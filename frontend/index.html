@@ -167,6 +167,26 @@
       const BG_LOBE_GLOW_SCALE = 0.5;  // background lobes glow at 50% of their spike-driven intensity
       const MAX_SPIKES_PER_WINDOW = 100; // normalization ceiling for spike rate → intensity
 
+      /* ── Per-vertex spatial glow ───────────────────── */
+      const VERTEX_PHASE_SPREAD  = 1.2;  // how much vertex positions offset their glow phase
+      const VERTEX_WAVE_SPEED    = 0.002; // propagation speed of the glow wave across vertices
+      const VERTEX_VARIATION_AMP = 0.25;  // amplitude of per-vertex brightness variation (0-1)
+
+      /* ── Spike burst flash ─────────────────────────── */
+      const BURST_THRESHOLD      = 0.6;  // spike rate jump threshold to trigger flash (0-1 normalized)
+      const BURST_FLASH_INTENSITY = 0.8; // max flash brightness boost
+      const BURST_FLASH_DECAY     = 0.92; // per-frame decay of flash effect (lower = faster fade)
+
+      /* ── Dynamic bloom ─────────────────────────────── */
+      const BLOOM_BASE_STRENGTH   = 1.8;
+      const BLOOM_ACTIVITY_BOOST  = 1.2;  // max additional bloom from spike activity
+      const BLOOM_SMOOTHING       = 0.03; // smooth bloom transitions
+
+      /* ── Idle breathing ─────────────────────────────── */
+      const IDLE_BREATH_SPEED    = 0.0008; // slow ambient pulse
+      const IDLE_BREATH_AMP      = 0.12;   // subtle brightness variation
+      const IDLE_BREATH_MIN      = 0.02;   // minimum idle glow above base
+
       /* ═══════════════════════════════════════════════
          DOM REFS
          ═══════════════════════════════════════════════ */
@@ -229,11 +249,12 @@
       let autoRotate = true;
       let brainGroup = null;
       let lastPayload = null;
-      let pulseDirty = false;
+      let currentBloomStrength = BLOOM_BASE_STRENGTH;
+      let idlePhase = 0;
 
       const brain = {
         meshEntries: [],      // [{ mesh, baseColors, colorAttr, vertexCount }]
-        lobeVertices: {},     // lobe -> [{ meshIdx, vertexIdx }]
+        lobeVertices: {},     // lobe -> [{ meshIdx, vertexIdx, phaseOffset }]
         totalVertices: 0,
         ready: false,
         activeLobe: null,     // lobe name during playback
@@ -243,6 +264,8 @@
           current: 0,          // smoothed glow intensity (0-1)
           target: 0,           // raw spike-rate-driven target
           noisePhase: Math.random() * Math.PI * 2,  // unique random phase per lobe
+          prevSpikeRate: 0,    // previous frame spike rate for burst detection
+          burstFlash: 0,       // current burst flash intensity (decays per frame)
         }])),
       };
 
@@ -425,7 +448,9 @@
             baseColors[i * 3 + 1] = color.g * BASE_BRIGHTNESS;
             baseColors[i * 3 + 2] = color.b * BASE_BRIGHTNESS;
 
-            brain.lobeVertices[lobe].push({ meshIdx: mi, vertexIdx: i });
+            // Compute spatial phase offset from vertex position for wave-like glow propagation
+            const phaseOffset = (worldPos.x * 0.7 + worldPos.y * 1.1 + worldPos.z * 0.9) * VERTEX_PHASE_SPREAD;
+            brain.lobeVertices[lobe].push({ meshIdx: mi, vertexIdx: i, phaseOffset });
           }
 
           // Set vertex colors
@@ -490,25 +515,37 @@
          LOBE GLOW — brighten active lobe vertex colors
          ═══════════════════════════════════════════════ */
 
-      function setLobeGlow(lobe, intensity) {
+      /**
+       * Apply glow to lobe vertices with per-vertex spatial variation.
+       * waveTime drives the propagation wave across vertices.
+       * burstExtra adds a brief bright flash on spike bursts.
+       */
+      function setLobeGlow(lobe, intensity, waveTime, burstExtra) {
         const vertices = brain.lobeVertices[lobe];
         if (!vertices) return;
-        for (const { meshIdx, vertexIdx } of vertices) {
+        const affectedMeshes = new Set();
+        for (const { meshIdx, vertexIdx, phaseOffset } of vertices) {
           const md = brain.meshEntries[meshIdx];
           const i = vertexIdx;
           const br = md.baseColors[i * 3];
           const bg = md.baseColors[i * 3 + 1];
           const bb = md.baseColors[i * 3 + 2];
-          // Brighten: scale up and push toward white
-          const boost = 1.0 + intensity * GLOW_BOOST;
+
+          // Per-vertex wave variation: each vertex glows at a slightly different phase
+          const wave = Math.sin(waveTime + phaseOffset) * 0.5 + 0.5; // 0-1
+          const vertexIntensity = intensity * (1.0 - VERTEX_VARIATION_AMP + VERTEX_VARIATION_AMP * wave);
+
+          // Add burst flash (uniform across lobe for impact)
+          const totalIntensity = vertexIntensity + burstExtra;
+
+          const boost = 1.0 + totalIntensity * GLOW_BOOST;
           md.colorAttr.setXYZ(i,
             Math.min(1.0, br * boost),
             Math.min(1.0, bg * boost),
             Math.min(1.0, bb * boost)
           );
+          affectedMeshes.add(meshIdx);
         }
-        // Mark all affected meshes dirty
-        const affectedMeshes = new Set(vertices.map(v => v.meshIdx));
         for (const mi of affectedMeshes) {
           brain.meshEntries[mi].colorAttr.needsUpdate = true;
         }
@@ -527,6 +564,8 @@
         for (const lobe of LOBES) {
           brain.lobeGlow[lobe].current = 0;
           brain.lobeGlow[lobe].target = 0;
+          brain.lobeGlow[lobe].prevSpikeRate = 0;
+          brain.lobeGlow[lobe].burstFlash = 0;
         }
       }
 
@@ -548,22 +587,57 @@
         return count;
       }
 
+      /** Multi-octave noise for organic, non-repetitive variations */
+      function organicNoise(phase, lobeIdx) {
+        return Math.sin(phase) * GLOW_NOISE_AMP
+             + Math.sin(phase * 2.3 + lobeIdx * 1.7) * GLOW_NOISE_AMP * 0.5
+             + Math.sin(phase * 0.7 + lobeIdx * 3.1) * GLOW_NOISE_AMP * 0.3
+             + Math.sin(phase * 4.1 + lobeIdx * 0.9) * GLOW_NOISE_AMP * 0.15;
+      }
+
+      /** Idle breathing animation — subtle ambient pulse when no playback */
+      function updateIdleBreathing(now) {
+        if (!brain.ready) return;
+        idlePhase += IDLE_BREATH_SPEED;
+        const waveTime = now * VERTEX_WAVE_SPEED;
+
+        for (let li = 0; li < LOBES.length; li++) {
+          const lobe = LOBES[li];
+          // Each lobe breathes at a slightly different rate/phase
+          const breath = IDLE_BREATH_MIN + IDLE_BREATH_AMP *
+            (Math.sin(idlePhase + li * 1.3) * 0.5 + 0.5);
+          setLobeGlow(lobe, breath, waveTime + li * 0.5, 0);
+        }
+      }
+
       /** Update all per-lobe glow targets from spike data, then smooth */
       function updateDynamicGlow(now) {
+        if (!brain.ready) return;
+
+        // When no playback is active, show idle breathing
         if (!playback.active && brain.glowAmount <= 0) {
-          // No playback, reset all lobes to zero
           for (const lobe of LOBES) {
             const g = brain.lobeGlow[lobe];
             g.target = 0;
-            g.current *= 0.92; // gentle decay to zero
+            g.current *= 0.92;
             if (g.current < 0.005) g.current = 0;
+            g.burstFlash *= BURST_FLASH_DECAY;
+            if (g.burstFlash < 0.005) g.burstFlash = 0;
           }
+          updateIdleBreathing(now);
+          // Subtle bloom in idle
+          const targetBloom = BLOOM_BASE_STRENGTH * 0.85;
+          currentBloomStrength += (targetBloom - currentBloomStrength) * BLOOM_SMOOTHING;
+          bloomPass.strength = currentBloomStrength;
           return;
         }
 
         const currentMs = playback.simMs;
+        const waveTime = now * VERTEX_WAVE_SPEED;
+        let totalActivity = 0;
 
-        for (const lobe of LOBES) {
+        for (let li = 0; li < LOBES.length; li++) {
+          const lobe = LOBES[li];
           const g = brain.lobeGlow[lobe];
 
           // Compute spike rate in sliding window
@@ -576,6 +650,16 @@
           // Normalize to 0-1 range
           const rawIntensity = Math.min(1.0, spikeCount / MAX_SPIKES_PER_WINDOW);
 
+          // Burst detection: sudden spike rate jump triggers flash
+          const rateJump = rawIntensity - g.prevSpikeRate;
+          if (rateJump > BURST_THRESHOLD) {
+            g.burstFlash = Math.min(BURST_FLASH_INTENSITY,
+              g.burstFlash + rateJump * BURST_FLASH_INTENSITY);
+          }
+          g.prevSpikeRate = rawIntensity;
+          g.burstFlash *= BURST_FLASH_DECAY;
+          if (g.burstFlash < 0.005) g.burstFlash = 0;
+
           // Scale: active lobe gets full intensity, others get reduced
           const isActive = lobe === brain.activeLobe;
           const scale = isActive ? 1.0 : BG_LOBE_GLOW_SCALE;
@@ -587,20 +671,26 @@
           const alpha = g.target > g.current ? smoothUp : smoothDown;
           g.current += (g.target - g.current) * alpha;
 
-          // Add organic micro-variations
+          // Multi-octave organic noise
           g.noisePhase += GLOW_PULSE_SPEED * (1.0 + (isActive ? 0.5 : 0));
-          const noise = Math.sin(g.noisePhase) * GLOW_NOISE_AMP
-                      + Math.sin(g.noisePhase * 2.3 + lobe.length) * GLOW_NOISE_AMP * 0.5;
+          const noise = organicNoise(g.noisePhase, li);
           const finalGlow = Math.max(0, g.current + noise * g.current);
 
-          // Apply glow to vertices
-          if (finalGlow > 0.001) {
-            setLobeGlow(lobe, finalGlow);
+          totalActivity += finalGlow;
+
+          // Apply glow with per-vertex wave and burst flash
+          if (finalGlow > 0.001 || g.burstFlash > 0.001) {
+            setLobeGlow(lobe, finalGlow, waveTime + li * 0.8, g.burstFlash);
           } else if (g.current < 0.001 && g.target < 0.001) {
-            // Reset to base when fully off
-            setLobeGlow(lobe, 0);
+            setLobeGlow(lobe, 0, waveTime, 0);
           }
         }
+
+        // Dynamic bloom: stronger bloom during high activity
+        const avgActivity = totalActivity / LOBES.length;
+        const targetBloom = BLOOM_BASE_STRENGTH + avgActivity * BLOOM_ACTIVITY_BOOST;
+        currentBloomStrength += (targetBloom - currentBloomStrength) * BLOOM_SMOOTHING;
+        bloomPass.strength = currentBloomStrength;
       }
 
       /* ═══════════════════════════════════════════════
@@ -679,7 +769,7 @@
           .easing(TWEEN.Easing.Quadratic.Out)
           .onUpdate(() => {
             brain.glowAmount = proxy.value;
-            pulseDirty = true;
+            /* glow envelope updated */
           })
           .start();
 
@@ -710,7 +800,7 @@
             .easing(TWEEN.Easing.Quadratic.In)
             .onUpdate(() => {
               brain.glowAmount = proxy.value;
-              pulseDirty = true;
+              /* glow envelope updated */
             })
             .onComplete(() => {
               resetAllLobeColors();
