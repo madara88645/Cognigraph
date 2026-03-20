@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CogniGraph v2.0</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tweenjs/tween.js@23.1.3/dist/tween.umd.js"></script>
+    <style>
+      body {
+        margin: 0;
+        background: radial-gradient(circle at 16% 0%, #1d2e57, #0b1427 48%, #060a14);
+      }
+      #brain-canvas canvas {
+        display: block;
+      }
+      .glass {
+        background: rgba(8, 14, 28, 0.82);
+        border: 1px solid rgba(100, 116, 139, 0.5);
+        backdrop-filter: blur(10px);
+      }
+      .thin-scroll::-webkit-scrollbar {
+        width: 6px;
+      }
+      .thin-scroll::-webkit-scrollbar-thumb {
+        border-radius: 999px;
+        background: rgba(71, 85, 105, 0.7);
+      }
+      input[type="range"]::-webkit-slider-thumb {
+        appearance: none;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: #22d3ee;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body class="h-screen w-screen overflow-hidden text-slate-100">
+    <main class="relative h-full w-full">
+      <div id="brain-canvas" class="absolute inset-0"></div>
+
+      <section class="pointer-events-none absolute inset-0 p-3 md:p-4">
+        <div class="pointer-events-auto flex justify-between gap-3">
+          <div class="glass rounded-lg px-3 py-2">
+            <p class="text-xs font-semibold tracking-wide text-cyan-300">CogniGraph v2.0</p>
+            <p id="status-chip" class="mt-1 text-[11px] text-slate-300">Loading brain model...</p>
+          </div>
+          <button
+            id="rotate-btn"
+            class="glass rounded-lg px-3 py-2 text-xs font-semibold text-slate-200 hover:text-cyan-200"
+          >
+            Auto-Rotate: ON
+          </button>
+        </div>
+
+        <div class="mt-3 flex h-[calc(100%-58px)] justify-end">
+          <aside class="glass thin-scroll pointer-events-auto h-full w-80 flex-shrink-0 overflow-y-auto rounded-2xl p-4 md:w-[380px]">
+            <h1 class="text-xl font-semibold text-cyan-300">Neural Activation Viewer</h1>
+            <p class="mt-1 text-xs text-slate-300">
+              3D brain model with real-time spiking neural network visualization.
+            </p>
+
+            <div class="mt-4">
+              <label class="text-xs font-semibold text-slate-300">Scenario</label>
+              <textarea
+                id="prompt"
+                class="mt-2 h-24 w-full rounded-lg border border-slate-600 bg-slate-950/70 p-3 text-sm outline-none focus:border-cyan-400"
+                placeholder="e.g., Doing a heavy deadlift"
+              ></textarea>
+              <button
+                id="simulate-btn"
+                class="mt-2 w-full rounded-lg bg-gradient-to-r from-cyan-400 to-indigo-500 px-4 py-2 text-sm font-semibold text-slate-950 disabled:opacity-60"
+              >
+                Simulate Activation
+              </button>
+            </div>
+
+            <div class="mt-4 rounded-lg border border-slate-700 bg-slate-950/60 p-3">
+              <p class="text-xs font-semibold text-slate-300">Playback</p>
+              <div class="mt-2 flex justify-between text-xs">
+                <span class="text-slate-400">Time</span>
+                <span id="timeline-label" class="font-mono text-cyan-300">0 / 1000 ms</span>
+              </div>
+              <input id="timeline-slider" type="range" min="0" max="1000" step="1" value="0" class="mt-2 w-full" />
+              <div class="mt-2 flex gap-2">
+                <button id="play-pause-btn" class="rounded border border-slate-600 px-3 py-1 text-xs">Pause</button>
+                <button id="replay-btn" class="rounded border border-slate-600 px-3 py-1 text-xs">Replay</button>
+                <button id="step-back-btn" class="rounded border border-slate-600 px-3 py-1 text-xs">-25ms</button>
+                <button id="step-forward-btn" class="rounded border border-slate-600 px-3 py-1 text-xs">+25ms</button>
+              </div>
+              <div class="mt-2 flex justify-between text-xs">
+                <span class="text-slate-400">Speed</span>
+                <span id="speed-label" class="font-mono text-cyan-300">0.30x</span>
+              </div>
+              <input id="speed-slider" type="range" min="0.1" max="2" step="0.05" value="0.30" class="mt-1 w-full" />
+            </div>
+
+            <div class="mt-4 rounded-lg border border-slate-700 bg-slate-950/60 p-3">
+              <div class="flex items-center justify-between">
+                <p class="text-xs font-semibold text-slate-300">Cognitive Analysis</p>
+                <span id="active-lobe-pill" class="rounded bg-slate-700 px-2 py-1 text-[10px] uppercase">N/A</span>
+              </div>
+              <p id="explanation-text" class="mt-2 text-xs text-slate-200">
+                Try "Doing a heavy deadlift" to see motor cortex activation with full neural pulse visualization.
+              </p>
+            </div>
+
+            <div class="mt-4 rounded-lg border border-slate-700 bg-slate-950/60 p-3">
+              <p class="text-xs font-semibold text-slate-300">Lobe Spike Counters</p>
+              <div id="legend-panel" class="mt-2 space-y-1 text-xs"></div>
+            </div>
+
+            <div class="mt-4 rounded-lg border border-slate-700 bg-slate-950/60 p-3">
+              <p class="text-xs font-semibold text-slate-300">Log</p>
+              <div id="log-panel" class="thin-scroll mt-2 h-40 overflow-y-auto whitespace-pre-wrap text-[11px] text-slate-300"></div>
+            </div>
+          </aside>
+        </div>
+      </section>
+    </main>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.161.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.161.0/examples/jsm/"
+        }
+      }
+    </script>
+
+    <script type="module">
+      import * as THREE from "three";
+      import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+      import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+      import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+      import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+      import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+
+      const TWEEN = window.TWEEN;
+
+      /* ═══════════════════════════════════════════════
+         CONSTANTS
+         ═══════════════════════════════════════════════ */
+      const LOBES = ["frontal", "parietal", "occipital", "temporal", "cerebellum"];
+      const REQUEST_TIMEOUT_MS = 45000;
+      const BACKEND_NEURONS_PER_LOBE = 100;
+
+      // Neon lobe colors — vibrant for wireframe glow
+      const LOBE_COLORS = {
+        frontal:    new THREE.Color(1.0, 0.15, 0.45),   // hot pink
+        parietal:   new THREE.Color(0.15, 1.0, 0.45),    // neon green
+        occipital:  new THREE.Color(0.25, 0.45, 1.0),    // electric blue
+        temporal:   new THREE.Color(1.0, 0.65, 0.05),    // amber orange
+        cerebellum: new THREE.Color(0.30, 0.90, 0.95),   // cyan / teal
+      };
+      // Base brightness — dim enough that glow contrast is obvious
+      const BASE_BRIGHTNESS = 0.35;
+      // How much brighter the active lobe glows during simulation
+      const GLOW_BOOST = 4.0;
+
+      /* ── Dynamic glow constants ─────────────────── */
+      const SPIKE_WINDOW_MS    = 50;   // sliding window to compute spike rate
+      const GLOW_SMOOTHING     = 0.08; // exponential smoothing factor (0-1, lower = smoother)
+      const GLOW_NOISE_AMP     = 0.06; // random micro-variation amplitude
+      const GLOW_PULSE_SPEED   = 0.003; // base organic pulse speed
+      const BG_LOBE_GLOW_SCALE = 0.5;  // background lobes glow at 50% of their spike-driven intensity
+      const MAX_SPIKES_PER_WINDOW = 100; // normalization ceiling for spike rate → intensity
+
+      /* ═══════════════════════════════════════════════
+         DOM REFS
+         ═══════════════════════════════════════════════ */
+      const promptInput       = document.getElementById("prompt");
+      const simulateButton    = document.getElementById("simulate-btn");
+      const rotateButton      = document.getElementById("rotate-btn");
+      const playPauseButton   = document.getElementById("play-pause-btn");
+      const replayButton      = document.getElementById("replay-btn");
+      const stepBackButton    = document.getElementById("step-back-btn");
+      const stepForwardButton = document.getElementById("step-forward-btn");
+      const speedSlider       = document.getElementById("speed-slider");
+      const speedLabel        = document.getElementById("speed-label");
+      const timelineSlider    = document.getElementById("timeline-slider");
+      const timelineLabel     = document.getElementById("timeline-label");
+      const statusChip        = document.getElementById("status-chip");
+      const explanationText   = document.getElementById("explanation-text");
+      const activeLobePill    = document.getElementById("active-lobe-pill");
+      const legendPanel       = document.getElementById("legend-panel");
+      const logPanel          = document.getElementById("log-panel");
+      const canvasHost        = document.getElementById("brain-canvas");
+
+      /* ═══════════════════════════════════════════════
+         THREE.JS SCENE
+         ═══════════════════════════════════════════════ */
+      const scene = new THREE.Scene();
+      // No fog — clean dark void like the reference
+
+      const camera = new THREE.PerspectiveCamera(58, 1, 0.1, 200);
+      camera.position.set(0, 0.5, 5.0);
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setSize(canvasHost.clientWidth, canvasHost.clientHeight);
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.2;
+      canvasHost.appendChild(renderer.domElement);
+
+      const composer = new EffectComposer(renderer);
+      composer.addPass(new RenderPass(scene, camera));
+      const _dpr = renderer.getPixelRatio();
+      const bloomPass = new UnrealBloomPass(
+        new THREE.Vector2(canvasHost.clientWidth * _dpr, canvasHost.clientHeight * _dpr),
+        1.8,    // strength — strong neon glow
+        0.6,    // radius — soft halo spread
+        0.30    // threshold — wireframe lines bloom
+      );
+      composer.addPass(bloomPass);
+
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.06;
+      controls.maxDistance = 12;
+      controls.minDistance = 2.0;
+
+      // No directional lights — MeshBasicMaterial is unlit (self-illuminating wireframe)
+
+      /* ═══════════════════════════════════════════════
+         STATE
+         ═══════════════════════════════════════════════ */
+      let autoRotate = true;
+      let brainGroup = null;
+      let lastPayload = null;
+      let pulseDirty = false;
+
+      const brain = {
+        meshEntries: [],      // [{ mesh, baseColors, colorAttr, vertexCount }]
+        lobeVertices: {},     // lobe -> [{ meshIdx, vertexIdx }]
+        totalVertices: 0,
+        ready: false,
+        activeLobe: null,     // lobe name during playback
+        glowAmount: 0,        // 0-1 master envelope (tween-driven fade in/out)
+        // Per-lobe dynamic glow state
+        lobeGlow: Object.fromEntries(LOBES.map(l => [l, {
+          current: 0,          // smoothed glow intensity (0-1)
+          target: 0,           // raw spike-rate-driven target
+          noisePhase: Math.random() * Math.PI * 2,  // unique random phase per lobe
+        }])),
+      };
+
+      const playback = {
+        active: false,
+        paused: false,
+        simMs: 0,
+        durationMs: 1000,
+        speed: Number(speedSlider.value),
+        lastWallNow: performance.now(),
+        lastProcessedMs: -1,
+        buckets: null,
+        playedCounts: null,
+        totalCounts: null,
+      };
+
+      /* ═══════════════════════════════════════════════
+         INIT
+         ═══════════════════════════════════════════════ */
+      initLegendPanel();
+      updateSpeedLabel();
+      updateTimelineUi();
+      hookUiEvents();
+      onResize();
+      render();
+      initSceneAsync();
+
+      /* ═══════════════════════════════════════════════
+         HELPERS
+         ═══════════════════════════════════════════════ */
+      function setStatus(text) { statusChip.textContent = text; }
+
+      function log(message, level = "info") {
+        const ts = new Date().toLocaleTimeString();
+        const prefix = level === "error" ? "[ERROR]" : level === "warn" ? "[WARN]" : "[INFO]";
+        logPanel.textContent += `${ts} ${prefix} ${message}\n`;
+        logPanel.scrollTop = logPanel.scrollHeight;
+      }
+
+      function initLegendPanel() {
+        legendPanel.innerHTML = "";
+        for (const lobe of LOBES) {
+          const row = document.createElement("div");
+          row.className = "flex items-center justify-between rounded border border-slate-700 bg-slate-900/70 px-2 py-1";
+          row.innerHTML = `
+            <div class="flex items-center gap-2">
+              <span class="h-2.5 w-2.5 rounded-full inline-block" style="background:#${LOBE_COLORS[lobe].getHexString()}"></span>
+              <span class="capitalize">${lobe}</span>
+            </div>
+            <div id="legend-${lobe}" class="font-mono text-cyan-300">0 / 0</div>
+          `;
+          legendPanel.appendChild(row);
+        }
+      }
+
+      function refreshLegendCounts() {
+        for (const lobe of LOBES) {
+          const el = document.getElementById(`legend-${lobe}`);
+          if (!el) continue;
+          el.textContent = `${playback.playedCounts?.[lobe] ?? 0} / ${playback.totalCounts?.[lobe] ?? 0}`;
+        }
+      }
+
+      function updateTimelineUi() {
+        timelineSlider.max = String(playback.durationMs);
+        timelineSlider.value = String(Math.floor(playback.simMs));
+        timelineLabel.textContent = `${Math.floor(playback.simMs)} / ${playback.durationMs} ms`;
+      }
+
+      function updateSpeedLabel() {
+        speedLabel.textContent = `${playback.speed.toFixed(2)}x`;
+      }
+
+      /* ═══════════════════════════════════════════════
+         BRAIN MODEL LOADING (brain.glb)
+         ═══════════════════════════════════════════════ */
+
+      function loadBrainGLB() {
+        return new Promise((resolve, reject) => {
+          new GLTFLoader().load(
+            "/static/assets/brain.glb",
+            (gltf) => {
+              try {
+                const brainScene = gltf.scene;
+
+                const meshes = [];
+                brainScene.traverse((child) => {
+                  if (child.isMesh) meshes.push(child);
+                });
+
+                if (meshes.length === 0) {
+                  reject(new Error("No mesh found in brain.glb"));
+                  return;
+                }
+
+                // Center and scale to fit ~3.0 unit radius
+                const bbox = new THREE.Box3().setFromObject(brainScene);
+                const center = new THREE.Vector3();
+                const size = new THREE.Vector3();
+                bbox.getCenter(center);
+                bbox.getSize(size);
+
+                const maxDim = Math.max(size.x, size.y, size.z);
+                const scaleFactor = 3.0 / maxDim;
+                brainScene.position.sub(center).multiplyScalar(scaleFactor);
+                brainScene.scale.multiplyScalar(scaleFactor);
+                brainScene.updateMatrixWorld(true);
+
+                // Recompute bounds after normalization
+                const normBbox = new THREE.Box3().setFromObject(brainScene);
+                const normCenter = new THREE.Vector3();
+                const normSize = new THREE.Vector3();
+                normBbox.getCenter(normCenter);
+                normBbox.getSize(normSize);
+
+                resolve({
+                  brainScene,
+                  meshes,
+                  bbox: normBbox,
+                  center: normCenter,
+                  size: normSize,
+                  scaleFactor,
+                  meshCount: meshes.length,
+                });
+              } catch (e) {
+                reject(e);
+              }
+            },
+            undefined,
+            (err) => reject(new Error("GLB load failed: " + (err?.message || err)))
+          );
+        });
+      }
+
+      /* ═══════════════════════════════════════════════
+         LOBE CLASSIFICATION (position-based)
+         ═══════════════════════════════════════════════ */
+
+      function classifyLobeByPosition(x, y, z, center, size) {
+        const nx = (x - center.x) / size.x;
+        const ny = (y - center.y) / size.y;
+        const nz = (z - center.z) / size.z;
+
+        if (ny < -0.30 && nz < -0.05) return "cerebellum";
+        if (nz > 0.15) return "frontal";
+        if (nz < -0.20 && ny > -0.30) return "occipital";
+        if (Math.abs(nx) > 0.25 && ny < 0.10) return "temporal";
+        return "parietal";
+      }
+
+      /* ═══════════════════════════════════════════════
+         WIREFRAME BRAIN WITH LOBE VERTEX COLORS
+         ═══════════════════════════════════════════════ */
+
+      function colorBrainByLobe(meshes, center, size) {
+        brain.lobeVertices = {};
+        for (const lobe of LOBES) brain.lobeVertices[lobe] = [];
+
+        brain.meshEntries = [];
+        const worldPos = new THREE.Vector3();
+
+        for (let mi = 0; mi < meshes.length; mi++) {
+          const mesh = meshes[mi];
+          const geo = mesh.geometry;
+          mesh.updateMatrixWorld(true);
+
+          const posAttr = geo.getAttribute("position");
+          const vertexCount = posAttr.count;
+
+          const baseColors = new Float32Array(vertexCount * 3);
+
+          for (let i = 0; i < vertexCount; i++) {
+            worldPos.set(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i));
+            mesh.localToWorld(worldPos);
+
+            const lobe = classifyLobeByPosition(worldPos.x, worldPos.y, worldPos.z, center, size);
+            const color = LOBE_COLORS[lobe];
+
+            baseColors[i * 3]     = color.r * BASE_BRIGHTNESS;
+            baseColors[i * 3 + 1] = color.g * BASE_BRIGHTNESS;
+            baseColors[i * 3 + 2] = color.b * BASE_BRIGHTNESS;
+
+            brain.lobeVertices[lobe].push({ meshIdx: mi, vertexIdx: i });
+          }
+
+          // Set vertex colors
+          const colorAttr = new THREE.Float32BufferAttribute(baseColors.slice(), 3);
+          geo.setAttribute("color", colorAttr);
+
+          // Wireframe MeshBasicMaterial — self-illuminating, no lighting needed
+          mesh.material = new THREE.MeshBasicMaterial({
+            wireframe: true,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.85,
+            side: THREE.DoubleSide,
+          });
+          mesh.renderOrder = 0;
+
+          brain.meshEntries.push({
+            mesh, baseColors, colorAttr, vertexCount,
+          });
+        }
+
+        brain.totalVertices = brain.meshEntries.reduce((sum, e) => sum + e.vertexCount, 0);
+
+        for (const lobe of LOBES) {
+          log(`${lobe}: ${brain.lobeVertices[lobe].length} vertices`);
+        }
+      }
+
+      /* ═══════════════════════════════════════════════
+         ASYNC SCENE INITIALIZATION
+         ═══════════════════════════════════════════════ */
+
+      async function initSceneAsync() {
+        setStatus("Loading brain model...");
+        log("Loading brain.glb...");
+
+        try {
+          const result = await loadBrainGLB();
+          const { brainScene, meshes, bbox, center, size, scaleFactor, meshCount } = result;
+          log(`Brain loaded. ${meshCount} mesh(es). Scale: ${scaleFactor.toFixed(3)}. Size: ${size.x.toFixed(2)} x ${size.y.toFixed(2)} x ${size.z.toFixed(2)}`);
+          log(`Bounds center: (${center.x.toFixed(2)}, ${center.y.toFixed(2)}, ${center.z.toFixed(2)})`);
+
+          setStatus("Coloring lobe regions...");
+          colorBrainByLobe(meshes, center, size);
+
+          brainGroup = new THREE.Group();
+          brainGroup.add(brainScene);
+          scene.add(brainGroup);
+
+          brain.ready = true;
+          setStatus("Ready for simulation.");
+          log(`Ready. ${brain.totalVertices} vertices across ${LOBES.length} lobes.`);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          log(`Failed to load brain model: ${msg}`, "error");
+          setStatus("Failed to load brain model");
+          console.error("Brain load error:", err);
+        }
+      }
+
+      /* ═══════════════════════════════════════════════
+         LOBE GLOW — brighten active lobe vertex colors
+         ═══════════════════════════════════════════════ */
+
+      function setLobeGlow(lobe, intensity) {
+        const vertices = brain.lobeVertices[lobe];
+        if (!vertices) return;
+        for (const { meshIdx, vertexIdx } of vertices) {
+          const md = brain.meshEntries[meshIdx];
+          const i = vertexIdx;
+          const br = md.baseColors[i * 3];
+          const bg = md.baseColors[i * 3 + 1];
+          const bb = md.baseColors[i * 3 + 2];
+          // Brighten: scale up and push toward white
+          const boost = 1.0 + intensity * GLOW_BOOST;
+          md.colorAttr.setXYZ(i,
+            Math.min(1.0, br * boost),
+            Math.min(1.0, bg * boost),
+            Math.min(1.0, bb * boost)
+          );
+        }
+        // Mark all affected meshes dirty
+        const affectedMeshes = new Set(vertices.map(v => v.meshIdx));
+        for (const mi of affectedMeshes) {
+          brain.meshEntries[mi].colorAttr.needsUpdate = true;
+        }
+      }
+
+      function resetAllLobeColors() {
+        for (const md of brain.meshEntries) {
+          for (let i = 0; i < md.vertexCount; i++) {
+            md.colorAttr.setXYZ(i, md.baseColors[i * 3], md.baseColors[i * 3 + 1], md.baseColors[i * 3 + 2]);
+          }
+          md.colorAttr.needsUpdate = true;
+        }
+        brain.activeLobe = null;
+        brain.glowAmount = 0;
+        // Reset per-lobe glow state
+        for (const lobe of LOBES) {
+          brain.lobeGlow[lobe].current = 0;
+          brain.lobeGlow[lobe].target = 0;
+        }
+      }
+
+      /* ═══════════════════════════════════════════════
+         SPIKE-SYNCED DYNAMIC GLOW
+         ═══════════════════════════════════════════════ */
+
+      /** Count spikes in [fromMs, toMs] for a given lobe */
+      function countSpikesInWindow(lobe, fromMs, toMs) {
+        if (!playback.buckets || !playback.buckets[lobe]) return 0;
+        const map = playback.buckets[lobe];
+        let count = 0;
+        const lo = Math.max(0, Math.floor(fromMs));
+        const hi = Math.min(playback.durationMs, Math.floor(toMs));
+        for (let ms = lo; ms <= hi; ms++) {
+          const events = map.get(ms);
+          if (events) count += events.length;
+        }
+        return count;
+      }
+
+      /** Update all per-lobe glow targets from spike data, then smooth */
+      function updateDynamicGlow(now) {
+        if (!playback.active && brain.glowAmount <= 0) {
+          // No playback, reset all lobes to zero
+          for (const lobe of LOBES) {
+            const g = brain.lobeGlow[lobe];
+            g.target = 0;
+            g.current *= 0.92; // gentle decay to zero
+            if (g.current < 0.005) g.current = 0;
+          }
+          return;
+        }
+
+        const currentMs = playback.simMs;
+
+        for (const lobe of LOBES) {
+          const g = brain.lobeGlow[lobe];
+
+          // Compute spike rate in sliding window
+          const spikeCount = countSpikesInWindow(
+            lobe,
+            currentMs - SPIKE_WINDOW_MS,
+            currentMs
+          );
+
+          // Normalize to 0-1 range
+          const rawIntensity = Math.min(1.0, spikeCount / MAX_SPIKES_PER_WINDOW);
+
+          // Scale: active lobe gets full intensity, others get reduced
+          const isActive = lobe === brain.activeLobe;
+          const scale = isActive ? 1.0 : BG_LOBE_GLOW_SCALE;
+          g.target = rawIntensity * scale * brain.glowAmount;
+
+          // Exponential smoothing (fast attack, slower decay for natural feel)
+          const smoothUp   = GLOW_SMOOTHING * 1.8;  // faster rise
+          const smoothDown = GLOW_SMOOTHING * 0.6;   // slower fade
+          const alpha = g.target > g.current ? smoothUp : smoothDown;
+          g.current += (g.target - g.current) * alpha;
+
+          // Add organic micro-variations
+          g.noisePhase += GLOW_PULSE_SPEED * (1.0 + (isActive ? 0.5 : 0));
+          const noise = Math.sin(g.noisePhase) * GLOW_NOISE_AMP
+                      + Math.sin(g.noisePhase * 2.3 + lobe.length) * GLOW_NOISE_AMP * 0.5;
+          const finalGlow = Math.max(0, g.current + noise * g.current);
+
+          // Apply glow to vertices
+          if (finalGlow > 0.001) {
+            setLobeGlow(lobe, finalGlow);
+          } else if (g.current < 0.001 && g.target < 0.001) {
+            // Reset to base when fully off
+            setLobeGlow(lobe, 0);
+          }
+        }
+      }
+
+      /* ═══════════════════════════════════════════════
+         SPIKE DATA PROCESSING & PLAYBACK
+         ═══════════════════════════════════════════════ */
+
+      function sanitizeSpikeBuckets(spikes) {
+        const buckets = {};
+        const totals = {};
+        for (const lobe of LOBES) {
+          const data = spikes?.[lobe];
+          if (!data || !Array.isArray(data.indices) || !Array.isArray(data.times_ms)) {
+            throw new Error(`Malformed spike payload for lobe: ${lobe}`);
+          }
+          const map = new Map();
+          const n = Math.min(data.indices.length, data.times_ms.length);
+          totals[lobe] = n;
+          for (let i = 0; i < n; i++) {
+            const idx = Number(data.indices[i]);
+            const t = Number(data.times_ms[i]);
+            if (!Number.isFinite(idx) || !Number.isFinite(t)) continue;
+            if (idx < 0 || idx >= BACKEND_NEURONS_PER_LOBE) continue;
+            const ms = Math.max(0, Math.floor(t));
+            if (!map.has(ms)) map.set(ms, []);
+            map.get(ms).push(idx);
+          }
+          buckets[lobe] = map;
+        }
+        return { buckets, totals };
+      }
+
+      function processSpikesUntil(targetMs) {
+        if (!playback.buckets) return;
+        for (let ms = playback.lastProcessedMs + 1; ms <= targetMs; ms++) {
+          for (const lobe of LOBES) {
+            const events = playback.buckets[lobe].get(ms);
+            if (!events) continue;
+            playback.playedCounts[lobe] += events.length;
+          }
+        }
+        playback.lastProcessedMs = targetMs;
+        refreshLegendCounts();
+      }
+
+      function setPlaybackTime(targetMs) {
+        const clamped = Math.max(0, Math.min(playback.durationMs, Math.floor(targetMs)));
+        if (clamped < playback.lastProcessedMs) {
+          playback.playedCounts = Object.fromEntries(LOBES.map((l) => [l, 0]));
+          playback.lastProcessedMs = -1;
+        }
+        playback.simMs = clamped;
+        processSpikesUntil(clamped);
+        updateTimelineUi();
+      }
+
+      function startPlayback(payload) {
+        const { buckets, totals } = sanitizeSpikeBuckets(payload.spikes);
+        playback.active = true;
+        playback.paused = false;
+        playback.simMs = 0;
+        playback.durationMs = Math.max(1, Number(payload.duration_ms) || 1000);
+        playback.lastProcessedMs = -1;
+        playback.lastWallNow = performance.now();
+        playback.buckets = buckets;
+        playback.totalCounts = totals;
+        playback.playedCounts = Object.fromEntries(LOBES.map((l) => [l, 0]));
+
+        TWEEN.removeAll();
+        resetAllLobeColors();
+
+        // Set active lobe and start glow
+        brain.activeLobe = payload.active_lobe;
+        const proxy = { value: 0 };
+        new TWEEN.Tween(proxy)
+          .to({ value: 1.0 }, 600)
+          .easing(TWEEN.Easing.Quadratic.Out)
+          .onUpdate(() => {
+            brain.glowAmount = proxy.value;
+            pulseDirty = true;
+          })
+          .start();
+
+        explanationText.textContent = payload.explanation || "";
+        activeLobePill.textContent = payload.active_lobe;
+        activeLobePill.style.background = `#${LOBE_COLORS[payload.active_lobe].getHexString()}`;
+        activeLobePill.className = "rounded px-2 py-1 text-[10px] uppercase font-semibold text-slate-900";
+
+        playPauseButton.textContent = "Pause";
+        setStatus("Neural pulse playback running");
+        refreshLegendCounts();
+        updateTimelineUi();
+      }
+
+      function updatePlayback(now) {
+        if (!playback.active || !playback.buckets || playback.paused) return;
+        const dt = now - playback.lastWallNow;
+        playback.lastWallNow = now;
+        setPlaybackTime(playback.simMs + dt * playback.speed);
+        if (playback.simMs >= playback.durationMs) {
+          playback.active = false;
+          setStatus("Playback complete");
+          log("Playback complete.");
+          // Fade out the glow
+          const proxy = { value: brain.glowAmount };
+          new TWEEN.Tween(proxy)
+            .to({ value: 0.0 }, 800)
+            .easing(TWEEN.Easing.Quadratic.In)
+            .onUpdate(() => {
+              brain.glowAmount = proxy.value;
+              pulseDirty = true;
+            })
+            .onComplete(() => {
+              resetAllLobeColors();
+            })
+            .start();
+        }
+      }
+
+      /* ═══════════════════════════════════════════════
+         API
+         ═══════════════════════════════════════════════ */
+
+      function assertValidResponse(payload) {
+        if (!payload || typeof payload !== "object") throw new Error("API response is invalid.");
+        if (!LOBES.includes(payload.active_lobe)) throw new Error("active_lobe missing or invalid.");
+        if (typeof payload.explanation !== "string") throw new Error("explanation missing.");
+        if (typeof payload.duration_ms !== "number") throw new Error("duration_ms missing.");
+        if (!payload.spikes || typeof payload.spikes !== "object") throw new Error("spikes missing.");
+      }
+
+      async function callSimulation(prompt) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+        try {
+          const response = await fetch("/simulate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt }),
+            signal: controller.signal,
+          });
+          const body = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(body.detail || `Simulation failed (${response.status})`);
+          return body;
+        } finally {
+          clearTimeout(timeoutId);
+        }
+      }
+
+      async function handleSimulateClick() {
+        if (simulateButton.disabled) return;
+        if (!brain.ready) {
+          log("Brain model is not loaded yet.", "error");
+          return;
+        }
+        const prompt = promptInput.value.trim();
+        if (!prompt) {
+          log("Please enter a scenario first.", "warn");
+          return;
+        }
+        simulateButton.disabled = true;
+        setStatus("Running backend classification + SNN...");
+        log(`Submitting: "${prompt}"`);
+        try {
+          const payload = await callSimulation(prompt);
+          assertValidResponse(payload);
+          lastPayload = payload;
+          startPlayback(payload);
+          log(`Active lobe: ${payload.active_lobe}`);
+          log(`Explanation: ${payload.explanation}`);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          log(msg, "error");
+          setStatus("Simulation failed");
+        } finally {
+          simulateButton.disabled = false;
+        }
+      }
+
+      /* ═══════════════════════════════════════════════
+         UI EVENTS
+         ═══════════════════════════════════════════════ */
+
+      function hookUiEvents() {
+        rotateButton.addEventListener("click", () => {
+          autoRotate = !autoRotate;
+          rotateButton.textContent = `Auto-Rotate: ${autoRotate ? "ON" : "OFF"}`;
+        });
+        simulateButton.addEventListener("click", handleSimulateClick);
+        replayButton.addEventListener("click", () => {
+          if (!lastPayload) return;
+          startPlayback(lastPayload);
+        });
+        playPauseButton.addEventListener("click", () => {
+          if (!playback.buckets) return;
+          playback.paused = !playback.paused;
+          playback.lastWallNow = performance.now();
+          playPauseButton.textContent = playback.paused ? "Resume" : "Pause";
+          setStatus(playback.paused ? "Paused" : "Resumed");
+        });
+        speedSlider.addEventListener("input", () => {
+          playback.speed = Number(speedSlider.value);
+          updateSpeedLabel();
+        });
+        stepBackButton.addEventListener("click", () => {
+          if (!playback.buckets) return;
+          playback.paused = true;
+          playPauseButton.textContent = "Resume";
+          setPlaybackTime(playback.simMs - 25);
+        });
+        stepForwardButton.addEventListener("click", () => {
+          if (!playback.buckets) return;
+          playback.paused = true;
+          playPauseButton.textContent = "Resume";
+          setPlaybackTime(playback.simMs + 25);
+        });
+        timelineSlider.addEventListener("input", () => {
+          if (!playback.buckets) return;
+          playback.paused = true;
+          playPauseButton.textContent = "Resume";
+          setPlaybackTime(Number(timelineSlider.value));
+          setStatus(`Inspecting ${Math.floor(playback.simMs)} ms`);
+        });
+        window.addEventListener("resize", onResize);
+      }
+
+      function onResize() {
+        const w = Math.max(1, canvasHost.clientWidth);
+        const h = Math.max(1, canvasHost.clientHeight);
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h);
+        const dpr = renderer.getPixelRatio();
+        composer.setSize(w * dpr, h * dpr);
+        bloomPass.setSize(w * dpr, h * dpr);
+      }
+
+      /* ═══════════════════════════════════════════════
+         RENDER LOOP
+         ═══════════════════════════════════════════════ */
+
+      function render(now = performance.now()) {
+        if (autoRotate && brainGroup) {
+          brainGroup.rotation.y += 0.002;
+        }
+
+        TWEEN.update(now);
+
+        // Dynamic spike-synced glow for all lobes
+        updateDynamicGlow(now);
+
+        controls.update();
+        updatePlayback(now);
+        composer.render();
+        requestAnimationFrame(render);
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,4 @@
+fastapi
+uvicorn
+brian2
+numpy<2.3
