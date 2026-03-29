@@ -2,7 +2,7 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Dict, List, Literal, Tuple
+from typing import Any, Dict, List, Tuple
 from urllib import error as urlerror
 from urllib import request as urlrequest
 
@@ -12,21 +12,23 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from backend.neuromodulation import (
+    LOBE_NAMES,
+    LobeName,
+    NeuromodulatorName,
+    ResolvedSnnParams,
+    build_vfx_profile,
+    resolve_snn_modulation,
+    snn_params_to_dict,
+    validate_classification_payload,
+)
+
 
 logger = logging.getLogger("cognigraph")
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(name)s %(message)s",
 )
-
-LOBE_NAMES: Tuple[str, ...] = (
-    "frontal",
-    "parietal",
-    "occipital",
-    "temporal",
-    "cerebellum",
-)
-LobeName = Literal["frontal", "parietal", "occipital", "temporal", "cerebellum"]
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 FRONTEND_DIR = PROJECT_ROOT / "frontend"
@@ -62,11 +64,43 @@ class LobeSpikes(BaseModel):
     times_ms: List[float]
 
 
+class SnnModulationEcho(BaseModel):
+    v_thresh: float
+    tau_ms: float
+    refractory_ms: float
+    epsp: float
+    v_center: float
+    v_spread: float
+    active_rate_hz: float
+    background_rate_hz: float
+
+
+class VfxProfileEcho(BaseModel):
+    glow_hex: str
+    bloom_mult: float
+    bloom_activity_boost_mult: float
+    tween_in_ms: float
+    tween_out_ms: float
+    idle_breath_speed_mult: float
+    idle_breath_amp_mult: float
+    vertex_wave_mult: float
+    burst_threshold: float
+    active_lobe_bloom_scale: float
+    global_chaos_mult: float = 1.0
+    desaturate: float = 0.0
+    scatter_flash_prob: float = 0.0
+
+
 class SimulateResponse(BaseModel):
     active_lobe: LobeName
+    dominant_neuromodulator: NeuromodulatorName
+    neuromodulator_intensity: float = Field(..., ge=0.0, le=1.0)
+    neuromodulator_rationale: str = ""
     explanation: str
     duration_ms: int
     spikes: Dict[LobeName, LobeSpikes]
+    snn_modulation: SnnModulationEcho
+    vfx_profile: VfxProfileEcho
 
 
 def _strip_markdown_fences(raw: str) -> str:
@@ -81,7 +115,7 @@ def _strip_markdown_fences(raw: str) -> str:
     return text
 
 
-def _parse_model_json(raw_text: str) -> Dict[str, str]:
+def _parse_model_json(raw_text: str) -> Dict[str, Any]:
     cleaned = _strip_markdown_fences(raw_text)
     parsed = json.loads(cleaned)
     if not isinstance(parsed, dict):
@@ -89,17 +123,31 @@ def _parse_model_json(raw_text: str) -> Dict[str, str]:
     return parsed
 
 
-def _validate_lobe_payload(payload: Dict[str, str]) -> Dict[str, str]:
-    active_lobe = str(payload.get("active_lobe", "")).strip().lower()
-    explanation = str(payload.get("explanation", "")).strip()
-    if active_lobe not in LOBE_NAMES:
-        raise ValueError(f"Invalid active_lobe from model output: {active_lobe!r}")
-    if not explanation:
-        raise ValueError("Model explanation is missing.")
-    return {"active_lobe": active_lobe, "explanation": explanation}
+def _extract_chat_message_text(message: Any) -> str:
+    """Normalize OpenRouter/OpenAI-style message.content (str or list of parts) to plain text."""
+    if message is None or not isinstance(message, dict):
+        return ""
+    content = message.get("content")
+    if content is None:
+        return ""
+    if isinstance(content, str):
+        return content.strip()
+    if isinstance(content, list):
+        parts: List[str] = []
+        for part in content:
+            if isinstance(part, str):
+                parts.append(part)
+            elif isinstance(part, dict):
+                t = part.get("type")
+                if t == "text" and isinstance(part.get("text"), str):
+                    parts.append(part["text"])
+                elif isinstance(part.get("content"), str):
+                    parts.append(part["content"])
+        return "".join(parts).strip()
+    return str(content).strip()
 
 
-def classify_active_lobe(prompt: str) -> Dict[str, str]:
+def classify_scenario(prompt: str) -> Dict[str, Any]:
     api_key = (
         os.getenv("OPENROUTER_API_KEY")
         or os.getenv("openrouter_api_key")
@@ -113,11 +161,28 @@ def classify_active_lobe(prompt: str) -> Dict[str, str]:
 
     instruction = (
         "You are a neuroscience classifier.\n"
-        "Given a real-world scenario, choose the single primary active lobe from:\n"
+        "Given a real-world scenario, choose:\n"
+        "1) The single primary active brain lobe from: "
         "frontal, parietal, occipital, temporal, cerebellum.\n"
-        "Return STRICT JSON only with keys active_lobe and explanation.\n"
-        'Example: {"active_lobe":"frontal","explanation":"..."}\n'
-        "No markdown fences. No extra keys. No prose."
+        "2) The single dominant neuromodulator tone from: "
+        "adrenaline, noradrenaline, dopamine, serotonin, gaba, acetylcholine, cortisol, baseline.\n"
+        "Return STRICT JSON only with keys:\n"
+        "active_lobe, dominant_neuromodulator, neuromodulator_intensity (0.0-1.0), "
+        "explanation, neuromodulator_rationale (one short sentence; may be empty string).\n"
+        "If the scenario is emotionally neutral, use baseline with neuromodulator_intensity <= 0.3.\n"
+        "Disambiguation — cortisol vs noradrenaline: If the scenario centers on HPA-axis cortisol "
+        "(e.g. morning cortisol awakening response, CAR, diurnal cortisol pulse, glucocorticoid stress "
+        "hormone, explicit 'cortisol' as the driver of the state), you MUST set "
+        "dominant_neuromodulator to cortisol. Do not pick noradrenaline merely because the person "
+        "feels alert or vigilant; noradrenaline is for LC-NE vigilance, surprise, or phasic attention "
+        "when cortisol/HPA is not the stated focus. If the user names cortisol or CAR, cortisol wins.\n"
+        "For cortisol, neuromodulator_intensity selects the regime: <=0.5 means optimal acute arousal "
+        "(e.g. waking up, short manageable challenge); >0.5 means toxic/chronic load "
+        "(e.g. chronic stress, exam panic, overtraining, burnout). Do not use cortisol for neutral scenes "
+        "unless stress is clearly described; otherwise prefer baseline or a sharper modulator.\n"
+        "Do not output concentrations or invented units. No markdown fences. No extra keys. No prose.\n"
+        'Example: {"active_lobe":"frontal","dominant_neuromodulator":"dopamine",'
+        '"neuromodulator_intensity":0.7,"explanation":"...","neuromodulator_rationale":"..."}'
     )
     payload = {
         "model": OPENROUTER_MODEL,
@@ -149,12 +214,13 @@ def classify_active_lobe(prompt: str) -> Dict[str, str]:
 
     try:
         parsed_response = json.loads(raw)
-        response_text = (
-            parsed_response.get("choices", [{}])[0]
-            .get("message", {})
-            .get("content", "")
-            .strip()
-        )
+        choice0 = parsed_response.get("choices", [{}])[0]
+        msg = choice0.get("message", {})
+        response_text = _extract_chat_message_text(msg)
+        if not response_text and isinstance(choice0, dict):
+            response_text = _extract_chat_message_text(
+                {"content": choice0.get("text") or choice0.get("content")}
+            )
     except Exception as exc:
         raise RuntimeError(f"OpenRouter returned malformed response: {exc}") from exc
     if not response_text:
@@ -162,18 +228,17 @@ def classify_active_lobe(prompt: str) -> Dict[str, str]:
 
     try:
         parsed = _parse_model_json(response_text)
-        return _validate_lobe_payload(parsed)
+        return validate_classification_payload(parsed)
     except Exception as exc:
         raise RuntimeError(f"OpenRouter returned invalid JSON payload: {exc}") from exc
 
 
 def run_snn(
     active_lobe: LobeName,
+    resolved: ResolvedSnnParams,
     duration_ms: int = 1000,
     neurons_per_lobe: int = 100,
-    active_rate_hz: float = 100.0,
-    background_rate_hz: float = 10.0,
-) -> Dict[LobeName, Dict[str, List[float]]]:
+) -> Dict[str, Dict[str, List[float]]]:
     if active_lobe not in LOBE_NAMES:
         raise ValueError(f"Unknown lobe: {active_lobe}")
     if duration_ms <= 0:
@@ -188,35 +253,51 @@ def run_snn(
     eqs = """
     dv/dt = (-v) / tau : 1 (unless refractory)
     tau : second
+    vt : 1
     """
 
-    monitors: Dict[LobeName, b2.SpikeMonitor] = {}
+    v_thresh = resolved.v_thresh
+    tau_val = resolved.tau_ms * b2.ms
+    ref_val = resolved.refractory_ms * b2.ms
+    epsp = resolved.epsp
+    v_init = f"{resolved.v_center} + {resolved.v_spread} * rand()"
+
+    monitors: Dict[str, b2.SpikeMonitor] = {}
     groups: List[b2.NeuronGroup] = []
     poisson_inputs: List[b2.PoissonGroup] = []
     synapses: List[b2.Synapses] = []
+
+    on_pre = f"v += {epsp}"
 
     for lobe in LOBE_NAMES:
         group = b2.NeuronGroup(
             neurons_per_lobe,
             model=eqs,
-            threshold="v > 0.8",
+            threshold="v > vt",
             reset="v = 0.0",
-            refractory=5 * b2.ms,
+            refractory=ref_val,
             method="euler",
             name=f"{lobe}_group",
         )
-        group.v = "0.45 + 0.1 * rand()"
-        group.tau = 20 * b2.ms
+        group.v = v_init
+        group.tau = tau_val
+        group.vt = v_thresh
         groups.append(group)
 
-        rate = active_rate_hz if lobe == active_lobe else background_rate_hz
+        if resolved.lobe_rates_hz is not None:
+            rate_map = dict(resolved.lobe_rates_hz)
+            rate_hz = rate_map.get(lobe, resolved.background_rate_hz)
+        else:
+            rate_hz = (
+                resolved.active_rate_hz if lobe == active_lobe else resolved.background_rate_hz
+            )
         poisson = b2.PoissonGroup(
             neurons_per_lobe,
-            rates=rate * b2.Hz,
+            rates=rate_hz * b2.Hz,
             name=f"{lobe}_poisson",
         )
         poisson_inputs.append(poisson)
-        syn = b2.Synapses(poisson, group, on_pre="v += 0.4", name=f"{lobe}_syn")
+        syn = b2.Synapses(poisson, group, on_pre=on_pre, name=f"{lobe}_syn")
         syn.connect(j="i")
         synapses.append(syn)
 
@@ -229,7 +310,7 @@ def run_snn(
     network.add(list(monitors.values()))
     network.run(duration_ms * b2.ms)
 
-    spikes: Dict[LobeName, Dict[str, List[float]]] = {}
+    spikes: Dict[str, Dict[str, List[float]]] = {}
     for lobe, monitor in monitors.items():
         indices = [int(i) for i in monitor.i[:]]
         times_ms = [float(t / b2.ms) for t in monitor.t[:]]
@@ -256,14 +337,14 @@ def simulate(request: SimulateRequest) -> SimulateResponse:
         raise HTTPException(status_code=400, detail="Prompt cannot be empty.")
 
     try:
-        llm_result = classify_active_lobe(prompt)
+        llm_result = classify_scenario(prompt)
     except RuntimeError as exc:
         message = str(exc)
         if "OPENROUTER_API_KEY is not set" in message:
             raise HTTPException(status_code=503, detail=message) from exc
         raise HTTPException(
             status_code=502,
-            detail=f"Failed to classify active lobe with OpenRouter: {message}",
+            detail=f"Failed to classify scenario with OpenRouter: {message}",
         ) from exc
     except Exception as exc:
         raise HTTPException(
@@ -273,9 +354,15 @@ def simulate(request: SimulateRequest) -> SimulateResponse:
 
     active_lobe = llm_result["active_lobe"]
     explanation = llm_result["explanation"]
+    dominant_nm = llm_result["dominant_neuromodulator"]
+    nm_intensity = llm_result["neuromodulator_intensity"]
+    nm_rationale = llm_result["neuromodulator_rationale"]
+
+    resolved = resolve_snn_modulation(dominant_nm, nm_intensity, active_lobe=active_lobe)
+    vfx_raw = build_vfx_profile(dominant_nm, nm_intensity)
 
     try:
-        spikes = run_snn(active_lobe=active_lobe)
+        spikes = run_snn(active_lobe=active_lobe, resolved=resolved)
     except Exception as exc:
         raise HTTPException(
             status_code=500,
@@ -284,16 +371,23 @@ def simulate(request: SimulateRequest) -> SimulateResponse:
 
     spike_counts = {lobe: len(spikes[lobe]["times_ms"]) for lobe in LOBE_NAMES}
     logger.info(
-        "simulation_complete active_lobe=%s spike_counts=%s",
+        "simulation_complete active_lobe=%s neuromod=%s intensity=%s spike_counts=%s",
         active_lobe,
+        dominant_nm,
+        nm_intensity,
         spike_counts,
     )
 
     return SimulateResponse(
         active_lobe=active_lobe,  # type: ignore[arg-type]
+        dominant_neuromodulator=dominant_nm,  # type: ignore[arg-type]
+        neuromodulator_intensity=nm_intensity,
+        neuromodulator_rationale=nm_rationale,
         explanation=explanation,
         duration_ms=1000,
         spikes=spikes,  # type: ignore[arg-type]
+        snn_modulation=SnnModulationEcho(**snn_params_to_dict(resolved)),
+        vfx_profile=VfxProfileEcho(**vfx_raw),
     )
 
 
@@ -301,8 +395,6 @@ if __name__ == "__main__":
     import sys
     import uvicorn
 
-    # Ensure the project root is on sys.path so uvicorn's reloader
-    # can resolve "backend.main" as a dotted module import.
     project_root = str(Path(__file__).resolve().parent.parent)
     if project_root not in sys.path:
         sys.path.insert(0, project_root)
