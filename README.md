@@ -1,8 +1,26 @@
 # CogniGraph
 
+<p align="center">
+  <img src="docs/readme/banner.png" alt="CogniGraph — neural network and brain visualization banner" width="100%" />
+</p>
+
 **CogniGraph** (repository folder: `Cognigraph`) is a small educational demo: you describe a real-world scenario, an LLM classifies brain lobe and neuromodulator tone, a [Brian2](https://brian2.readthedocs.io/) spiking neural network (SNN) is simulated, and a web UI visualizes activity on a 3D brain model.
 
 **This is not medical software.** Outputs are for visualization and learning only, not diagnosis or treatment. The UI includes context for modeled stress-hormone axes (for example HPA / cortisol) as simulation metaphors, not clinical measurements.
+
+## Screenshots
+
+**Neural Activation Viewer** — scenario input, playback controls, and cognitive analysis (example: *Doing a heavy deadlift*).
+
+<p align="center">
+  <img src="docs/readme/screenshot-ui.png" alt="CogniGraph UI: scenario field, Simulate Activation, active lobe and neuromodulator readout" width="92%" />
+</p>
+
+**Simulation view** — colored lobe mesh, spike counters, HPA context, and event log after playback completes.
+
+<p align="center">
+  <img src="docs/readme/screenshot-simulation.png" alt="CogniGraph full window: 3D brain with lobe colors, sidebar with spike counts and log" width="92%" />
+</p>
 
 ## Requirements
 
