@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import os
@@ -7,6 +8,7 @@ from urllib import error as urlerror
 from urllib import request as urlrequest
 
 import brian2 as b2
+import httpx
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -147,7 +149,7 @@ def _extract_chat_message_text(message: Any) -> str:
     return str(content).strip()
 
 
-def classify_scenario(prompt: str) -> Dict[str, Any]:
+async def classify_scenario(prompt: str) -> Dict[str, Any]:
     api_key = (
         os.getenv("OPENROUTER_API_KEY")
         or os.getenv("openrouter_api_key")
@@ -192,22 +194,22 @@ def classify_scenario(prompt: str) -> Dict[str, Any]:
         ],
         "temperature": 0.2,
     }
-    data = json.dumps(payload).encode("utf-8")
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
         "HTTP-Referer": "http://localhost:8000",
         "X-Title": "CogniGraph",
     }
-    req = urlrequest.Request(OPENROUTER_URL, data=data, headers=headers, method="POST")
 
     try:
-        with urlrequest.urlopen(req, timeout=45) as response:
-            raw = response.read().decode("utf-8")
-    except urlerror.HTTPError as exc:
-        error_body = exc.read().decode("utf-8", errors="replace")
+        async with httpx.AsyncClient(timeout=45.0) as client:
+            response = await client.post(OPENROUTER_URL, json=payload, headers=headers)
+            response.raise_for_status()
+            raw = response.text
+    except httpx.HTTPStatusError as exc:
+        error_body = exc.response.text
         raise RuntimeError(
-            f"OpenRouter request failed with status {exc.code}: {error_body}"
+            f"OpenRouter request failed with status {exc.response.status_code}: {error_body}"
         ) from exc
     except Exception as exc:  # pragma: no cover - network/service dependency
         raise RuntimeError(f"OpenRouter request failed: {exc}") from exc
@@ -331,13 +333,13 @@ def serve_index() -> FileResponse:
 
 
 @app.post("/simulate", response_model=SimulateResponse)
-def simulate(request: SimulateRequest) -> SimulateResponse:
+async def simulate(request: SimulateRequest) -> SimulateResponse:
     prompt = request.prompt.strip()
     if not prompt:
         raise HTTPException(status_code=400, detail="Prompt cannot be empty.")
 
     try:
-        llm_result = classify_scenario(prompt)
+        llm_result = await classify_scenario(prompt)
     except RuntimeError as exc:
         message = str(exc)
         if "OPENROUTER_API_KEY is not set" in message:
@@ -362,7 +364,7 @@ def simulate(request: SimulateRequest) -> SimulateResponse:
     vfx_raw = build_vfx_profile(dominant_nm, nm_intensity)
 
     try:
-        spikes = run_snn(active_lobe=active_lobe, resolved=resolved)
+        spikes = await asyncio.to_thread(run_snn, active_lobe=active_lobe, resolved=resolved)
     except Exception as exc:
         raise HTTPException(
             status_code=500,
