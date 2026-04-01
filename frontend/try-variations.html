@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CogniGraph — UI varyasyonları</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0a0a0c;
+        --fg: #e4e4e7;
+        --muted: #71717a;
+        --line: #27272a;
+        --accent: #a78bfa;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--fg);
+        padding: 2rem;
+        line-height: 1.5;
+      }
+      h1 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin: 0 0 0.5rem;
+      }
+      p.lead {
+        margin: 0 0 2rem;
+        color: var(--muted);
+        font-size: 0.9rem;
+        max-width: 42rem;
+      }
+      ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        max-width: 36rem;
+      }
+      a {
+        display: block;
+        padding: 1rem 1.25rem;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        color: var(--fg);
+        text-decoration: none;
+        transition: border-color 0.15s, background 0.15s;
+      }
+      a:hover {
+        border-color: var(--accent);
+        background: rgba(167, 139, 250, 0.06);
+      }
+      a strong {
+        display: block;
+        margin-bottom: 0.25rem;
+      }
+      a span {
+        font-size: 0.85rem;
+        color: var(--muted);
+        font-weight: normal;
+      }
+      footer {
+        margin-top: 2.5rem;
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>UI varyasyonlarını dene</h1>
+    <p class="lead">
+      Sunucuyu çalıştırdıktan sonra aşağıdaki bağlantılarla üç arayüzü karşılaştır. Karar verince birini
+      <code>index.html</code> yapıp diğer dosyaları silebilirsin.
+    </p>
+    <ul>
+      <li>
+        <a href="./index_variation1.html">
+          <strong>Varyasyon 1 — Lüks minimal</strong>
+          <span>Sağda katlanır sidebar, altın vurgu, Playfair + Inter.</span>
+        </a>
+      </li>
+      <li>
+        <a href="./index_variation2.html">
+          <strong>Varyasyon 2 — Alt dashboard</strong>
+          <span>Üst bilgi çubuğu, altta geniş kontrol paneli, cyan HUD.</span>
+        </a>
+      </li>
+      <li>
+        <a href="./index_variation3.html">
+          <strong>Varyasyon 3 — Yüzen cam paneller</strong>
+          <span>Ada düzeni, ortada beyin alanı, Space Grotesk.</span>
+        </a>
+      </li>
+    </ul>
+    <footer>
+      Doğrudan adresler:
+      <code>/static/try-variations.html</code> ·
+      <code>/static/index_variation1.html</code> vb.
+    </footer>
+  </body>
+</html>
