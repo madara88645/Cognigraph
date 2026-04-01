@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CogniGraph v2.0</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tweenjs/tween.js@23.1.3/dist/tween.umd.js"></script>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@300;400;500&family=Jura:wght@400;600&display=swap');
+      body {
+        margin: 0;
+        background: #020813;
+        font-family: 'Jura', sans-serif;
+      }
+      #brain-canvas {
+        height: 65vh;
+        width: 100%;
+        position: absolute;
+        top: 0;
+      }
+      #brain-canvas canvas {
+        display: block;
+      }
+      .dashboard-panel {
+        background: rgba(4, 12, 25, 0.95);
+        border-top: 2px solid #00f0ff;
+        border-bottom: 2px solid #005f73;
+        box-shadow: 0 -10px 30px rgba(0, 240, 255, 0.05);
+        backdrop-filter: blur(15px);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      .panel-border {
+        border: 1px solid rgba(0, 240, 255, 0.15);
+      }
+      .data-value {
+        font-family: 'Roboto Mono', monospace;
+        color: #00f0ff;
+        text-shadow: 0 0 5px rgba(0, 240, 255, 0.5);
+      }
+      .thin-scroll::-webkit-scrollbar {
+        width: 4px;
+        height: 4px;
+      }
+      .thin-scroll::-webkit-scrollbar-thumb {
+        border-radius: 999px;
+        background: rgba(0, 240, 255, 0.3);
+      }
+      input[type="range"] {
+        accent-color: #00f0ff;
+      }
+    </style>
+  </head>
+  <body class="h-screen w-screen overflow-hidden text-blue-100">
+    <main class="relative h-full w-full flex flex-col">
+      <div id="brain-canvas"></div>
+
+      <!-- Top info bar -->
+      <header class="pointer-events-auto absolute top-0 left-0 w-full p-4 flex justify-between items-start z-10 bg-gradient-to-b from-[#020813] to-transparent">
+        <div class="flex items-center gap-4">
+          <div class="border-l-4 border-[#00f0ff] pl-3">
+            <h1 class="text-xl font-bold tracking-widest uppercase text-white shadow-[#00f0ff]">CogniGraph</h1>
+            <p class="text-[10px] tracking-widest text-[#00f0ff] opacity-80 uppercase">System Active v2.0</p>
+          </div>
+          <p id="status-chip" class="text-xs font-mono text-blue-300 ml-4 border border-blue-900/50 bg-blue-950/30 px-2 py-1 rounded">Initialize...</p>
+        </div>
+        <button
+          id="rotate-btn"
+          class="panel-border px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-blue-300 hover:text-[#00f0ff] hover:bg-[#00f0ff]/10 transition-all rounded"
+        >
+          Auto-Rotate: ON
+        </button>
+      </header>
+
+      <!-- Bottom Dashboard -->
+      <section class="dashboard-panel pointer-events-auto absolute bottom-0 left-0 w-full h-[35vh] flex flex-col z-20">
+        <div class="flex-1 flex w-full p-4 gap-4 h-full">
+
+          <!-- Left: Input -->
+          <div class="flex-1 flex flex-col h-full panel-border p-3 bg-black/20 rounded-md">
+            <h2 class="text-xs uppercase tracking-widest text-blue-400 mb-2 font-bold">Input Sequence</h2>
+            <textarea
+              id="prompt"
+              class="flex-1 w-full bg-[#020610] border border-blue-900/50 p-2 text-sm text-blue-100 placeholder:text-blue-800 outline-none focus:border-[#00f0ff] font-mono resize-none rounded thin-scroll"
+              placeholder="System prompt..."
+            ></textarea>
+            <button
+              id="simulate-btn"
+              class="mt-2 w-full bg-[#00f0ff]/10 border border-[#00f0ff]/30 hover:bg-[#00f0ff]/20 hover:border-[#00f0ff] py-2 text-xs font-bold uppercase tracking-widest text-[#00f0ff] transition-all rounded disabled:opacity-50"
+            >
+              Simulate
+            </button>
+          </div>
+
+          <!-- Middle: Playback & Controls -->
+          <div class="flex-[1.5] flex flex-col h-full panel-border p-3 bg-black/20 rounded-md">
+            <h2 class="text-xs uppercase tracking-widest text-blue-400 mb-2 font-bold">Temporal Control</h2>
+
+            <div class="flex-1 flex flex-col justify-center gap-4">
+              <div class="flex items-center gap-4">
+                <span class="text-[10px] uppercase text-blue-500 w-8">Time</span>
+                <input id="timeline-slider" type="range" min="0" max="1000" step="1" value="0" class="flex-1 h-1 bg-blue-900 rounded-full appearance-none outline-none" />
+                <span id="timeline-label" class="data-value text-xs w-20 text-right">0ms</span>
+              </div>
+
+              <div class="flex items-center gap-4">
+                <span class="text-[10px] uppercase text-blue-500 w-8">Pace</span>
+                <input id="speed-slider" type="range" min="0.1" max="2" step="0.05" value="0.30" class="flex-1 h-1 bg-blue-900 rounded-full appearance-none outline-none" />
+                <span id="speed-label" class="data-value text-xs w-20 text-right">0.30x</span>
+              </div>
+
+              <div class="flex justify-center gap-2 mt-2">
+                <button id="step-back-btn" class="bg-blue-950/50 hover:bg-[#00f0ff]/20 border border-blue-900 px-3 py-1 rounded text-xs transition-colors">◁ 25ms</button>
+                <button id="play-pause-btn" class="bg-[#00f0ff]/10 hover:bg-[#00f0ff]/30 border border-[#00f0ff]/50 px-6 py-1 rounded text-xs font-bold uppercase text-[#00f0ff] transition-colors">Pause</button>
+                <button id="step-forward-btn" class="bg-blue-950/50 hover:bg-[#00f0ff]/20 border border-blue-900 px-3 py-1 rounded text-xs transition-colors">25ms ▷</button>
+                <button id="replay-btn" class="bg-blue-950/50 hover:bg-[#00f0ff]/20 border border-blue-900 px-3 py-1 rounded text-xs transition-colors ml-4">↻</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Analysis (Split top/bottom) -->
+          <div class="flex-[1.5] flex flex-col h-full gap-2">
+
+            <div class="flex-1 panel-border p-2 bg-black/20 rounded-md flex flex-col thin-scroll overflow-y-auto">
+               <h2 class="text-[10px] uppercase tracking-widest text-blue-400 mb-1 font-bold">Neurometrics</h2>
+               <div class="flex justify-between items-center border-b border-blue-900/30 pb-1 mb-1">
+                 <span class="text-xs text-blue-300">Active Lobe</span>
+                 <span id="active-lobe-pill" class="text-xs font-bold uppercase text-white bg-blue-900/50 px-2 py-0.5 rounded">N/A</span>
+               </div>
+               <div class="flex justify-between items-center border-b border-blue-900/30 pb-1 mb-1">
+                 <span class="text-xs text-blue-300">Neuromodulator <button id="hpa-help-btn" class="text-blue-500">?</button></span>
+                 <span id="neuromod-pill" class="text-xs font-bold uppercase px-2 py-0.5 rounded">—</span>
+               </div>
+               <div class="flex justify-between items-center">
+                 <span class="text-xs text-blue-300">Intensity</span>
+                 <span id="neuromod-intensity-label" class="data-value text-xs">—</span>
+               </div>
+               <p id="explanation-text" class="text-[10px] mt-2 text-blue-400 leading-tight italic line-clamp-2 overflow-hidden"></p>
+               <p id="neuromod-rationale" class="hidden text-[10px]"></p>
+               <p id="hpa-context-hint" class="hidden text-[10px]"></p>
+            </div>
+
+            <div class="flex-1 flex gap-2 h-1/2">
+              <div class="flex-1 panel-border p-2 bg-black/20 rounded-md thin-scroll overflow-y-auto">
+                <h2 class="text-[10px] uppercase tracking-widest text-blue-400 mb-1 font-bold">Activity Log</h2>
+                <div id="log-panel" class="text-[8px] font-mono text-blue-500 leading-relaxed whitespace-pre-wrap"></div>
+              </div>
+              <div class="w-1/3 panel-border p-2 bg-black/20 rounded-md thin-scroll overflow-y-auto hidden md:block">
+                 <h2 class="text-[10px] uppercase tracking-widest text-blue-400 mb-1 font-bold">Signatures</h2>
+                 <div id="legend-panel" class="space-y-1 text-[9px]"></div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+    </main>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.161.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.161.0/examples/jsm/"
+        }
+      }
+    </script>
+
+    <script type="module">
+      import * as THREE from "three";
+      import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+      import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+      import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+      import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+      import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+
+      const TWEEN = window.TWEEN;
+
+      /* ═══════════════════════════════════════════════
+         CONSTANTS
+         ═══════════════════════════════════════════════ */
+      const LOBES = ["frontal", "parietal", "occipital", "temporal", "cerebellum"];
+      const NEUROMODS = [
+        "adrenaline",
+        "noradrenaline",
+        "dopamine",
+        "serotonin",
+        "gaba",
+        "acetylcholine",
+        "cortisol",
+        "baseline",
+      ];
+      const NEUROMOD_LABELS = {
+        adrenaline: "Adrenaline",
+        noradrenaline: "Noradrenaline",
+        dopamine: "Dopamine",
+        serotonin: "Serotonin",
+        gaba: "GABA",
+        acetylcholine: "Acetylcholine",
+        cortisol: "Cortisol",
+        baseline: "Baseline",
+      };
+      const DEFAULT_VFX = {
+        glow_hex: "#E0FFFF",
+        bloom_mult: 1.0,
+        bloom_activity_boost_mult: 1.0,
+        tween_in_ms: 600,
+        tween_out_ms: 800,
+        idle_breath_speed_mult: 1.0,
+        idle_breath_amp_mult: 1.0,
+        vertex_wave_mult: 1.0,
+        burst_threshold: 0.6,
+        active_lobe_bloom_scale: 1.0,
+        global_chaos_mult: 1.0,
+        desaturate: 0.0,
+        scatter_flash_prob: 0.0,
+      };
+      const REQUEST_TIMEOUT_MS = 45000;
+      const BACKEND_NEURONS_PER_LOBE = 100;
+
+      // Neon lobe colors — vibrant for wireframe glow
+      const LOBE_COLORS = {
+        frontal:    new THREE.Color(1.0, 0.15, 0.45),   // hot pink
+        parietal:   new THREE.Color(0.15, 1.0, 0.45),    // neon green
+        occipital:  new THREE.Color(0.25, 0.45, 1.0),    // electric blue
+        temporal:   new THREE.Color(1.0, 0.65, 0.05),    // amber orange
+        cerebellum: new THREE.Color(0.30, 0.90, 0.95),   // cyan / teal
+      };
+      // Base brightness — dim enough that glow contrast is obvious
+      const BASE_BRIGHTNESS = 0.35;
+      // How much brighter the active lobe glows during simulation
+      const GLOW_BOOST = 4.0;
+
+      /* ── Dynamic glow constants ─────────────────── */
+      const SPIKE_WINDOW_MS    = 50;   // sliding window to compute spike rate
+      const GLOW_SMOOTHING     = 0.08; // exponential smoothing factor (0-1, lower = smoother)
+      const GLOW_NOISE_AMP     = 0.06; // random micro-variation amplitude
+      const GLOW_PULSE_SPEED   = 0.003; // base organic pulse speed
+      const BG_LOBE_GLOW_SCALE = 0.5;  // background lobes glow at 50% of their spike-driven intensity
+      const MAX_SPIKES_PER_WINDOW = 100; // normalization ceiling for spike rate → intensity
+
+      /* ── Per-vertex spatial glow ───────────────────── */
+      const VERTEX_PHASE_SPREAD  = 1.2;  // how much vertex positions offset their glow phase
+      const VERTEX_WAVE_SPEED    = 0.002; // propagation speed of the glow wave across vertices
+      const VERTEX_VARIATION_AMP = 0.25;  // amplitude of per-vertex brightness variation (0-1)
+
+      /* ── Spike burst flash ─────────────────────────── */
+      const BURST_THRESHOLD      = 0.6;  // spike rate jump threshold to trigger flash (0-1 normalized)
+      const BURST_FLASH_INTENSITY = 0.8; // max flash brightness boost
+      const BURST_FLASH_DECAY     = 0.92; // per-frame decay of flash effect (lower = faster fade)
+
+      /* ── Dynamic bloom ─────────────────────────────── */
+      const BLOOM_BASE_STRENGTH   = 1.8;
+      const BLOOM_ACTIVITY_BOOST  = 1.2;  // max additional bloom from spike activity
+      const BLOOM_SMOOTHING       = 0.03; // smooth bloom transitions
+
+      /* ── Idle breathing ─────────────────────────────── */
+      const IDLE_BREATH_SPEED    = 0.0008; // slow ambient pulse
+      const IDLE_BREATH_AMP      = 0.12;   // subtle brightness variation
+      const IDLE_BREATH_MIN      = 0.02;   // minimum idle glow above base
+
+      /* ═══════════════════════════════════════════════
+         DOM REFS
+         ═══════════════════════════════════════════════ */
+      const promptInput       = document.getElementById("prompt");
+      const simulateButton    = document.getElementById("simulate-btn");
+      const rotateButton      = document.getElementById("rotate-btn");
+      const playPauseButton   = document.getElementById("play-pause-btn");
+      const replayButton      = document.getElementById("replay-btn");
+      const stepBackButton    = document.getElementById("step-back-btn");
+      const stepForwardButton = document.getElementById("step-forward-btn");
+      const speedSlider       = document.getElementById("speed-slider");
+      const speedLabel        = document.getElementById("speed-label");
+      const timelineSlider    = document.getElementById("timeline-slider");
+      const timelineLabel     = document.getElementById("timeline-label");
+      const statusChip        = document.getElementById("status-chip");
+      const explanationText   = document.getElementById("explanation-text");
+      const activeLobePill    = document.getElementById("active-lobe-pill");
+      const neuromodPill      = document.getElementById("neuromod-pill");
+      const neuromodIntensityLabel = document.getElementById("neuromod-intensity-label");
+      const neuromodRationaleEl = document.getElementById("neuromod-rationale");
+      const hpaContextHint    = document.getElementById("hpa-context-hint");
+      const legendPanel       = document.getElementById("legend-panel");
+      const logPanel          = document.getElementById("log-panel");
+      const canvasHost        = document.getElementById("brain-canvas");
+
+      /* ═══════════════════════════════════════════════
+         THREE.JS SCENE
+         ═══════════════════════════════════════════════ */
+      const scene = new THREE.Scene();
+      // No fog — clean dark void like the reference
+
+      const camera = new THREE.PerspectiveCamera(58, 1, 0.1, 200);
+      camera.position.set(0, 0.5, 5.0);
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setSize(canvasHost.clientWidth, canvasHost.clientHeight);
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.2;
+      canvasHost.appendChild(renderer.domElement);
+
+      const composer = new EffectComposer(renderer);
+      composer.addPass(new RenderPass(scene, camera));
+      const _dpr = renderer.getPixelRatio();
+      const bloomPass = new UnrealBloomPass(
+        new THREE.Vector2(canvasHost.clientWidth * _dpr, canvasHost.clientHeight * _dpr),
+        1.8,    // strength — strong neon glow
+        0.6,    // radius — soft halo spread
+        0.30    // threshold — wireframe lines bloom
+      );
+      composer.addPass(bloomPass);
+
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.06;
+      controls.maxDistance = 12;
+      controls.minDistance = 2.0;
+
+      // No directional lights — MeshBasicMaterial is unlit (self-illuminating wireframe)
+
+      /* ═══════════════════════════════════════════════
+         STATE
+         ═══════════════════════════════════════════════ */
+      let autoRotate = true;
+      let brainGroup = null;
+      let lastPayload = null;
+      let currentBloomStrength = BLOOM_BASE_STRENGTH;
+      let idlePhase = 0;
+
+      function hexToThreeColor(hex) {
+        const h = String(hex || "").replace("#", "").trim();
+        if (!/^[0-9A-Fa-f]{6}$/.test(h)) return new THREE.Color(0xe0ffff);
+        return new THREE.Color(parseInt(h, 16));
+      }
+
+      function mergeVfxProfile(raw) {
+        const v = { ...DEFAULT_VFX };
+        if (!raw || typeof raw !== "object") return v;
+        for (const key of Object.keys(DEFAULT_VFX)) {
+          if (key === "glow_hex" && typeof raw[key] === "string" && /^#[0-9A-Fa-f]{6}$/.test(raw[key])) {
+            v[key] = raw[key];
+          } else if (typeof raw[key] === "number" && Number.isFinite(raw[key])) {
+            v[key] = raw[key];
+          }
+        }
+        return v;
+      }
+
+      function neuromodPillTextClass(hex) {
+        const h = (hex || "").toUpperCase();
+        if (h === "#E0FFFF" || h === "#FFD700" || h === "#FFBF00" || h === "#FFF8F0") return "text-slate-900";
+        return "text-white";
+      }
+
+      function isCortisolOptimalVfx() {
+        return brain.dominantNeuromod === "cortisol" && brain.neuromodulatorIntensity <= 0.5;
+      }
+
+      function isCortisolToxicVfx() {
+        return brain.dominantNeuromod === "cortisol" && brain.neuromodulatorIntensity > 0.5;
+      }
+
+      const brain = {
+        meshEntries: [],      // [{ mesh, baseColors, colorAttr, vertexCount }]
+        lobeVertices: {},     // lobe -> [{ meshIdx, vertexIdx, phaseOffset }]
+        totalVertices: 0,
+        ready: false,
+        activeLobe: null,     // lobe name during playback
+        glowAmount: 0,        // 0-1 master envelope (tween-driven fade in/out)
+        dominantNeuromod: "baseline",
+        neuromodulatorIntensity: 0.5,
+        neuromodGlowColor: hexToThreeColor(DEFAULT_VFX.glow_hex),
+        vfxProfile: { ...DEFAULT_VFX },
+        // Per-lobe dynamic glow state
+        lobeGlow: Object.fromEntries(LOBES.map(l => [l, {
+          current: 0,          // smoothed glow intensity (0-1)
+          target: 0,           // raw spike-rate-driven target
+          noisePhase: Math.random() * Math.PI * 2,  // unique random phase per lobe
+          prevSpikeRate: 0,    // previous frame spike rate for burst detection
+          burstFlash: 0,       // current burst flash intensity (decays per frame)
+        }])),
+      };
+
+      const playback = {
+        active: false,
+        paused: false,
+        simMs: 0,
+        durationMs: 1000,
+        speed: Number(speedSlider.value),
+        lastWallNow: performance.now(),
+        lastProcessedMs: -1,
+        buckets: null,
+        playedCounts: null,
+        totalCounts: null,
+      };
+
+      /* ═══════════════════════════════════════════════
+         INIT
+         ═══════════════════════════════════════════════ */
+      initLegendPanel();
+      updateSpeedLabel();
+      updateTimelineUi();
+      hookUiEvents();
+      onResize();
+      render();
+      initSceneAsync();
+
+      /* ═══════════════════════════════════════════════
+         HELPERS
+         ═══════════════════════════════════════════════ */
+      function setStatus(text) { statusChip.textContent = text; }
+
+      function log(message, level = "info") {
+        const ts = new Date().toLocaleTimeString();
+        const prefix = level === "error" ? "[ERROR]" : level === "warn" ? "[WARN]" : "[INFO]";
+        logPanel.textContent += `${ts} ${prefix} ${message}\n`;
+        logPanel.scrollTop = logPanel.scrollHeight;
+      }
+
+      function initLegendPanel() {
+        legendPanel.innerHTML = "";
+        for (const lobe of LOBES) {
+          const row = document.createElement("div");
+          row.className = "flex items-center justify-between pb-0.5 border-b border-blue-900/30";
+          row.innerHTML = `
+            <div class="flex items-center gap-1.5">
+              <span class="h-1.5 w-1.5 inline-block rounded-sm" style="background:#${LOBE_COLORS[lobe].getHexString()}"></span>
+              <span class="capitalize text-blue-300 opacity-80">${lobe}</span>
+            </div>
+            <div id="legend-${lobe}" class="data-value">0</div>
+          `;
+          legendPanel.appendChild(row);
+        }
+      }
+
+      function refreshLegendCounts() {
+        for (const lobe of LOBES) {
+          const el = document.getElementById(`legend-${lobe}`);
+          if (!el) continue;
+          el.textContent = `${playback.playedCounts?.[lobe] ?? 0} / ${playback.totalCounts?.[lobe] ?? 0}`;
+        }
+      }
+
+      function updateTimelineUi() {
+        timelineSlider.max = String(playback.durationMs);
+        timelineSlider.value = String(Math.floor(playback.simMs));
+        timelineLabel.textContent = `${Math.floor(playback.simMs)} / ${playback.durationMs} ms`;
+      }
+
+      function updateSpeedLabel() {
+        speedLabel.textContent = `${playback.speed.toFixed(2)}x`;
+      }
+
+      /* ═══════════════════════════════════════════════
+         BRAIN MODEL LOADING (brain.glb)
+         ═══════════════════════════════════════════════ */
+
+      function loadBrainGLB() {
+        return new Promise((resolve, reject) => {
+          new GLTFLoader().load(
+            "/static/assets/brain.glb",
+            (gltf) => {
+              try {
+                const brainScene = gltf.scene;
+
+                const meshes = [];
+                brainScene.traverse((child) => {
+                  if (child.isMesh) meshes.push(child);
+                });
+
+                if (meshes.length === 0) {
+                  reject(new Error("No mesh found in brain.glb"));
+                  return;
+                }
+
+                // Center and scale to fit ~3.0 unit radius
+                const bbox = new THREE.Box3().setFromObject(brainScene);
+                const center = new THREE.Vector3();
+                const size = new THREE.Vector3();
+                bbox.getCenter(center);
+                bbox.getSize(size);
+
+                const maxDim = Math.max(size.x, size.y, size.z);
+                const scaleFactor = 3.0 / maxDim;
+                brainScene.position.sub(center).multiplyScalar(scaleFactor);
+                brainScene.scale.multiplyScalar(scaleFactor);
+                brainScene.updateMatrixWorld(true);
+
+                // Recompute bounds after normalization
+                const normBbox = new THREE.Box3().setFromObject(brainScene);
+                const normCenter = new THREE.Vector3();
+                const normSize = new THREE.Vector3();
+                normBbox.getCenter(normCenter);
+                normBbox.getSize(normSize);
+
+                resolve({
+                  brainScene,
+                  meshes,
+                  bbox: normBbox,
+                  center: normCenter,
+                  size: normSize,
+                  scaleFactor,
+                  meshCount: meshes.length,
+                });
+              } catch (e) {
+                reject(e);
+              }
+            },
+            undefined,
+            (err) => reject(new Error("GLB load failed: " + (err?.message || err)))
+          );
+        });
+      }
+
+      /* ═══════════════════════════════════════════════
+         LOBE CLASSIFICATION (position-based)
+         ═══════════════════════════════════════════════ */
+
+      function classifyLobeByPosition(x, y, z, center, size) {
+        const nx = (x - center.x) / size.x;
+        const ny = (y - center.y) / size.y;
+        const nz = (z - center.z) / size.z;
+
+        if (ny < -0.30 && nz < -0.05) return "cerebellum";
+        if (nz > 0.15) return "frontal";
+        if (nz < -0.20 && ny > -0.30) return "occipital";
+        if (Math.abs(nx) > 0.25 && ny < 0.10) return "temporal";
+        return "parietal";
+      }
+
+      /* ═══════════════════════════════════════════════
+         WIREFRAME BRAIN WITH LOBE VERTEX COLORS
+         ═══════════════════════════════════════════════ */
+
+      function colorBrainByLobe(meshes, center, size) {
+        brain.lobeVertices = {};
+        for (const lobe of LOBES) brain.lobeVertices[lobe] = [];
+
+        brain.meshEntries = [];
+        const worldPos = new THREE.Vector3();
+
+        for (let mi = 0; mi < meshes.length; mi++) {
+          const mesh = meshes[mi];
+          const geo = mesh.geometry;
+          mesh.updateMatrixWorld(true);
+
+          const posAttr = geo.getAttribute("position");
+          const vertexCount = posAttr.count;
+
+          const baseColors = new Float32Array(vertexCount * 3);
+
+          for (let i = 0; i < vertexCount; i++) {
+            worldPos.set(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i));
+            mesh.localToWorld(worldPos);
+
+            const lobe = classifyLobeByPosition(worldPos.x, worldPos.y, worldPos.z, center, size);
+            const color = LOBE_COLORS[lobe];
+
+            baseColors[i * 3]     = color.r * BASE_BRIGHTNESS;
+            baseColors[i * 3 + 1] = color.g * BASE_BRIGHTNESS;
+            baseColors[i * 3 + 2] = color.b * BASE_BRIGHTNESS;
+
+            // Compute spatial phase offset from vertex position for wave-like glow propagation
+            const phaseOffset = (worldPos.x * 0.7 + worldPos.y * 1.1 + worldPos.z * 0.9) * VERTEX_PHASE_SPREAD;
+            brain.lobeVertices[lobe].push({ meshIdx: mi, vertexIdx: i, phaseOffset });
+          }
+
+          // Set vertex colors
+          const colorAttr = new THREE.Float32BufferAttribute(baseColors.slice(), 3);
+          geo.setAttribute("color", colorAttr);
+
+          // Wireframe MeshBasicMaterial — self-illuminating, no lighting needed
+          mesh.material = new THREE.MeshBasicMaterial({
+            wireframe: true,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.85,
+            side: THREE.DoubleSide,
+          });
+          mesh.renderOrder = 0;
+
+          brain.meshEntries.push({
+            mesh, baseColors, colorAttr, vertexCount,
+          });
+        }
+
+        brain.totalVertices = brain.meshEntries.reduce((sum, e) => sum + e.vertexCount, 0);
+
+        for (const lobe of LOBES) {
+          log(`${lobe}: ${brain.lobeVertices[lobe].length} vertices`);
+        }
+      }
+
+      /* ═══════════════════════════════════════════════
+         ASYNC SCENE INITIALIZATION
+         ═══════════════════════════════════════════════ */
+
+      async function initSceneAsync() {
+        setStatus("Loading brain model...");
+        log("Loading brain.glb...");
+
+        try {
+          const result = await loadBrainGLB();
+          const { brainScene, meshes, bbox, center, size, scaleFactor, meshCount } = result;
+          log(`Brain loaded. ${meshCount} mesh(es). Scale: ${scaleFactor.toFixed(3)}. Size: ${size.x.toFixed(2)} x ${size.y.toFixed(2)} x ${size.z.toFixed(2)}`);
+          log(`Bounds center: (${center.x.toFixed(2)}, ${center.y.toFixed(2)}, ${center.z.toFixed(2)})`);
+
+          setStatus("Coloring lobe regions...");
+          colorBrainByLobe(meshes, center, size);
+
+          brainGroup = new THREE.Group();
+          brainGroup.add(brainScene);
+          scene.add(brainGroup);
+
+          brain.ready = true;
+          setStatus("Ready for simulation.");
+          log(`Ready. ${brain.totalVertices} vertices across ${LOBES.length} lobes.`);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          log(`Failed to load brain model: ${msg}`, "error");
+          setStatus("Failed to load brain model");
+          console.error("Brain load error:", err);
+        }
+      }
+
+      /* ═══════════════════════════════════════════════
+         LOBE GLOW — brighten active lobe vertex colors
+         ═══════════════════════════════════════════════ */
+
+      /**
+       * Apply glow to lobe vertices with per-vertex spatial variation.
+       * waveTime drives the propagation wave across vertices.
+       * burstExtra adds a brief bright flash on spike bursts.
+       */
+      function setLobeGlow(lobe, intensity, waveTime, burstExtra) {
+        const vertices = brain.lobeVertices[lobe];
+        if (!vertices) return;
+        const neu = brain.neuromodGlowColor;
+        const nmInt = brain.neuromodulatorIntensity;
+        const idlePhase =
+          !playback.active && brain.glowAmount <= 0;
+        const affectedMeshes = new Set();
+        for (const { meshIdx, vertexIdx, phaseOffset } of vertices) {
+          const md = brain.meshEntries[meshIdx];
+          const i = vertexIdx;
+          const br = md.baseColors[i * 3];
+          const bg = md.baseColors[i * 3 + 1];
+          const bb = md.baseColors[i * 3 + 2];
+
+          const wave = Math.sin(waveTime + phaseOffset) * 0.5 + 0.5;
+          const vertexIntensity = intensity * (1.0 - VERTEX_VARIATION_AMP + VERTEX_VARIATION_AMP * wave);
+          const totalIntensity = vertexIntensity + burstExtra;
+
+          const lc = LOBE_COLORS[lobe];
+          const lr = lc.r * BASE_BRIGHTNESS;
+          const lg = lc.g * BASE_BRIGHTNESS;
+          const lb = lc.b * BASE_BRIGHTNESS;
+
+          let k = Math.min(0.88, (0.34 + totalIntensity * 0.52) * (0.38 + 0.62 * nmInt));
+          if (idlePhase) k *= 0.38;
+
+          let ar = lr + (neu.r - lr) * k;
+          let ag = lg + (neu.g - lg) * k;
+          let ab = lb + (neu.b - lb) * k;
+          const ds = brain.vfxProfile.desaturate ?? 0;
+          if (ds > 0.001) {
+            const murkR = 0.52, murkG = 0.48, murkB = 0.44;
+            ar = ar * (1 - ds) + murkR * ds;
+            ag = ag * (1 - ds) + murkG * ds;
+            ab = ab * (1 - ds) + murkB * ds;
+          }
+
+          const boost = 1.0 + totalIntensity * GLOW_BOOST;
+          md.colorAttr.setXYZ(i,
+            Math.min(1.0, ar * boost),
+            Math.min(1.0, ag * boost),
+            Math.min(1.0, ab * boost)
+          );
+          affectedMeshes.add(meshIdx);
+        }
+        for (const mi of affectedMeshes) {
+          brain.meshEntries[mi].colorAttr.needsUpdate = true;
+        }
+      }
+
+      function resetAllLobeColors() {
+        for (const md of brain.meshEntries) {
+          for (let i = 0; i < md.vertexCount; i++) {
+            md.colorAttr.setXYZ(i, md.baseColors[i * 3], md.baseColors[i * 3 + 1], md.baseColors[i * 3 + 2]);
+          }
+          md.colorAttr.needsUpdate = true;
+        }
+        brain.activeLobe = null;
+        brain.glowAmount = 0;
+        // Reset per-lobe glow state
+        for (const lobe of LOBES) {
+          brain.lobeGlow[lobe].current = 0;
+          brain.lobeGlow[lobe].target = 0;
+          brain.lobeGlow[lobe].prevSpikeRate = 0;
+          brain.lobeGlow[lobe].burstFlash = 0;
+        }
+      }
+
+      /* ═══════════════════════════════════════════════
+         SPIKE-SYNCED DYNAMIC GLOW
+         ═══════════════════════════════════════════════ */
+
+      /** Count spikes in [fromMs, toMs] for a given lobe */
+      function countSpikesInWindow(lobe, fromMs, toMs) {
+        if (!playback.buckets || !playback.buckets[lobe]) return 0;
+        const map = playback.buckets[lobe];
+        let count = 0;
+        const lo = Math.max(0, Math.floor(fromMs));
+        const hi = Math.min(playback.durationMs, Math.floor(toMs));
+        for (let ms = lo; ms <= hi; ms++) {
+          const events = map.get(ms);
+          if (events) count += events.length;
+        }
+        return count;
+      }
+
+      /** Multi-octave noise for organic, non-repetitive variations */
+      function organicNoise(phase, lobeIdx) {
+        return Math.sin(phase) * GLOW_NOISE_AMP
+             + Math.sin(phase * 2.3 + lobeIdx * 1.7) * GLOW_NOISE_AMP * 0.5
+             + Math.sin(phase * 0.7 + lobeIdx * 3.1) * GLOW_NOISE_AMP * 0.3
+             + Math.sin(phase * 4.1 + lobeIdx * 0.9) * GLOW_NOISE_AMP * 0.15;
+      }
+
+      /** Idle breathing animation — subtle ambient pulse when no playback */
+      function updateIdleBreathing(now) {
+        if (!brain.ready) return;
+        const vp = brain.vfxProfile;
+        idlePhase += IDLE_BREATH_SPEED * vp.idle_breath_speed_mult;
+        const waveTime = now * VERTEX_WAVE_SPEED * vp.vertex_wave_mult;
+
+        for (let li = 0; li < LOBES.length; li++) {
+          const lobe = LOBES[li];
+          const breath = IDLE_BREATH_MIN + IDLE_BREATH_AMP * vp.idle_breath_amp_mult *
+            (Math.sin(idlePhase + li * 1.3) * 0.5 + 0.5);
+          setLobeGlow(lobe, breath, waveTime + li * 0.5, 0);
+        }
+      }
+
+      /** Update all per-lobe glow targets from spike data, then smooth */
+      function updateDynamicGlow(now) {
+        if (!brain.ready) return;
+
+        // When no playback is active, show idle breathing
+        if (!playback.active && brain.glowAmount <= 0) {
+          for (const lobe of LOBES) {
+            const g = brain.lobeGlow[lobe];
+            g.target = 0;
+            g.current *= 0.92;
+            if (g.current < 0.005) g.current = 0;
+            g.burstFlash *= BURST_FLASH_DECAY;
+            if (g.burstFlash < 0.005) g.burstFlash = 0;
+          }
+          updateIdleBreathing(now);
+          const vpIdle = brain.vfxProfile;
+          const targetBloom = BLOOM_BASE_STRENGTH * 0.85 * vpIdle.bloom_mult;
+          currentBloomStrength += (targetBloom - currentBloomStrength) * BLOOM_SMOOTHING;
+          bloomPass.strength = currentBloomStrength;
+          return;
+        }
+
+        const currentMs = playback.simMs;
+        const vp = brain.vfxProfile;
+        const waveTime = now * VERTEX_WAVE_SPEED * vp.vertex_wave_mult;
+        const burstTh = vp.burst_threshold;
+        let totalActivity = 0;
+
+        let glowEnv = brain.glowAmount;
+        if (brain.dominantNeuromod === "dopamine") {
+          glowEnv *= 1.0 + 0.07 * Math.sin(now * 0.004);
+        }
+
+        const cortisolToxic = isCortisolToxicVfx();
+        const scatterP = cortisolToxic ? (vp.scatter_flash_prob ?? 0) : 0;
+
+        for (let li = 0; li < LOBES.length; li++) {
+          const lobe = LOBES[li];
+          const g = brain.lobeGlow[lobe];
+
+          const spikeCount = countSpikesInWindow(
+            lobe,
+            currentMs - SPIKE_WINDOW_MS,
+            currentMs
+          );
+
+          const rawIntensity = Math.min(1.0, spikeCount / MAX_SPIKES_PER_WINDOW);
+
+          const rateJump = rawIntensity - g.prevSpikeRate;
+          if (rateJump > burstTh) {
+            g.burstFlash = Math.min(BURST_FLASH_INTENSITY,
+              g.burstFlash + rateJump * BURST_FLASH_INTENSITY);
+          }
+          if (scatterP > 0.02 && Math.random() < scatterP * 0.12) {
+            g.burstFlash = Math.min(
+              BURST_FLASH_INTENSITY * 0.55,
+              g.burstFlash + scatterP * 0.35
+            );
+          }
+          g.prevSpikeRate = rawIntensity;
+          g.burstFlash *= BURST_FLASH_DECAY;
+          if (g.burstFlash < 0.005) g.burstFlash = 0;
+
+          const isActive = lobe === brain.activeLobe;
+          let scale = isActive ? 1.0 : BG_LOBE_GLOW_SCALE;
+          if (cortisolToxic && !isActive) {
+            const chaos = vp.global_chaos_mult ?? 1;
+            scale = Math.min(1, BG_LOBE_GLOW_SCALE + (1 - BG_LOBE_GLOW_SCALE) * 0.92 * Math.min(1.8, (chaos - 1) * 0.55 + 0.42));
+          }
+          if (isCortisolOptimalVfx() && isActive) {
+            scale = 1.0;
+          }
+          g.target = rawIntensity * scale * glowEnv;
+
+          const smoothUp   = GLOW_SMOOTHING * 1.8;
+          const smoothDown = GLOW_SMOOTHING * 0.6;
+          const alpha = g.target > g.current ? smoothUp : smoothDown;
+          g.current += (g.target - g.current) * alpha;
+
+          g.noisePhase += GLOW_PULSE_SPEED * (1.0 + (isActive ? 0.5 : 0));
+          const noise = organicNoise(g.noisePhase, li);
+          const finalGlow = Math.max(0, g.current + noise * g.current);
+
+          const bloomW = isActive ? vp.active_lobe_bloom_scale : 1.0;
+          totalActivity += finalGlow * bloomW;
+
+          if (finalGlow > 0.001 || g.burstFlash > 0.001) {
+            setLobeGlow(lobe, finalGlow, waveTime + li * 0.8, g.burstFlash);
+          } else if (g.current < 0.001 && g.target < 0.001) {
+            setLobeGlow(lobe, 0, waveTime, 0);
+          }
+        }
+
+        const avgActivity = totalActivity / LOBES.length;
+        const targetBloom =
+          BLOOM_BASE_STRENGTH * vp.bloom_mult +
+          avgActivity * BLOOM_ACTIVITY_BOOST * vp.bloom_activity_boost_mult;
+        currentBloomStrength += (targetBloom - currentBloomStrength) * BLOOM_SMOOTHING;
+        bloomPass.strength = currentBloomStrength;
+      }
+
+      /* ═══════════════════════════════════════════════
+         SPIKE DATA PROCESSING & PLAYBACK
+         ═══════════════════════════════════════════════ */
+
+      function sanitizeSpikeBuckets(spikes) {
+        const buckets = {};
+        const totals = {};
+        for (const lobe of LOBES) {
+          const data = spikes?.[lobe];
+          if (!data || !Array.isArray(data.indices) || !Array.isArray(data.times_ms)) {
+            throw new Error(`Malformed spike payload for lobe: ${lobe}`);
+          }
+          const map = new Map();
+          const n = Math.min(data.indices.length, data.times_ms.length);
+          totals[lobe] = n;
+          for (let i = 0; i < n; i++) {
+            const idx = Number(data.indices[i]);
+            const t = Number(data.times_ms[i]);
+            if (!Number.isFinite(idx) || !Number.isFinite(t)) continue;
+            if (idx < 0 || idx >= BACKEND_NEURONS_PER_LOBE) continue;
+            const ms = Math.max(0, Math.floor(t));
+            if (!map.has(ms)) map.set(ms, []);
+            map.get(ms).push(idx);
+          }
+          buckets[lobe] = map;
+        }
+        return { buckets, totals };
+      }
+
+      function processSpikesUntil(targetMs) {
+        if (!playback.buckets) return;
+        for (let ms = playback.lastProcessedMs + 1; ms <= targetMs; ms++) {
+          for (const lobe of LOBES) {
+            const events = playback.buckets[lobe].get(ms);
+            if (!events) continue;
+            playback.playedCounts[lobe] += events.length;
+          }
+        }
+        playback.lastProcessedMs = targetMs;
+        refreshLegendCounts();
+      }
+
+      function setPlaybackTime(targetMs) {
+        const clamped = Math.max(0, Math.min(playback.durationMs, Math.floor(targetMs)));
+        if (clamped < playback.lastProcessedMs) {
+          playback.playedCounts = Object.fromEntries(LOBES.map((l) => [l, 0]));
+          playback.lastProcessedMs = -1;
+        }
+        playback.simMs = clamped;
+        processSpikesUntil(clamped);
+        updateTimelineUi();
+      }
+
+      function tweenEaseInForNeuromod(mod) {
+        if (mod === "cortisol" && brain.neuromodulatorIntensity > 0.5 && TWEEN.Easing.Cubic) {
+          return TWEEN.Easing.Cubic.InOut;
+        }
+        if (mod === "cortisol" && brain.neuromodulatorIntensity <= 0.5) {
+          return TWEEN.Easing.Quadratic.Out;
+        }
+        if (mod === "serotonin" && TWEEN.Easing.Sinusoidal) {
+          return TWEEN.Easing.Sinusoidal.InOut;
+        }
+        return TWEEN.Easing.Quadratic.Out;
+      }
+
+      function tweenEaseOutForNeuromod(mod) {
+        if (mod === "cortisol" && brain.neuromodulatorIntensity > 0.5 && TWEEN.Easing.Cubic) {
+          return TWEEN.Easing.Cubic.InOut;
+        }
+        if (mod === "cortisol" && brain.neuromodulatorIntensity <= 0.5) {
+          return TWEEN.Easing.Quadratic.In;
+        }
+        if (mod === "serotonin" && TWEEN.Easing.Sinusoidal) {
+          return TWEEN.Easing.Sinusoidal.InOut;
+        }
+        if (mod === "gaba") return TWEEN.Easing.Cubic.In;
+        return TWEEN.Easing.Quadratic.In;
+      }
+
+      function applyNeuromodFromPayload(payload) {
+        const mod = payload.dominant_neuromodulator || "baseline";
+        brain.dominantNeuromod = NEUROMODS.includes(mod) ? mod : "baseline";
+        brain.neuromodulatorIntensity = Math.max(
+          0,
+          Math.min(1, Number(payload.neuromodulator_intensity) || 0.5)
+        );
+        brain.vfxProfile = mergeVfxProfile(payload.vfx_profile);
+        brain.neuromodGlowColor = hexToThreeColor(brain.vfxProfile.glow_hex);
+      }
+
+      function updateNeuromodPanel(payload) {
+        const mod = brain.dominantNeuromod;
+        const label = NEUROMOD_LABELS[mod] || mod;
+        const hex = brain.vfxProfile.glow_hex;
+        neuromodPill.textContent = label;
+        neuromodPill.style.color = hex;
+        neuromodIntensityLabel.textContent = `${Math.round(brain.neuromodulatorIntensity * 100)}%`;
+        const rat = payload.neuromodulator_rationale;
+        if (rat && String(rat).trim()) {
+          neuromodRationaleEl.textContent = String(rat).trim();
+          neuromodRationaleEl.classList.remove("hidden");
+        } else {
+          neuromodRationaleEl.textContent = "";
+          neuromodRationaleEl.classList.add("hidden");
+        }
+        if (mod === "cortisol") {
+          hpaContextHint.classList.remove("hidden");
+        } else {
+          hpaContextHint.classList.add("hidden");
+        }
+      }
+
+      function startPlayback(payload) {
+        const { buckets, totals } = sanitizeSpikeBuckets(payload.spikes);
+        playback.active = true;
+        playback.paused = false;
+        playback.simMs = 0;
+        playback.durationMs = Math.max(1, Number(payload.duration_ms) || 1000);
+        playback.lastProcessedMs = -1;
+        playback.lastWallNow = performance.now();
+        playback.buckets = buckets;
+        playback.totalCounts = totals;
+        playback.playedCounts = Object.fromEntries(LOBES.map((l) => [l, 0]));
+
+        TWEEN.removeAll();
+        resetAllLobeColors();
+
+        applyNeuromodFromPayload(payload);
+        updateNeuromodPanel(payload);
+
+        brain.activeLobe = payload.active_lobe;
+        const vp = brain.vfxProfile;
+        const proxy = { value: 0 };
+        new TWEEN.Tween(proxy)
+          .to({ value: 1.0 }, vp.tween_in_ms)
+          .easing(tweenEaseInForNeuromod(brain.dominantNeuromod))
+          .onUpdate(() => {
+            brain.glowAmount = proxy.value;
+          })
+          .start();
+
+        explanationText.textContent = payload.explanation || "";
+        activeLobePill.textContent = payload.active_lobe;
+        activeLobePill.style.color = `#${LOBE_COLORS[payload.active_lobe].getHexString()}`;
+
+        playPauseButton.textContent = "Pause";
+        setStatus("Neural pulse playback running");
+        refreshLegendCounts();
+        updateTimelineUi();
+      }
+
+      function updatePlayback(now) {
+        if (!playback.active || !playback.buckets || playback.paused) return;
+        const dt = now - playback.lastWallNow;
+        playback.lastWallNow = now;
+        setPlaybackTime(playback.simMs + dt * playback.speed);
+        if (playback.simMs >= playback.durationMs) {
+          playback.active = false;
+          setStatus("Playback complete");
+          log("Playback complete.");
+          const proxy = { value: brain.glowAmount };
+          const outMs = brain.vfxProfile.tween_out_ms;
+          new TWEEN.Tween(proxy)
+            .to({ value: 0.0 }, outMs)
+            .easing(tweenEaseOutForNeuromod(brain.dominantNeuromod))
+            .onUpdate(() => {
+              brain.glowAmount = proxy.value;
+            })
+            .onComplete(() => {
+              resetAllLobeColors();
+            })
+            .start();
+        }
+      }
+
+      /* ═══════════════════════════════════════════════
+         API
+         ═══════════════════════════════════════════════ */
+
+      function formatFastApiDetail(detail, status) {
+        if (typeof detail === "string" && detail.trim()) return detail;
+        if (Array.isArray(detail)) {
+          return detail
+            .map((e) => (e && typeof e.msg === "string" ? e.msg : JSON.stringify(e)))
+            .join("; ");
+        }
+        if (detail && typeof detail === "object") {
+          try {
+            return JSON.stringify(detail);
+          } catch {
+            return `Simulation failed (${status})`;
+          }
+        }
+        return `Simulation failed (${status})`;
+      }
+
+      function assertValidResponse(payload) {
+        if (!payload || typeof payload !== "object") throw new Error("API response is invalid.");
+        if (!LOBES.includes(payload.active_lobe)) throw new Error("active_lobe missing or invalid.");
+        if (typeof payload.explanation !== "string") throw new Error("explanation missing.");
+        const dur = Number(payload.duration_ms);
+        if (!Number.isFinite(dur)) throw new Error("duration_ms missing or invalid.");
+        payload.duration_ms = dur;
+        if (!payload.spikes || typeof payload.spikes !== "object") throw new Error("spikes missing.");
+        if (!NEUROMODS.includes(payload.dominant_neuromodulator)) {
+          throw new Error("dominant_neuromodulator missing or invalid.");
+        }
+        const nmInt = Number(payload.neuromodulator_intensity);
+        if (!Number.isFinite(nmInt)) {
+          throw new Error("neuromodulator_intensity missing or invalid.");
+        }
+        payload.neuromodulator_intensity = Math.max(0, Math.min(1, nmInt));
+        if (payload.neuromodulator_rationale != null && typeof payload.neuromodulator_rationale !== "string") {
+          throw new Error("neuromodulator_rationale must be a string.");
+        }
+        if (!payload.snn_modulation || typeof payload.snn_modulation !== "object") {
+          throw new Error("snn_modulation missing (is the API server updated to CogniGraph neuromod build?).");
+        }
+        if (!payload.vfx_profile || typeof payload.vfx_profile !== "object") {
+          throw new Error("vfx_profile missing (is the API server updated to CogniGraph neuromod build?).");
+        }
+      }
+
+      async function callSimulation(prompt) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+        try {
+          const response = await fetch("/simulate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt }),
+            signal: controller.signal,
+          });
+          const body = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            throw new Error(formatFastApiDetail(body.detail, response.status));
+          }
+          return body;
+        } finally {
+          clearTimeout(timeoutId);
+        }
+      }
+
+      async function handleSimulateClick() {
+        if (simulateButton.disabled) return;
+        if (!brain.ready) {
+          log("Brain model is not loaded yet.", "error");
+          return;
+        }
+        const prompt = promptInput.value.trim();
+        if (!prompt) {
+          log("Please enter a scenario first.", "warn");
+          return;
+        }
+        simulateButton.disabled = true;
+        setStatus("Running backend classification + SNN...");
+        log(`Submitting: "${prompt}"`);
+        try {
+          const payload = await callSimulation(prompt);
+          assertValidResponse(payload);
+          lastPayload = payload;
+          startPlayback(payload);
+          log(`Active lobe: ${payload.active_lobe}`);
+          log(`Neuromodulator: ${payload.dominant_neuromodulator} (${Math.round(payload.neuromodulator_intensity * 100)}%)`);
+          log(`Explanation: ${payload.explanation}`);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          log(msg, "error");
+          setStatus("Simulation failed");
+        } finally {
+          simulateButton.disabled = false;
+        }
+      }
+
+      /* ═══════════════════════════════════════════════
+         UI EVENTS
+         ═══════════════════════════════════════════════ */
+
+      function hookUiEvents() {
+        rotateButton.addEventListener("click", () => {
+          autoRotate = !autoRotate;
+          rotateButton.textContent = `Auto-Rotate: ${autoRotate ? "ON" : "OFF"}`;
+        });
+        simulateButton.addEventListener("click", handleSimulateClick);
+        replayButton.addEventListener("click", () => {
+          if (!lastPayload) return;
+          startPlayback(lastPayload);
+        });
+        playPauseButton.addEventListener("click", () => {
+          if (!playback.buckets) return;
+          playback.paused = !playback.paused;
+          playback.lastWallNow = performance.now();
+          playPauseButton.textContent = playback.paused ? "Resume" : "Pause";
+          setStatus(playback.paused ? "Paused" : "Resumed");
+        });
+        speedSlider.addEventListener("input", () => {
+          playback.speed = Number(speedSlider.value);
+          updateSpeedLabel();
+        });
+        stepBackButton.addEventListener("click", () => {
+          if (!playback.buckets) return;
+          playback.paused = true;
+          playPauseButton.textContent = "Resume";
+          setPlaybackTime(playback.simMs - 25);
+        });
+        stepForwardButton.addEventListener("click", () => {
+          if (!playback.buckets) return;
+          playback.paused = true;
+          playPauseButton.textContent = "Resume";
+          setPlaybackTime(playback.simMs + 25);
+        });
+        timelineSlider.addEventListener("input", () => {
+          if (!playback.buckets) return;
+          playback.paused = true;
+          playPauseButton.textContent = "Resume";
+          setPlaybackTime(Number(timelineSlider.value));
+          setStatus(`Inspecting ${Math.floor(playback.simMs)} ms`);
+        });
+        window.addEventListener("resize", onResize);
+      }
+
+      function onResize() {
+        const w = Math.max(1, canvasHost.clientWidth);
+        const h = Math.max(1, canvasHost.clientHeight);
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h);
+        const dpr = renderer.getPixelRatio();
+        composer.setSize(w * dpr, h * dpr);
+        bloomPass.setSize(w * dpr, h * dpr);
+      }
+
+      /* ═══════════════════════════════════════════════
+         RENDER LOOP
+         ═══════════════════════════════════════════════ */
+
+      function render(now = performance.now()) {
+        if (autoRotate && brainGroup) {
+          brainGroup.rotation.y += 0.002;
+        }
+
+        TWEEN.update(now);
+
+        // Dynamic spike-synced glow for all lobes
+        updateDynamicGlow(now);
+
+        controls.update();
+        updatePlayback(now);
+        composer.render();
+        requestAnimationFrame(render);
+      }
+    </script>
+  </body>
+</html>
