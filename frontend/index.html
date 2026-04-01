@@ -7,154 +7,181 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tweenjs/tween.js@23.1.3/dist/tween.umd.js"></script>
     <style>
+      @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&display=swap');
       body {
         margin: 0;
-        background: radial-gradient(circle at 16% 0%, #1d2e57, #0b1427 48%, #060a14);
+        background: radial-gradient(ellipse 120% 80% at 50% 20%, #1a1f2e 0%, #0f1115 45%, #08090c 100%);
+        font-family: 'Space Grotesk', sans-serif;
+      }
+      #brain-canvas {
+        touch-action: none;
       }
       #brain-canvas canvas {
         display: block;
       }
-      .glass {
-        background: rgba(8, 14, 28, 0.82);
-        border: 1px solid rgba(100, 116, 139, 0.5);
-        backdrop-filter: blur(10px);
+      .glass-panel {
+        background: rgba(20, 24, 32, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 24px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
       }
       .thin-scroll::-webkit-scrollbar {
-        width: 6px;
+        width: 4px;
       }
       .thin-scroll::-webkit-scrollbar-thumb {
         border-radius: 999px;
-        background: rgba(71, 85, 105, 0.7);
+        background: rgba(255, 255, 255, 0.15);
       }
-      input[type="range"]::-webkit-slider-thumb {
-        appearance: none;
-        width: 14px;
-        height: 14px;
-        border-radius: 50%;
-        background: #22d3ee;
-        cursor: pointer;
+      input[type="range"] {
+        accent-color: #fff;
+      }
+      .accent-text {
+        color: #f1f5f9;
+      }
+      .sub-text {
+        color: #94a3b8;
+      }
+      /* Analysis: higher contrast than generic sub-text */
+      .analysis-panel {
+        background: rgba(15, 18, 26, 0.88);
+        border-color: rgba(255, 255, 255, 0.12);
+        min-width: 17rem;
+      }
+      .analysis-label {
+        color: #cbd5e1;
+        font-size: 0.7rem;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+      }
+      .analysis-body {
+        color: #e2e8f0;
+        font-size: 0.8125rem;
+        line-height: 1.55;
+      }
+      .analysis-value {
+        color: #f8fafc;
+        font-size: 0.9375rem;
+        font-weight: 600;
+      }
+      button {
+        transition: all 0.2s ease;
+      }
+      button:hover {
+        transform: translateY(-1px);
+      }
+      button:active {
+        transform: translateY(1px);
       }
     </style>
   </head>
-  <body class="h-screen w-screen overflow-hidden text-slate-100">
+  <body class="h-screen w-screen overflow-hidden text-slate-200">
     <main class="relative h-full w-full">
       <div id="brain-canvas" class="absolute inset-0"></div>
 
-      <section class="pointer-events-none absolute inset-0 p-3 md:p-4">
-        <div class="pointer-events-auto flex justify-between gap-3">
-          <div class="glass rounded-lg px-3 py-2">
-            <p class="text-xs font-semibold tracking-wide text-cyan-300">CogniGraph v2.0</p>
-            <p id="status-chip" class="mt-1 text-xs leading-relaxed text-slate-200">Loading brain model...</p>
+      <!-- Free-floating panels layer -->
+      <section class="pointer-events-none absolute inset-0 p-6 flex flex-col justify-between">
+
+        <!-- Top Row: outer row does not capture hits (only panels do) -->
+        <div class="pointer-events-none flex justify-between items-start gap-6">
+          <!-- Top Left: Branding & Status -->
+          <div class="pointer-events-auto glass-panel px-5 py-3 flex flex-col gap-1">
+            <h1 class="text-sm font-semibold tracking-widest uppercase accent-text">CogniGraph 2.0</h1>
+            <p id="status-chip" class="text-[10px] tracking-wide sub-text">Initializing...</p>
           </div>
-          <button
-            id="rotate-btn"
-            class="glass rounded-lg px-3 py-2 text-xs font-semibold text-slate-200 hover:text-cyan-200"
-          >
-            Auto-Rotate: ON
-          </button>
+
+          <!-- Top Right: Input & Simulation -->
+          <div class="pointer-events-auto glass-panel p-5 w-80 md:w-96 flex flex-col gap-4">
+            <div class="flex justify-between items-center">
+              <span class="text-xs font-medium uppercase tracking-widest sub-text">Sequence Input</span>
+              <button id="rotate-btn" class="text-[10px] uppercase font-semibold text-slate-400 hover:text-white border border-slate-700 rounded-full px-2 py-1">Auto-Rotate</button>
+            </div>
+            <textarea
+              id="prompt"
+              class="w-full bg-slate-900/30 border border-slate-700/50 rounded-xl p-3 text-sm text-slate-100 placeholder:text-slate-600 outline-none focus:border-white transition-colors resize-none h-20"
+              placeholder="E.g., Solving a complex math problem..."
+            ></textarea>
+            <button
+              id="simulate-btn"
+              class="w-full bg-white text-black font-semibold uppercase tracking-wider text-xs py-2.5 rounded-xl hover:bg-slate-200 disabled:opacity-50 disabled:hover:bg-white"
+            >
+              Analyze
+            </button>
+          </div>
         </div>
 
-        <div class="mt-3 flex h-[calc(100%-58px)] justify-end">
-          <aside class="glass thin-scroll pointer-events-auto h-full w-80 flex-shrink-0 overflow-y-auto rounded-2xl p-4 md:w-[380px]">
-            <h1 class="text-xl font-semibold text-cyan-300">Neural Activation Viewer</h1>
-            <p class="mt-1 text-sm leading-relaxed text-slate-200">
-              3D brain model with real-time spiking neural network visualization.
-            </p>
+        <!-- Middle: wrapper must NOT capture pointer events — otherwise OrbitControls cannot rotate the brain -->
+        <div class="flex-1 pointer-events-none relative min-h-0">
+           <!-- Analysis floating panel (Middle Right) -->
+           <div class="pointer-events-auto analysis-panel glass-panel absolute right-0 top-1/2 -translate-y-1/2 p-5 w-72 flex flex-col gap-3.5">
+              <h2 class="text-xs font-semibold uppercase tracking-widest text-slate-300 border-b border-slate-600/60 pb-2">Analysis</h2>
 
-            <div class="mt-4">
-              <label class="text-sm font-semibold text-slate-200">Scenario</label>
-              <textarea
-                id="prompt"
-                class="mt-2 h-24 w-full rounded-lg border border-slate-600 bg-slate-950/70 p-3 text-sm leading-relaxed text-slate-100 placeholder:text-slate-500 outline-none focus:border-cyan-400"
-                placeholder="e.g., Doing a heavy deadlift"
-              ></textarea>
-              <button
-                id="simulate-btn"
-                class="mt-2 w-full rounded-lg bg-gradient-to-r from-cyan-400 to-indigo-500 px-4 py-2 text-sm font-semibold text-slate-950 disabled:opacity-60"
-              >
-                Simulate Activation
-              </button>
-            </div>
-
-            <div class="mt-4 rounded-lg border border-slate-700 bg-slate-950/60 p-3">
-              <p class="text-sm font-semibold text-slate-200">Playback</p>
-              <div class="mt-2 flex justify-between text-sm">
-                <span class="text-slate-300">Time</span>
-                <span id="timeline-label" class="font-mono text-cyan-300">0 / 1000 ms</span>
-              </div>
-              <input id="timeline-slider" type="range" min="0" max="1000" step="1" value="0" class="mt-2 w-full" />
-              <div class="mt-2 flex gap-2">
-                <button id="play-pause-btn" class="rounded border border-slate-600 px-3 py-1 text-sm">Pause</button>
-                <button id="replay-btn" class="rounded border border-slate-600 px-3 py-1 text-sm">Replay</button>
-                <button id="step-back-btn" class="rounded border border-slate-600 px-3 py-1 text-sm">-25ms</button>
-                <button id="step-forward-btn" class="rounded border border-slate-600 px-3 py-1 text-sm">+25ms</button>
-              </div>
-              <div class="mt-2 flex justify-between text-sm">
-                <span class="text-slate-300">Speed</span>
-                <span id="speed-label" class="font-mono text-cyan-300">0.30x</span>
-              </div>
-              <input id="speed-slider" type="range" min="0.1" max="2" step="0.05" value="0.30" class="mt-1 w-full" />
-            </div>
-
-            <div class="mt-4 rounded-lg border border-slate-700 bg-slate-950/60 p-3">
-              <p class="text-sm font-semibold text-slate-200">Cognitive Analysis</p>
-              <p class="mt-1 text-xs font-medium uppercase tracking-wider text-slate-500">Simulation output</p>
-
-              <div class="mt-3 flex items-center justify-between gap-3 border-b border-slate-600 pb-3">
-                <span class="shrink-0 text-sm text-slate-300">Active lobe</span>
-                <span id="active-lobe-pill" class="shrink-0 whitespace-nowrap rounded bg-slate-700 px-2.5 py-1 text-sm uppercase tracking-wide">N/A</span>
+              <div>
+                <span class="analysis-label uppercase block mb-1">Primary Region</span>
+                <span id="active-lobe-pill" class="analysis-value capitalize">N/A</span>
               </div>
 
-              <div class="mt-3 space-y-3">
-                <div class="flex items-center justify-between gap-3">
-                  <div class="flex min-w-0 flex-1 items-center gap-1.5">
-                    <span class="text-sm font-semibold text-slate-200">Neuromodulator</span>
-                    <button
-                      type="button"
-                      id="hpa-help-btn"
-                      class="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-slate-400 text-[11px] font-bold leading-none text-slate-200 hover:border-cyan-400 hover:text-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-400"
-                      aria-label="HPA axis: hypothalamus, pituitary, and adrenal cortex regulate cortisol. The cortisol neuromodulator represents this stress-hormone chain in the simulation, not a medical measurement."
-                      title="HPA axis: hypothalamus → pituitary → adrenal cortex → cortisol. When cortisol is dominant here, it reflects that axis in the simulation—not a clinical reading."
-                    >?</button>
-                  </div>
-                  <span id="neuromod-pill" class="shrink-0 whitespace-nowrap rounded px-2.5 py-1 text-sm font-semibold shadow-sm">—</span>
+              <div>
+                <span class="analysis-label uppercase block mb-1">Neuromodulation <button type="button" id="hpa-help-btn" class="inline-flex items-center justify-center bg-slate-700/90 text-slate-200 rounded-full w-5 h-5 text-[11px] font-semibold leading-none ml-1 align-middle" title="HPA info">?</button></span>
+                <div class="flex items-center justify-between gap-2 mt-0.5">
+                  <span id="neuromod-pill" class="analysis-value capitalize">—</span>
+                  <span id="neuromod-intensity-label" class="text-xs font-mono text-slate-100 bg-slate-800/90 border border-slate-600/50 px-2 py-1 rounded-md tabular-nums">—</span>
                 </div>
-                <div class="flex justify-between gap-3 text-sm">
-                  <span class="text-slate-300">Intensity</span>
-                  <span id="neuromod-intensity-label" class="shrink-0 font-mono text-cyan-300">—</span>
-                </div>
-                <p id="neuromod-rationale" class="hidden text-sm leading-relaxed text-slate-100"></p>
-                <p id="hpa-context-hint" class="hidden text-sm leading-relaxed text-cyan-100">
-                  HPA-axis tone: cortisol drives the simulation's stress-hormone branch (see ? tooltip).
-                </p>
               </div>
 
-              <div class="mt-4 rounded-md border border-cyan-900/50 bg-slate-900/90 p-3">
-                <p class="text-xs font-semibold uppercase tracking-wide text-cyan-400/90">HPA axis — background</p>
-                <p class="mt-2 text-sm leading-relaxed text-slate-300">
-                  The hypothalamus → pituitary → adrenal cortex pathway regulates cortisol release.
-                  Cortisol in this viewer models that stress-hormone axis for education—it is not a clinical lab value.
-                </p>
-              </div>
+              <p id="explanation-text" class="analysis-body mt-1">Awaiting simulation sequence to provide context.</p>
+              <p id="neuromod-rationale" class="hidden analysis-body text-slate-200/95 mt-1"></p>
+              <p id="hpa-context-hint" class="hidden text-xs text-amber-200 mt-1 font-medium">HPA axis active.</p>
+           </div>
 
-              <p id="explanation-text" class="mt-4 border-t border-slate-600 pt-3 text-sm leading-relaxed text-slate-100">
-                Try "Doing a heavy deadlift" to see motor cortex activation with full neural pulse visualization.
-              </p>
-            </div>
-
-            <div class="mt-4 rounded-lg border border-slate-700 bg-slate-950/60 p-3">
-              <p class="text-sm font-semibold text-slate-200">Lobe Spike Counters</p>
-              <div id="legend-panel" class="mt-2 space-y-1 text-sm text-slate-200"></div>
-            </div>
-
-            <div class="mt-4 rounded-lg border border-slate-700 bg-slate-950/60 p-3">
-              <p class="text-sm font-semibold text-slate-200">Log</p>
-              <div id="log-panel" class="thin-scroll mt-2 h-40 overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed text-slate-200"></div>
-            </div>
-          </aside>
+           <!-- Signatures (Middle Left) -->
+           <div class="pointer-events-auto absolute left-0 top-1/2 -translate-y-1/2 glass-panel p-4 w-48 flex flex-col gap-3">
+              <h2 class="text-[10px] font-medium uppercase tracking-widest sub-text border-b border-slate-700/50 pb-2">Signatures</h2>
+              <div id="legend-panel" class="flex flex-col gap-2 text-[10px] font-medium"></div>
+           </div>
         </div>
+
+        <!-- Bottom Row -->
+        <div class="pointer-events-none flex justify-between items-end gap-6">
+
+          <!-- Bottom Left: Log -->
+          <div class="pointer-events-auto glass-panel p-4 w-64 h-32 flex flex-col gap-2">
+            <span class="text-[10px] font-medium uppercase tracking-widest sub-text">Event Log</span>
+            <div id="log-panel" class="thin-scroll flex-1 overflow-y-auto whitespace-pre-wrap text-[9px] font-mono text-slate-400"></div>
+          </div>
+
+          <!-- Bottom Center: Playback (Floating Island) -->
+          <div class="pointer-events-auto glass-panel px-6 py-4 flex-1 max-w-xl mx-auto flex flex-col gap-3">
+             <div class="flex justify-between items-center text-[10px] font-medium uppercase tracking-widest sub-text">
+                <span>Timeline</span>
+                <span id="timeline-label" class="font-mono">0ms</span>
+             </div>
+             <input id="timeline-slider" type="range" min="0" max="1000" step="1" value="0" class="w-full h-1 bg-slate-700 rounded-full appearance-none" />
+
+             <div class="flex justify-between items-center mt-1">
+                <div class="flex items-center gap-3">
+                   <button id="step-back-btn" class="w-7 h-7 rounded-full bg-slate-800 flex items-center justify-center text-xs hover:bg-slate-700">◁</button>
+                   <button id="play-pause-btn" class="px-4 py-1.5 rounded-full bg-slate-200 text-black font-semibold text-[10px] uppercase tracking-wider hover:bg-white min-w-[70px]">Pause</button>
+                   <button id="step-forward-btn" class="w-7 h-7 rounded-full bg-slate-800 flex items-center justify-center text-xs hover:bg-slate-700">▷</button>
+                   <button id="replay-btn" class="w-7 h-7 rounded-full border border-slate-700 flex items-center justify-center text-xs ml-2 hover:bg-slate-800">↻</button>
+                </div>
+
+                <div class="flex items-center gap-3">
+                   <span class="text-[10px] uppercase sub-text">Speed</span>
+                   <input id="speed-slider" type="range" min="0.1" max="2" step="0.05" value="0.30" class="w-20 h-1 bg-slate-700 rounded-full appearance-none" />
+                   <span id="speed-label" class="text-[10px] font-mono w-8 text-right">0.30x</span>
+                </div>
+             </div>
+          </div>
+
+          <!-- Spacer for layout balance (no hit capture) -->
+          <div class="pointer-events-none w-64 shrink-0" aria-hidden="true"></div>
+
+        </div>
+
       </section>
     </main>
 
@@ -173,6 +200,8 @@
       import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
       import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
       import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+      import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
+      import { FXAAShader } from "three/addons/shaders/FXAAShader.js";
       import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
       const TWEEN = window.TWEEN;
@@ -228,9 +257,14 @@
         cerebellum: new THREE.Color(0.30, 0.90, 0.95),   // cyan / teal
       };
       // Base brightness — dim enough that glow contrast is obvious
-      const BASE_BRIGHTNESS = 0.35;
-      // How much brighter the active lobe glows during simulation
-      const GLOW_BOOST = 4.0;
+      const BASE_BRIGHTNESS = 0.30;
+      /** Max RGB after glow — avoids blown-out white on active lobe */
+      const MAX_GLOW_RGB = 0.82;
+      /** Softer than linear: high spike rates don’t clip to white */
+      const GLOW_BOOST = 1.35;
+      /** Neuromod blend cap during playback (lower = stay closer to lobe hue) */
+      const K_MAX_PLAYBACK = 0.48;
+      const K_MAX_IDLE_GLOW = 0.72;
 
       /* ── Dynamic glow constants ─────────────────── */
       const SPIKE_WINDOW_MS    = 50;   // sliding window to compute spike rate
@@ -247,18 +281,32 @@
 
       /* ── Spike burst flash ─────────────────────────── */
       const BURST_THRESHOLD      = 0.6;  // spike rate jump threshold to trigger flash (0-1 normalized)
-      const BURST_FLASH_INTENSITY = 0.8; // max flash brightness boost
+      const BURST_FLASH_INTENSITY = 0.42; // max flash brightness boost (kept subtle)
       const BURST_FLASH_DECAY     = 0.92; // per-frame decay of flash effect (lower = faster fade)
 
       /* ── Dynamic bloom ─────────────────────────────── */
-      const BLOOM_BASE_STRENGTH   = 1.8;
-      const BLOOM_ACTIVITY_BOOST  = 1.2;  // max additional bloom from spike activity
+      const BLOOM_BASE_STRENGTH   = 1.05;
+      const BLOOM_ACTIVITY_BOOST  = 0.48;  // max additional bloom from spike activity (avoid white-out)
       const BLOOM_SMOOTHING       = 0.03; // smooth bloom transitions
 
       /* ── Idle breathing ─────────────────────────────── */
       const IDLE_BREATH_SPEED    = 0.0008; // slow ambient pulse
-      const IDLE_BREATH_AMP      = 0.12;   // subtle brightness variation
-      const IDLE_BREATH_MIN      = 0.02;   // minimum idle glow above base
+      const IDLE_BREATH_AMP      = 0.105;  // subtle brightness variation
+      const IDLE_BREATH_MIN      = 0.044;  // default idle visibility (slightly lifted)
+
+      /* ── Pointer / hover ───────────────────────────── */
+      const HOVER_LOBE_BOOST     = 0.14;   // extra idle intensity on hovered lobe
+      const HOVER_OTHER_SCALE    = 0.78;   // dim non-hovered lobes while hovering (idle)
+      const HOVER_PLAYBACK_BOOST = 1.08;   // subtle highlight during playback
+
+      /* ── Camera focus nudge ───────────────────────── */
+      const FOCUS_NUDGE_MS       = 720;
+      const FOCUS_TARGET_BLEND   = 0.42;   // how much controls.target moves toward lobe
+      const FOCUS_POS_PULL       = 0.38;   // how much camera moves toward lobe
+
+      /** One-shot “muzzle flash” when simulation starts; decays each frame */
+      const FIRE_PULSE_DECAY   = 0.88;
+      const FIRE_PULSE_TO_BURST = 0.38;    // added to burst channel while pulse > 0
 
       /* ═══════════════════════════════════════════════
          DOM REFS
@@ -289,7 +337,7 @@
          THREE.JS SCENE
          ═══════════════════════════════════════════════ */
       const scene = new THREE.Scene();
-      // No fog — clean dark void like the reference
+      scene.background = null;
 
       const camera = new THREE.PerspectiveCamera(58, 1, 0.1, 200);
       camera.position.set(0, 0.5, 5.0);
@@ -298,7 +346,7 @@
       renderer.setPixelRatio(window.devicePixelRatio);
       renderer.setSize(canvasHost.clientWidth, canvasHost.clientHeight);
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = 1.2;
+      renderer.toneMappingExposure = 0.95;
       canvasHost.appendChild(renderer.domElement);
 
       const composer = new EffectComposer(renderer);
@@ -306,11 +354,14 @@
       const _dpr = renderer.getPixelRatio();
       const bloomPass = new UnrealBloomPass(
         new THREE.Vector2(canvasHost.clientWidth * _dpr, canvasHost.clientHeight * _dpr),
-        1.8,    // strength — strong neon glow
-        0.6,    // radius — soft halo spread
-        0.30    // threshold — wireframe lines bloom
+        1.05,   // strength — toned down vs harsh neon
+        0.45,   // radius — slightly tighter halo
+        0.42    // threshold — fewer pixels bloom = less wash-out
       );
       composer.addPass(bloomPass);
+
+      const fxaaPass = new ShaderPass(FXAAShader);
+      composer.addPass(fxaaPass);
 
       const controls = new OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
@@ -328,6 +379,11 @@
       let lastPayload = null;
       let currentBloomStrength = BLOOM_BASE_STRENGTH;
       let idlePhase = 0;
+
+      const raycaster = new THREE.Raycaster();
+      const pointerNdc = new THREE.Vector2();
+      let pointerLobe = null;
+      let pickedLobe = null;
 
       function hexToThreeColor(hex) {
         const h = String(hex || "").replace("#", "").trim();
@@ -365,10 +421,15 @@
       const brain = {
         meshEntries: [],      // [{ mesh, baseColors, colorAttr, vertexCount }]
         lobeVertices: {},     // lobe -> [{ meshIdx, vertexIdx, phaseOffset }]
+        lobeCenters: {},      // lobe -> THREE.Vector3 (world)
+        boundsCenter: null,
+        boundsSize: null,
+        namedMeshMode: false,
         totalVertices: 0,
         ready: false,
         activeLobe: null,     // lobe name during playback
         glowAmount: 0,        // 0-1 master envelope (tween-driven fade in/out)
+        firePulse: 0,         // 0–1 decaying spike at simulate start (firing effect)
         dominantNeuromod: "baseline",
         neuromodulatorIntensity: 0.5,
         neuromodGlowColor: hexToThreeColor(DEFAULT_VFX.glow_hex),
@@ -423,15 +484,56 @@
         legendPanel.innerHTML = "";
         for (const lobe of LOBES) {
           const row = document.createElement("div");
-          row.className = "flex items-center justify-between rounded border border-slate-700 bg-slate-900/70 px-2 py-1";
+          row.id = `legend-row-${lobe}`;
+          row.className = "legend-row flex items-center justify-between rounded px-1 -mx-1 transition-colors";
           row.innerHTML = `
             <div class="flex items-center gap-2">
-              <span class="h-2.5 w-2.5 rounded-full inline-block" style="background:#${LOBE_COLORS[lobe].getHexString()}"></span>
-              <span class="capitalize">${lobe}</span>
+              <span class="h-2 w-2 rounded-full inline-block" style="background:#${LOBE_COLORS[lobe].getHexString()}; box-shadow: 0 0 8px #${LOBE_COLORS[lobe].getHexString()}"></span>
+              <span class="capitalize text-slate-300">${lobe}</span>
             </div>
-            <div id="legend-${lobe}" class="font-mono text-cyan-300">0 / 0</div>
+            <div id="legend-${lobe}" class="font-mono text-white">0</div>
           `;
           legendPanel.appendChild(row);
+        }
+      }
+
+      function setLegendHighlight(lobe) {
+        for (const l of LOBES) {
+          const el = document.getElementById(`legend-row-${l}`);
+          if (!el) continue;
+          if (lobe && l === lobe) {
+            el.classList.add("bg-white/10", "ring-1", "ring-white/20");
+          } else {
+            el.classList.remove("bg-white/10", "ring-1", "ring-white/20");
+          }
+        }
+      }
+
+      function updateViewStatus() {
+        if (!brain.ready) return;
+        const ms = Math.floor(playback.simMs);
+        const dur = playback.durationMs;
+        const hoverBit = pointerLobe ? ` · hover: ${pointerLobe}` : "";
+        if (playback.active && !playback.paused) {
+          setStatus(`Playback · t=${ms}ms / ${dur}ms${hoverBit}`);
+          return;
+        }
+        if (playback.buckets && playback.paused) {
+          setStatus(`Paused · t=${ms}ms / ${dur}ms${hoverBit}`);
+          return;
+        }
+        if (playback.buckets && !playback.active && ms > 0) {
+          setStatus(`Review · t=${ms}ms / ${dur}ms${hoverBit}`);
+          return;
+        }
+        if (pointerLobe) {
+          setStatus(
+            `Hover: ${pointerLobe}${pickedLobe && pickedLobe !== pointerLobe ? ` · pinned: ${pickedLobe}` : ""}`
+          );
+        } else if (pickedLobe) {
+          setStatus(`Pinned region: ${pickedLobe}`);
+        } else {
+          setStatus("Ready for simulation.");
         }
       }
 
@@ -439,7 +541,7 @@
         for (const lobe of LOBES) {
           const el = document.getElementById(`legend-${lobe}`);
           if (!el) continue;
-          el.textContent = `${playback.playedCounts?.[lobe] ?? 0} / ${playback.totalCounts?.[lobe] ?? 0}`;
+          el.textContent = `${playback.playedCounts?.[lobe] ?? 0}`;
         }
       }
 
@@ -467,7 +569,13 @@
 
                 const meshes = [];
                 brainScene.traverse((child) => {
-                  if (child.isMesh) meshes.push(child);
+                  if (child.isMesh) {
+                    const raw = (child.name || "").trim().toLowerCase().replace(/\s+/g, "_");
+                    if (LOBES.includes(raw)) {
+                      child.userData.lobeFromAsset = raw;
+                    }
+                    meshes.push(child);
+                  }
                 });
 
                 if (meshes.length === 0) {
@@ -495,6 +603,7 @@
                 normBbox.getCenter(normCenter);
                 normBbox.getSize(normSize);
 
+                const namedCount = meshes.filter((m) => m.userData.lobeFromAsset).length;
                 resolve({
                   brainScene,
                   meshes,
@@ -503,6 +612,7 @@
                   size: normSize,
                   scaleFactor,
                   meshCount: meshes.length,
+                  namedMeshCount: namedCount,
                 });
               } catch (e) {
                 reject(e);
@@ -555,7 +665,9 @@
             worldPos.set(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i));
             mesh.localToWorld(worldPos);
 
-            const lobe = classifyLobeByPosition(worldPos.x, worldPos.y, worldPos.z, center, size);
+            const lobe =
+              mesh.userData.lobeFromAsset ||
+              classifyLobeByPosition(worldPos.x, worldPos.y, worldPos.z, center, size);
             const color = LOBE_COLORS[lobe];
 
             baseColors[i * 3]     = color.r * BASE_BRIGHTNESS;
@@ -576,10 +688,21 @@
             wireframe: true,
             vertexColors: true,
             transparent: true,
-            opacity: 0.85,
+            opacity: 0.72,
             side: THREE.DoubleSide,
           });
           mesh.renderOrder = 0;
+
+          const solidMat = new THREE.MeshBasicMaterial({
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.06,
+            side: THREE.DoubleSide,
+            depthWrite: false,
+          });
+          const solidMesh = new THREE.Mesh(geo, solidMat);
+          solidMesh.renderOrder = -1;
+          mesh.add(solidMesh);
 
           brain.meshEntries.push({
             mesh, baseColors, colorAttr, vertexCount,
@@ -593,6 +716,46 @@
         }
       }
 
+      function computeLobeCenters() {
+        brain.lobeCenters = {};
+        const wp = new THREE.Vector3();
+        for (const lobe of LOBES) {
+          const verts = brain.lobeVertices[lobe];
+          if (!verts || !verts.length) continue;
+          const sum = new THREE.Vector3();
+          for (const { meshIdx, vertexIdx } of verts) {
+            const md = brain.meshEntries[meshIdx];
+            const pos = md.mesh.geometry.getAttribute("position");
+            wp.set(pos.getX(vertexIdx), pos.getY(vertexIdx), pos.getZ(vertexIdx));
+            md.mesh.localToWorld(wp);
+            sum.add(wp);
+          }
+          brain.lobeCenters[lobe] = sum.multiplyScalar(1 / verts.length);
+        }
+      }
+
+      function pickLobeAtClient(clientX, clientY) {
+        if (!brain.ready || !brain.boundsCenter || !brain.boundsSize) return null;
+        const rect = renderer.domElement.getBoundingClientRect();
+        pointerNdc.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+        pointerNdc.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(pointerNdc, camera);
+        const meshes = brain.meshEntries.map((e) => e.mesh);
+        const hits = raycaster.intersectObjects(meshes, true);
+        if (!hits.length) return null;
+        let o = hits[0].object;
+        while (o && !o.userData?.lobeFromAsset && o.parent) o = o.parent;
+        if (o?.userData?.lobeFromAsset) return o.userData.lobeFromAsset;
+        const p = hits[0].point;
+        return classifyLobeByPosition(
+          p.x,
+          p.y,
+          p.z,
+          brain.boundsCenter,
+          brain.boundsSize
+        );
+      }
+
       /* ═══════════════════════════════════════════════
          ASYNC SCENE INITIALIZATION
          ═══════════════════════════════════════════════ */
@@ -603,20 +766,28 @@
 
         try {
           const result = await loadBrainGLB();
-          const { brainScene, meshes, bbox, center, size, scaleFactor, meshCount } = result;
+          const { brainScene, meshes, bbox, center, size, scaleFactor, meshCount, namedMeshCount } = result;
           log(`Brain loaded. ${meshCount} mesh(es). Scale: ${scaleFactor.toFixed(3)}. Size: ${size.x.toFixed(2)} x ${size.y.toFixed(2)} x ${size.z.toFixed(2)}`);
           log(`Bounds center: (${center.x.toFixed(2)}, ${center.y.toFixed(2)}, ${center.z.toFixed(2)})`);
+          if (namedMeshCount > 0) {
+            log(`GLB named lobe mesh(es): ${namedMeshCount} (vertex regions follow mesh names).`);
+          }
 
           setStatus("Coloring lobe regions...");
+          brain.boundsCenter = center.clone();
+          brain.boundsSize = size.clone();
+          brain.namedMeshMode = namedMeshCount > 0;
+
           colorBrainByLobe(meshes, center, size);
+          computeLobeCenters();
 
           brainGroup = new THREE.Group();
           brainGroup.add(brainScene);
           scene.add(brainGroup);
 
           brain.ready = true;
-          setStatus("Ready for simulation.");
           log(`Ready. ${brain.totalVertices} vertices across ${LOBES.length} lobes.`);
+          updateViewStatus();
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           log(`Failed to load brain model: ${msg}`, "error");
@@ -641,6 +812,7 @@
         const nmInt = brain.neuromodulatorIntensity;
         const idlePhase =
           !playback.active && brain.glowAmount <= 0;
+        const playbackPhase = playback.active && brain.glowAmount > 0.001;
         const affectedMeshes = new Set();
         for (const { meshIdx, vertexIdx, phaseOffset } of vertices) {
           const md = brain.meshEntries[meshIdx];
@@ -658,7 +830,8 @@
           const lg = lc.g * BASE_BRIGHTNESS;
           const lb = lc.b * BASE_BRIGHTNESS;
 
-          let k = Math.min(0.88, (0.34 + totalIntensity * 0.52) * (0.38 + 0.62 * nmInt));
+          let k = (0.30 + Math.min(1, totalIntensity) * 0.45) * (0.36 + 0.64 * nmInt);
+          k = Math.min(playbackPhase ? K_MAX_PLAYBACK : K_MAX_IDLE_GLOW, k);
           if (idlePhase) k *= 0.38;
 
           let ar = lr + (neu.r - lr) * k;
@@ -672,12 +845,15 @@
             ab = ab * (1 - ds) + murkB * ds;
           }
 
-          const boost = 1.0 + totalIntensity * GLOW_BOOST;
-          md.colorAttr.setXYZ(i,
-            Math.min(1.0, ar * boost),
-            Math.min(1.0, ag * boost),
-            Math.min(1.0, ab * boost)
-          );
+          const t = Math.min(1, Math.max(0, totalIntensity));
+          const boost = 1.0 + Math.pow(t, 0.72) * GLOW_BOOST;
+          let cr = ar * boost;
+          let cg = ag * boost;
+          let cb = ab * boost;
+          cr = Math.min(MAX_GLOW_RGB, cr);
+          cg = Math.min(MAX_GLOW_RGB, cg);
+          cb = Math.min(MAX_GLOW_RGB, cb);
+          md.colorAttr.setXYZ(i, cr, cg, cb);
           affectedMeshes.add(meshIdx);
         }
         for (const mi of affectedMeshes) {
@@ -694,6 +870,7 @@
         }
         brain.activeLobe = null;
         brain.glowAmount = 0;
+        brain.firePulse = 0;
         // Reset per-lobe glow state
         for (const lobe of LOBES) {
           brain.lobeGlow[lobe].current = 0;
@@ -735,11 +912,16 @@
         const vp = brain.vfxProfile;
         idlePhase += IDLE_BREATH_SPEED * vp.idle_breath_speed_mult;
         const waveTime = now * VERTEX_WAVE_SPEED * vp.vertex_wave_mult;
+        const hover = pointerLobe;
 
         for (let li = 0; li < LOBES.length; li++) {
           const lobe = LOBES[li];
-          const breath = IDLE_BREATH_MIN + IDLE_BREATH_AMP * vp.idle_breath_amp_mult *
+          let breath = IDLE_BREATH_MIN + IDLE_BREATH_AMP * vp.idle_breath_amp_mult *
             (Math.sin(idlePhase + li * 1.3) * 0.5 + 0.5);
+          if (hover) {
+            if (lobe === hover) breath += HOVER_LOBE_BOOST;
+            else breath *= HOVER_OTHER_SCALE;
+          }
           setLobeGlow(lobe, breath, waveTime + li * 0.5, 0);
         }
       }
@@ -772,9 +954,15 @@
         const burstTh = vp.burst_threshold;
         let totalActivity = 0;
 
-        let glowEnv = brain.glowAmount;
+        if (brain.firePulse > 0.001) {
+          brain.firePulse *= FIRE_PULSE_DECAY;
+        } else {
+          brain.firePulse = 0;
+        }
+
+        let glowEnv = Math.pow(brain.glowAmount, 0.88);
         if (brain.dominantNeuromod === "dopamine") {
-          glowEnv *= 1.0 + 0.07 * Math.sin(now * 0.004);
+          glowEnv *= 1.0 + 0.05 * Math.sin(now * 0.004);
         }
 
         const cortisolToxic = isCortisolToxicVfx();
@@ -790,7 +978,8 @@
             currentMs
           );
 
-          const rawIntensity = Math.min(1.0, spikeCount / MAX_SPIKES_PER_WINDOW);
+          let rawIntensity = Math.min(1.0, spikeCount / MAX_SPIKES_PER_WINDOW);
+          rawIntensity = Math.pow(rawIntensity, 0.82);
 
           const rateJump = rawIntensity - g.prevSpikeRate;
           if (rateJump > burstTh) {
@@ -830,8 +1019,20 @@
           const bloomW = isActive ? vp.active_lobe_bloom_scale : 1.0;
           totalActivity += finalGlow * bloomW;
 
-          if (finalGlow > 0.001 || g.burstFlash > 0.001) {
-            setLobeGlow(lobe, finalGlow, waveTime + li * 0.8, g.burstFlash);
+          const showGlow =
+            finalGlow > 0.001 ||
+            g.burstFlash > 0.001 ||
+            (pointerLobe === lobe && playback.active);
+          if (showGlow) {
+            let fg = finalGlow;
+            if (pointerLobe === lobe) {
+              fg = Math.max(fg, 0.055) * HOVER_PLAYBACK_BOOST;
+            }
+            let burst = g.burstFlash;
+            if (isActive && brain.firePulse > 0) {
+              burst += brain.firePulse * FIRE_PULSE_TO_BURST;
+            }
+            setLobeGlow(lobe, fg, waveTime + li * 0.8, burst);
           } else if (g.current < 0.001 && g.target < 0.001) {
             setLobeGlow(lobe, 0, waveTime, 0);
           }
@@ -896,6 +1097,7 @@
         playback.simMs = clamped;
         processSpikesUntil(clamped);
         updateTimelineUi();
+        updateViewStatus();
       }
 
       function tweenEaseInForNeuromod(mod) {
@@ -941,9 +1143,7 @@
         const label = NEUROMOD_LABELS[mod] || mod;
         const hex = brain.vfxProfile.glow_hex;
         neuromodPill.textContent = label;
-        neuromodPill.style.background = hex;
-        neuromodPill.className =
-          `shrink-0 whitespace-nowrap rounded px-2.5 py-1 text-sm font-semibold shadow-sm ${neuromodPillTextClass(hex)}`;
+        neuromodPill.style.color = hex;
         neuromodIntensityLabel.textContent = `${Math.round(brain.neuromodulatorIntensity * 100)}%`;
         const rat = payload.neuromodulator_rationale;
         if (rat && String(rat).trim()) {
@@ -958,6 +1158,44 @@
         } else {
           hpaContextHint.classList.add("hidden");
         }
+      }
+
+      function nudgeCameraTowardLobe(lobeName) {
+        if (!brain.lobeCenters[lobeName]) return;
+        const world = brain.lobeCenters[lobeName];
+        const startTarget = controls.target.clone();
+        const startPos = camera.position.clone();
+        const endTarget = startTarget.clone().lerp(world, FOCUS_TARGET_BLEND);
+        const dir = world.clone().sub(startPos);
+        if (dir.lengthSq() < 1e-6) return;
+        dir.normalize();
+        const endPos = startPos.clone().add(dir.multiplyScalar(FOCUS_POS_PULL));
+        const backTarget = startTarget.clone();
+        const backPos = startPos.clone();
+        const out = { t: 0 };
+        new TWEEN.Tween(out)
+          .to({ t: 1 }, FOCUS_NUDGE_MS)
+          .easing(TWEEN.Easing.Quadratic.Out)
+          .onUpdate(() => {
+            const t = out.t;
+            controls.target.lerpVectors(startTarget, endTarget, t);
+            camera.position.lerpVectors(startPos, endPos, t);
+            controls.update();
+          })
+          .onComplete(() => {
+            const inn = { t: 0 };
+            new TWEEN.Tween(inn)
+              .to({ t: 1 }, FOCUS_NUDGE_MS * 0.95)
+              .easing(TWEEN.Easing.Quadratic.InOut)
+              .onUpdate(() => {
+                const t = inn.t;
+                controls.target.lerpVectors(endTarget, backTarget, t);
+                camera.position.lerpVectors(endPos, backPos, t);
+                controls.update();
+              })
+              .start();
+          })
+          .start();
       }
 
       function startPlayback(payload) {
@@ -979,6 +1217,7 @@
         updateNeuromodPanel(payload);
 
         brain.activeLobe = payload.active_lobe;
+        brain.firePulse = 1.0;
         const vp = brain.vfxProfile;
         const proxy = { value: 0 };
         new TWEEN.Tween(proxy)
@@ -991,14 +1230,13 @@
 
         explanationText.textContent = payload.explanation || "";
         activeLobePill.textContent = payload.active_lobe;
-        activeLobePill.style.background = `#${LOBE_COLORS[payload.active_lobe].getHexString()}`;
-        activeLobePill.className =
-          "shrink-0 whitespace-nowrap rounded px-2.5 py-1 text-sm uppercase tracking-wide font-semibold text-slate-900";
+        activeLobePill.style.color = `#${LOBE_COLORS[payload.active_lobe].getHexString()}`;
 
         playPauseButton.textContent = "Pause";
-        setStatus("Neural pulse playback running");
         refreshLegendCounts();
         updateTimelineUi();
+        updateViewStatus();
+        nudgeCameraTowardLobe(payload.active_lobe);
       }
 
       function updatePlayback(now) {
@@ -1008,7 +1246,6 @@
         setPlaybackTime(playback.simMs + dt * playback.speed);
         if (playback.simMs >= playback.durationMs) {
           playback.active = false;
-          setStatus("Playback complete");
           log("Playback complete.");
           const proxy = { value: brain.glowAmount };
           const outMs = brain.vfxProfile.tween_out_ms;
@@ -1020,8 +1257,11 @@
             })
             .onComplete(() => {
               resetAllLobeColors();
+              updateViewStatus();
             })
             .start();
+        } else if (playback.active && !playback.paused) {
+          updateViewStatus();
         }
       }
 
@@ -1129,6 +1369,35 @@
          ═══════════════════════════════════════════════ */
 
       function hookUiEvents() {
+        controls.addEventListener("start", () => {
+          autoRotate = false;
+          rotateButton.textContent = "Auto-Rotate: OFF";
+        });
+
+        renderer.domElement.style.cursor = "crosshair";
+        renderer.domElement.addEventListener("pointermove", (e) => {
+          if (!brain.ready) return;
+          pointerLobe = pickLobeAtClient(e.clientX, e.clientY);
+          updateViewStatus();
+        });
+        renderer.domElement.addEventListener("pointerleave", () => {
+          pointerLobe = null;
+          updateViewStatus();
+        });
+        renderer.domElement.addEventListener("click", (e) => {
+          if (!brain.ready) return;
+          const lobe = pickLobeAtClient(e.clientX, e.clientY);
+          if (!lobe) {
+            pickedLobe = null;
+            setLegendHighlight(null);
+            updateViewStatus();
+            return;
+          }
+          pickedLobe = lobe;
+          setLegendHighlight(lobe);
+          updateViewStatus();
+        });
+
         rotateButton.addEventListener("click", () => {
           autoRotate = !autoRotate;
           rotateButton.textContent = `Auto-Rotate: ${autoRotate ? "ON" : "OFF"}`;
@@ -1143,7 +1412,7 @@
           playback.paused = !playback.paused;
           playback.lastWallNow = performance.now();
           playPauseButton.textContent = playback.paused ? "Resume" : "Pause";
-          setStatus(playback.paused ? "Paused" : "Resumed");
+          updateViewStatus();
         });
         speedSlider.addEventListener("input", () => {
           playback.speed = Number(speedSlider.value);
@@ -1166,7 +1435,6 @@
           playback.paused = true;
           playPauseButton.textContent = "Resume";
           setPlaybackTime(Number(timelineSlider.value));
-          setStatus(`Inspecting ${Math.floor(playback.simMs)} ms`);
         });
         window.addEventListener("resize", onResize);
       }
@@ -1180,6 +1448,7 @@
         const dpr = renderer.getPixelRatio();
         composer.setSize(w * dpr, h * dpr);
         bloomPass.setSize(w * dpr, h * dpr);
+        fxaaPass.material.uniforms.resolution.value.set(1 / (w * dpr), 1 / (h * dpr));
       }
 
       /* ═══════════════════════════════════════════════
