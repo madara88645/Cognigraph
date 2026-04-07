@@ -5,9 +5,11 @@ from backend.main import _extract_chat_message_text, run_snn
 from backend.neuromodulation import (
     CORTISOL_U_CRIT,
     NEUROMOD_GLOW_HEX,
+    ResolvedSnnParams,
     build_vfx_profile,
     resolve_cortisol_piecewise,
     resolve_snn_modulation,
+    snn_params_to_dict,
     validate_classification_payload,
 )
 
@@ -191,3 +193,29 @@ def test_run_snn_gaba_total_spikes_below_adrenaline() -> None:
     total_ad = sum(len(sp_ad[l]["times_ms"]) for l in sp_ad)
 
     assert total_gaba < total_ad
+
+
+def test_snn_params_to_dict() -> None:
+    p = ResolvedSnnParams(
+        v_thresh=0.85,
+        tau_ms=25.0,
+        refractory_ms=6.0,
+        epsp=0.45,
+        v_center=0.4,
+        v_spread=0.15,
+        active_rate_hz=120.0,
+        background_rate_hz=15.0,
+        lobe_rates_hz=None,
+    )
+    d = snn_params_to_dict(p)
+    assert isinstance(d, dict)
+    assert d["v_thresh"] == 0.85
+    assert d["tau_ms"] == 25.0
+    assert d["refractory_ms"] == 6.0
+    assert d["epsp"] == 0.45
+    assert d["v_center"] == 0.4
+    assert d["v_spread"] == 0.15
+    assert d["active_rate_hz"] == 120.0
+    assert d["background_rate_hz"] == 15.0
+    # lobe_rates_hz shouldn't be in the dict based on snn_params_to_dict code
+    assert "lobe_rates_hz" not in d
