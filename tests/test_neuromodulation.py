@@ -5,11 +5,26 @@ from backend.main import _extract_chat_message_text, run_snn
 from backend.neuromodulation import (
     CORTISOL_U_CRIT,
     NEUROMOD_GLOW_HEX,
+    _lerp_toward_neutral,
     build_vfx_profile,
     resolve_cortisol_piecewise,
     resolve_snn_modulation,
     validate_classification_payload,
 )
+
+
+def test_lerp_toward_neutral() -> None:
+    # At intensity 0, always returns 1.0 (neutral)
+    assert _lerp_toward_neutral(2.0, 0.0) == 1.0
+    assert _lerp_toward_neutral(0.5, 0.0) == 1.0
+
+    # At intensity 1, returns the full multiplier
+    assert _lerp_toward_neutral(2.0, 1.0) == 2.0
+    assert _lerp_toward_neutral(0.5, 1.0) == 0.5
+
+    # At fractional intensity, returns interpolated value
+    assert _lerp_toward_neutral(2.0, 0.5) == 1.5
+    assert _lerp_toward_neutral(0.5, 0.5) == 0.75
 
 
 def test_extract_chat_message_text_list_parts() -> None:
