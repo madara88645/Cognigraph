@@ -7,6 +7,8 @@ from typing import Any, Dict, List, Tuple
 from urllib import error as urlerror
 from urllib import request as urlrequest
 
+from contextlib import asynccontextmanager
+
 import brian2 as b2
 import httpx
 from fastapi import FastAPI, HTTPException
@@ -24,7 +26,6 @@ from backend.neuromodulation import (
     snn_params_to_dict,
     validate_classification_payload,
 )
-
 
 logger = logging.getLogger("cognigraph")
 logging.basicConfig(
@@ -55,6 +56,17 @@ def _load_dotenv_file() -> None:
 
 
 _load_dotenv_file()
+
+# Global HTTPX Client
+http_client: httpx.AsyncClient = None  # type: ignore
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global http_client
+    http_client = httpx.AsyncClient(timeout=45.0)
+    yield
+    await http_client.aclose()
 
 
 class SimulateRequest(BaseModel):
@@ -202,8 +214,14 @@ async def classify_scenario(prompt: str) -> Dict[str, Any]:
     }
 
     try:
-        async with httpx.AsyncClient(timeout=45.0) as client:
-            response = await client.post(OPENROUTER_URL, json=payload, headers=headers)
+        if http_client is None:
+            # Fallback for when run outside of the FastAPI app lifecycle (e.g., direct test calls)
+            async with httpx.AsyncClient(timeout=45.0) as temp_client:
+                response = await temp_client.post(OPENROUTER_URL, json=payload, headers=headers)
+                response.raise_for_status()
+                raw = response.text
+        else:
+            response = await http_client.post(OPENROUTER_URL, json=payload, headers=headers)
             response.raise_for_status()
             raw = response.text
     except httpx.HTTPStatusError as exc:
@@ -271,6 +289,11 @@ def run_snn(
 
     on_pre = f"v += {epsp}"
 
+    if resolved.lobe_rates_hz is not None:
+        rate_map = dict(resolved.lobe_rates_hz)
+    else:
+        rate_map = None
+
     for lobe in LOBE_NAMES:
         group = b2.NeuronGroup(
             neurons_per_lobe,
@@ -286,12 +309,13 @@ def run_snn(
         group.vt = v_thresh
         groups.append(group)
 
-        if resolved.lobe_rates_hz is not None:
-            rate_map = dict(resolved.lobe_rates_hz)
+        if rate_map is not None:
             rate_hz = rate_map.get(lobe, resolved.background_rate_hz)
         else:
             rate_hz = (
-                resolved.active_rate_hz if lobe == active_lobe else resolved.background_rate_hz
+                resolved.active_rate_hz
+                if lobe == active_lobe
+                else resolved.background_rate_hz
             )
         poisson = b2.PoissonGroup(
             neurons_per_lobe,
@@ -321,7 +345,7 @@ def run_snn(
     return spikes
 
 
-app = FastAPI(title="CogniGraph API", version="1.0.0")
+app = FastAPI(title="CogniGraph API", version="1.0.0", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
 
@@ -344,14 +368,16 @@ async def simulate(request: SimulateRequest) -> SimulateResponse:
         message = str(exc)
         if "OPENROUTER_API_KEY is not set" in message:
             raise HTTPException(status_code=503, detail=message) from exc
+        logger.exception("Failed to classify scenario with OpenRouter.")
         raise HTTPException(
             status_code=502,
-            detail=f"Failed to classify scenario with OpenRouter: {message}",
+            detail="Failed to classify scenario with OpenRouter.",
         ) from exc
     except Exception as exc:
+        logger.exception("Unexpected LLM classification failure.")
         raise HTTPException(
             status_code=502,
-            detail=f"Unexpected LLM classification failure: {exc}",
+            detail="Unexpected LLM classification failure.",
         ) from exc
 
     active_lobe = llm_result["active_lobe"]
@@ -360,11 +386,15 @@ async def simulate(request: SimulateRequest) -> SimulateResponse:
     nm_intensity = llm_result["neuromodulator_intensity"]
     nm_rationale = llm_result["neuromodulator_rationale"]
 
-    resolved = resolve_snn_modulation(dominant_nm, nm_intensity, active_lobe=active_lobe)
+    resolved = resolve_snn_modulation(
+        dominant_nm, nm_intensity, active_lobe=active_lobe
+    )
     vfx_raw = build_vfx_profile(dominant_nm, nm_intensity)
 
     try:
-        spikes = await asyncio.to_thread(run_snn, active_lobe=active_lobe, resolved=resolved)
+        spikes = await asyncio.to_thread(
+            run_snn, active_lobe=active_lobe, resolved=resolved
+        )
     except Exception as exc:
         raise HTTPException(
             status_code=500,
