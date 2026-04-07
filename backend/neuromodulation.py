@@ -291,6 +291,101 @@ def _vfx_cortisol_piecewise(u: float) -> VfxProfileDict:
     }
 
 
+VFX_PROFILE_TABLE: Dict[str, VfxProfileDict] = {
+    "adrenaline": {
+        "bloom_mult": 1.25,
+        "bloom_activity_boost_mult": 1.2,
+        "tween_in_ms": 350,
+        "tween_out_ms": 500,
+        "idle_breath_speed_mult": 1.35,
+        "idle_breath_amp_mult": 1.15,
+        "vertex_wave_mult": 1.4,
+        "burst_threshold": 0.45,
+        "active_lobe_bloom_scale": 1.0,
+    },
+    "noradrenaline": {
+        "bloom_mult": 1.2,
+        "bloom_activity_boost_mult": 1.35,
+        "tween_in_ms": 420,
+        "tween_out_ms": 560,
+        "idle_breath_speed_mult": 1.05,
+        "idle_breath_amp_mult": 0.9,
+        "vertex_wave_mult": 1.15,
+        "burst_threshold": 0.5,
+        "active_lobe_bloom_scale": 1.35,
+    },
+    "dopamine": {
+        "bloom_mult": 1.12,
+        "bloom_activity_boost_mult": 1.15,
+        "tween_in_ms": 480,
+        "tween_out_ms": 640,
+        "idle_breath_speed_mult": 1.12,
+        "idle_breath_amp_mult": 1.08,
+        "vertex_wave_mult": 1.1,
+        "burst_threshold": 0.52,
+        "active_lobe_bloom_scale": 1.05,
+    },
+    "serotonin": {
+        "bloom_mult": 0.95,
+        "bloom_activity_boost_mult": 0.85,
+        "tween_in_ms": 720,
+        "tween_out_ms": 900,
+        "idle_breath_speed_mult": 0.75,
+        "idle_breath_amp_mult": 0.85,
+        "vertex_wave_mult": 0.75,
+        "burst_threshold": 0.68,
+        "active_lobe_bloom_scale": 1.0,
+    },
+    "gaba": {
+        "bloom_mult": 0.8,
+        "bloom_activity_boost_mult": 0.7,
+        "tween_in_ms": 900,
+        "tween_out_ms": 1200,
+        "idle_breath_speed_mult": 0.55,
+        "idle_breath_amp_mult": 1.25,
+        "vertex_wave_mult": 0.6,
+        "burst_threshold": 0.72,
+        "active_lobe_bloom_scale": 1.0,
+    },
+    "acetylcholine": {
+        "bloom_mult": 1.05,
+        "bloom_activity_boost_mult": 1.08,
+        "tween_in_ms": 520,
+        "tween_out_ms": 680,
+        "idle_breath_speed_mult": 0.95,
+        "idle_breath_amp_mult": 0.8,
+        "vertex_wave_mult": 1.12,
+        "burst_threshold": 0.55,
+        "active_lobe_bloom_scale": 1.12,
+    },
+    "baseline": {
+        "bloom_mult": 1.0,
+        "bloom_activity_boost_mult": 1.0,
+        "tween_in_ms": 600,
+        "tween_out_ms": 800,
+        "idle_breath_speed_mult": 1.0,
+        "idle_breath_amp_mult": 1.0,
+        "vertex_wave_mult": 1.0,
+        "burst_threshold": 0.6,
+        "active_lobe_bloom_scale": 1.0,
+    },
+}
+
+for _neuromodulator, _profile in VFX_PROFILE_TABLE.items():
+    _profile["glow_hex"] = NEUROMOD_GLOW_HEX.get(_neuromodulator, NEUROMOD_GLOW_HEX["baseline"])
+
+VFX_PROFILE_KEYS = (
+    "bloom_mult",
+    "bloom_activity_boost_mult",
+    "tween_in_ms",
+    "tween_out_ms",
+    "idle_breath_speed_mult",
+    "idle_breath_amp_mult",
+    "vertex_wave_mult",
+    "burst_threshold",
+    "active_lobe_bloom_scale",
+)
+
 def build_vfx_profile(neuromodulator: str, intensity: float) -> VfxProfileDict:
     """Timing/bloom coefficients; glow_hex is mandatory for client."""
     intensity = max(0.0, min(1.0, intensity))
@@ -304,107 +399,10 @@ def build_vfx_profile(neuromodulator: str, intensity: float) -> VfxProfileDict:
     def tlerp(a: float, b: float) -> float:
         return a + (b - a) * intensity
 
-    profiles: Dict[str, VfxProfileDict] = {
-        "adrenaline": {
-            "glow_hex": glow_hex,
-            "bloom_mult": 1.25,
-            "bloom_activity_boost_mult": 1.2,
-            "tween_in_ms": 350,
-            "tween_out_ms": 500,
-            "idle_breath_speed_mult": 1.35,
-            "idle_breath_amp_mult": 1.15,
-            "vertex_wave_mult": 1.4,
-            "burst_threshold": 0.45,
-            "active_lobe_bloom_scale": 1.0,
-        },
-        "noradrenaline": {
-            "glow_hex": glow_hex,
-            "bloom_mult": 1.2,
-            "bloom_activity_boost_mult": 1.35,
-            "tween_in_ms": 420,
-            "tween_out_ms": 560,
-            "idle_breath_speed_mult": 1.05,
-            "idle_breath_amp_mult": 0.9,
-            "vertex_wave_mult": 1.15,
-            "burst_threshold": 0.5,
-            "active_lobe_bloom_scale": 1.35,
-        },
-        "dopamine": {
-            "glow_hex": glow_hex,
-            "bloom_mult": 1.12,
-            "bloom_activity_boost_mult": 1.15,
-            "tween_in_ms": 480,
-            "tween_out_ms": 640,
-            "idle_breath_speed_mult": 1.12,
-            "idle_breath_amp_mult": 1.08,
-            "vertex_wave_mult": 1.1,
-            "burst_threshold": 0.52,
-            "active_lobe_bloom_scale": 1.05,
-        },
-        "serotonin": {
-            "glow_hex": glow_hex,
-            "bloom_mult": 0.95,
-            "bloom_activity_boost_mult": 0.85,
-            "tween_in_ms": 720,
-            "tween_out_ms": 900,
-            "idle_breath_speed_mult": 0.75,
-            "idle_breath_amp_mult": 0.85,
-            "vertex_wave_mult": 0.75,
-            "burst_threshold": 0.68,
-            "active_lobe_bloom_scale": 1.0,
-        },
-        "gaba": {
-            "glow_hex": glow_hex,
-            "bloom_mult": 0.8,
-            "bloom_activity_boost_mult": 0.7,
-            "tween_in_ms": 900,
-            "tween_out_ms": 1200,
-            "idle_breath_speed_mult": 0.55,
-            "idle_breath_amp_mult": 1.25,
-            "vertex_wave_mult": 0.6,
-            "burst_threshold": 0.72,
-            "active_lobe_bloom_scale": 1.0,
-        },
-        "acetylcholine": {
-            "glow_hex": glow_hex,
-            "bloom_mult": 1.05,
-            "bloom_activity_boost_mult": 1.08,
-            "tween_in_ms": 520,
-            "tween_out_ms": 680,
-            "idle_breath_speed_mult": 0.95,
-            "idle_breath_amp_mult": 0.8,
-            "vertex_wave_mult": 1.12,
-            "burst_threshold": 0.55,
-            "active_lobe_bloom_scale": 1.12,
-        },
-        "baseline": {
-            "glow_hex": glow_hex,
-            "bloom_mult": 1.0,
-            "bloom_activity_boost_mult": 1.0,
-            "tween_in_ms": 600,
-            "tween_out_ms": 800,
-            "idle_breath_speed_mult": 1.0,
-            "idle_breath_amp_mult": 1.0,
-            "vertex_wave_mult": 1.0,
-            "burst_threshold": 0.6,
-            "active_lobe_bloom_scale": 1.0,
-        },
-    }
-
-    base = profiles.get(neuromodulator, profiles["baseline"])
-    neutral = profiles["baseline"]
+    base = VFX_PROFILE_TABLE.get(neuromodulator, VFX_PROFILE_TABLE["baseline"])
+    neutral = VFX_PROFILE_TABLE["baseline"]
     out: VfxProfileDict = {"glow_hex": glow_hex}
-    for key in (
-        "bloom_mult",
-        "bloom_activity_boost_mult",
-        "tween_in_ms",
-        "tween_out_ms",
-        "idle_breath_speed_mult",
-        "idle_breath_amp_mult",
-        "vertex_wave_mult",
-        "burst_threshold",
-        "active_lobe_bloom_scale",
-    ):
+    for key in VFX_PROFILE_KEYS:
         bv = float(base[key])  # type: ignore[literal-required]
         nv = float(neutral[key])  # type: ignore[literal-required]
         out[key] = tlerp(nv, bv)  # type: ignore[literal-required]
