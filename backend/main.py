@@ -344,14 +344,16 @@ async def simulate(request: SimulateRequest) -> SimulateResponse:
         message = str(exc)
         if "OPENROUTER_API_KEY is not set" in message:
             raise HTTPException(status_code=503, detail=message) from exc
+        logger.exception("Failed to classify scenario with OpenRouter.")
         raise HTTPException(
             status_code=502,
-            detail=f"Failed to classify scenario with OpenRouter: {message}",
+            detail="Failed to classify scenario with OpenRouter.",
         ) from exc
     except Exception as exc:
+        logger.exception("Unexpected LLM classification failure.")
         raise HTTPException(
             status_code=502,
-            detail=f"Unexpected LLM classification failure: {exc}",
+            detail="Unexpected LLM classification failure.",
         ) from exc
 
     active_lobe = llm_result["active_lobe"]
