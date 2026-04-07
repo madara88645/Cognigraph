@@ -8,6 +8,8 @@ from backend.neuromodulation import (
     build_vfx_profile,
     resolve_cortisol_piecewise,
     resolve_snn_modulation,
+    snn_params_to_dict,
+    ResolvedSnnParams,
     validate_classification_payload,
 )
 
@@ -191,3 +193,31 @@ def test_run_snn_gaba_total_spikes_below_adrenaline() -> None:
     total_ad = sum(len(sp_ad[l]["times_ms"]) for l in sp_ad)
 
     assert total_gaba < total_ad
+
+
+def test_snn_params_to_dict_formatting() -> None:
+    p = ResolvedSnnParams(
+        v_thresh=0.85,
+        tau_ms=22.0,
+        refractory_ms=6.0,
+        epsp=0.45,
+        v_center=0.45,
+        v_spread=0.1,
+        active_rate_hz=120.0,
+        background_rate_hz=12.0,
+        lobe_rates_hz=(("frontal", 120.0), ("parietal", 12.0)),
+    )
+    d = snn_params_to_dict(p)
+
+    # Assert specific keys map correctly
+    assert d["v_thresh"] == 0.85
+    assert d["tau_ms"] == 22.0
+    assert d["refractory_ms"] == 6.0
+    assert d["epsp"] == 0.45
+    assert d["v_center"] == 0.45
+    assert d["v_spread"] == 0.1
+    assert d["active_rate_hz"] == 120.0
+    assert d["background_rate_hz"] == 12.0
+
+    # Assert lobe_rates_hz is not included in the dictionary
+    assert "lobe_rates_hz" not in d
