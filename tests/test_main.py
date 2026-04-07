@@ -1,7 +1,11 @@
 import pytest
 import json
+from unittest.mock import patch
+from fastapi.testclient import TestClient
 
-from backend.main import _parse_model_json
+from backend.main import _parse_model_json, app
+
+client = TestClient(app)
 
 def test_parse_model_json_valid_dict():
     # Test valid JSON string without markdown
@@ -32,3 +36,15 @@ def test_parse_model_json_not_a_dict():
     raw = '"just a string"'
     with pytest.raises(ValueError, match="Model output is not a JSON object."):
         _parse_model_json(raw)
+
+def test_serve_index_success():
+    response = client.get("/")
+    assert response.status_code == 200
+    assert "text/html" in response.headers.get("content-type", "")
+
+def test_serve_index_not_found():
+    with patch("backend.main.FRONTEND_INDEX") as mock_index:
+        mock_index.exists.return_value = False
+        response = client.get("/")
+        assert response.status_code == 500
+        assert response.json() == {"detail": "Frontend index.html not found."}
