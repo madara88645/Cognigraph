@@ -1,7 +1,9 @@
 import pytest
 import json
+import os
+from unittest.mock import patch
 
-from backend.main import _parse_model_json, _strip_markdown_fences
+from backend.main import _parse_model_json, _strip_markdown_fences, _load_dotenv_file
 
 def test_strip_markdown_fences_with_fences():
     raw = "```json\n{\"key\": \"value\"}\n```"
@@ -64,3 +66,50 @@ def test_parse_model_json_not_a_dict():
     raw = '"just a string"'
     with pytest.raises(ValueError, match="Model output is not a JSON object."):
         _parse_model_json(raw)
+
+@patch("backend.main.ENV_FILE")
+def test_load_dotenv_file_not_exists(mock_env_file):
+    mock_env_file.exists.return_value = False
+    with patch.dict(os.environ, {}, clear=True):
+        _load_dotenv_file()
+    mock_env_file.read_text.assert_not_called()
+
+@patch("backend.main.ENV_FILE")
+def test_load_dotenv_file_valid_lines(mock_env_file):
+    mock_env_file.exists.return_value = True
+    mock_env_file.read_text.return_value = (
+        "TEST_VAR1=value1\n"
+        "  TEST_VAR2  =  value2  \n"
+        "TEST_VAR3=\"value3\"\n"
+        "TEST_VAR4='value4'"
+    )
+    with patch.dict(os.environ, {}, clear=True):
+        _load_dotenv_file()
+        assert os.environ.get("TEST_VAR1") == "value1"
+        assert os.environ.get("TEST_VAR2") == "value2"
+        assert os.environ.get("TEST_VAR3") == "value3"
+        assert os.environ.get("TEST_VAR4") == "value4"
+
+@patch("backend.main.ENV_FILE")
+def test_load_dotenv_file_ignored_lines(mock_env_file):
+    mock_env_file.exists.return_value = True
+    mock_env_file.read_text.return_value = (
+        "\n"
+        "   \n"
+        "# This is a comment\n"
+        "INVALID_LINE_NO_EQUALS\n"
+        "TEST_VAR5=value5"
+    )
+    with patch.dict(os.environ, {}, clear=True):
+        _load_dotenv_file()
+        assert os.environ.get("TEST_VAR5") == "value5"
+        assert len(os.environ) == 1
+
+@patch("backend.main.ENV_FILE")
+def test_load_dotenv_file_existing_vars_not_overwritten(mock_env_file):
+    mock_env_file.exists.return_value = True
+    mock_env_file.read_text.return_value = "TEST_VAR6=new_value"
+
+    with patch.dict(os.environ, {"TEST_VAR6": "old_value"}, clear=True):
+        _load_dotenv_file()
+        assert os.environ.get("TEST_VAR6") == "old_value"
