@@ -1,7 +1,33 @@
 import pytest
 import json
 
-from backend.main import _parse_model_json
+from backend.main import _parse_model_json, _strip_markdown_fences
+
+def test_strip_markdown_fences_no_fences():
+    raw = '{"key": "value"}'
+    assert _strip_markdown_fences(raw) == '{"key": "value"}'
+
+def test_strip_markdown_fences_standard():
+    raw = '```json\n{"key": "value"}\n```'
+    assert _strip_markdown_fences(raw) == '{"key": "value"}'
+
+def test_strip_markdown_fences_multiline():
+    raw = '```\nline1\nline2\n```'
+    assert _strip_markdown_fences(raw) == 'line1\nline2'
+
+def test_strip_markdown_fences_incomplete_missing_end():
+    # Only 2 lines, so len(lines) >= 3 is False
+    raw = '```json\n{"key": "value"}'
+    assert _strip_markdown_fences(raw) == '```json\n{"key": "value"}'
+
+def test_strip_markdown_fences_missing_end_but_long():
+    # More than 3 lines but missing end fence
+    raw = '```json\n{"key": "value"}\n"extra": "value"}'
+    assert _strip_markdown_fences(raw) == '{"key": "value"}\n"extra": "value"}'
+
+def test_strip_markdown_fences_extra_whitespace():
+    raw = '  \n```json\n{"key": "value"}\n``` \n '
+    assert _strip_markdown_fences(raw) == '{"key": "value"}'
 
 def test_parse_model_json_valid_dict():
     # Test valid JSON string without markdown
