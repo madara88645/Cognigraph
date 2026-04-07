@@ -103,6 +103,27 @@ def test_validate_rejects_bad_payload(payload: dict, match: str) -> None:
     assert match in str(exc.value).lower() or match.replace("_", " ") in str(exc.value).lower()
 
 
+def test_validate_explanation_length_limit() -> None:
+    payload = {
+        "active_lobe": "frontal",
+        "dominant_neuromodulator": "baseline",
+        "explanation": "x" * 2001,
+    }
+    with pytest.raises(ValueError, match="Explanation exceeds maximum length"):
+        validate_classification_payload(payload)
+
+
+def test_validate_rationale_length_limit() -> None:
+    payload = {
+        "active_lobe": "frontal",
+        "dominant_neuromodulator": "baseline",
+        "explanation": "Valid explanation.",
+        "neuromodulator_rationale": "x" * 501,
+    }
+    with pytest.raises(ValueError, match="neuromodulator_rationale exceeds maximum length"):
+        validate_classification_payload(payload)
+
+
 def test_glow_hex_per_modulator() -> None:
     assert NEUROMOD_GLOW_HEX["adrenaline"] == "#FF4500"
     assert NEUROMOD_GLOW_HEX["dopamine"] == "#FFD700"
