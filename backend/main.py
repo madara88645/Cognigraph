@@ -125,6 +125,22 @@ def _parse_model_json(raw_text: str) -> Dict[str, Any]:
     return parsed
 
 
+async def _make_openrouter_request(payload: Dict[str, Any], headers: Dict[str, str]) -> str:
+    """Helper function to execute the HTTP request to OpenRouter."""
+    try:
+        async with httpx.AsyncClient(timeout=45.0) as client:
+            response = await client.post(OPENROUTER_URL, json=payload, headers=headers)
+            response.raise_for_status()
+            return response.text
+    except httpx.HTTPStatusError as exc:
+        error_body = exc.response.text
+        raise RuntimeError(
+            f"OpenRouter request failed with status {exc.response.status_code}: {error_body}"
+        ) from exc
+    except Exception as exc:  # pragma: no cover - network/service dependency
+        raise RuntimeError(f"OpenRouter request failed: {exc}") from exc
+
+
 def _extract_chat_message_text(message: Any) -> str:
     """Normalize OpenRouter/OpenAI-style message.content (str or list of parts) to plain text."""
     if message is None or not isinstance(message, dict):
@@ -201,18 +217,7 @@ async def classify_scenario(prompt: str) -> Dict[str, Any]:
         "X-Title": "CogniGraph",
     }
 
-    try:
-        async with httpx.AsyncClient(timeout=45.0) as client:
-            response = await client.post(OPENROUTER_URL, json=payload, headers=headers)
-            response.raise_for_status()
-            raw = response.text
-    except httpx.HTTPStatusError as exc:
-        error_body = exc.response.text
-        raise RuntimeError(
-            f"OpenRouter request failed with status {exc.response.status_code}: {error_body}"
-        ) from exc
-    except Exception as exc:  # pragma: no cover - network/service dependency
-        raise RuntimeError(f"OpenRouter request failed: {exc}") from exc
+    raw = await _make_openrouter_request(payload, headers)
 
     try:
         parsed_response = json.loads(raw)
