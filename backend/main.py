@@ -25,7 +25,6 @@ from backend.neuromodulation import (
     validate_classification_payload,
 )
 
-
 logger = logging.getLogger("cognigraph")
 logging.basicConfig(
     level=logging.INFO,
@@ -271,6 +270,11 @@ def run_snn(
 
     on_pre = f"v += {epsp}"
 
+    if resolved.lobe_rates_hz is not None:
+        rate_map = dict(resolved.lobe_rates_hz)
+    else:
+        rate_map = None
+
     for lobe in LOBE_NAMES:
         group = b2.NeuronGroup(
             neurons_per_lobe,
@@ -286,12 +290,13 @@ def run_snn(
         group.vt = v_thresh
         groups.append(group)
 
-        if resolved.lobe_rates_hz is not None:
-            rate_map = dict(resolved.lobe_rates_hz)
+        if rate_map is not None:
             rate_hz = rate_map.get(lobe, resolved.background_rate_hz)
         else:
             rate_hz = (
-                resolved.active_rate_hz if lobe == active_lobe else resolved.background_rate_hz
+                resolved.active_rate_hz
+                if lobe == active_lobe
+                else resolved.background_rate_hz
             )
         poisson = b2.PoissonGroup(
             neurons_per_lobe,
@@ -360,11 +365,15 @@ async def simulate(request: SimulateRequest) -> SimulateResponse:
     nm_intensity = llm_result["neuromodulator_intensity"]
     nm_rationale = llm_result["neuromodulator_rationale"]
 
-    resolved = resolve_snn_modulation(dominant_nm, nm_intensity, active_lobe=active_lobe)
+    resolved = resolve_snn_modulation(
+        dominant_nm, nm_intensity, active_lobe=active_lobe
+    )
     vfx_raw = build_vfx_profile(dominant_nm, nm_intensity)
 
     try:
-        spikes = await asyncio.to_thread(run_snn, active_lobe=active_lobe, resolved=resolved)
+        spikes = await asyncio.to_thread(
+            run_snn, active_lobe=active_lobe, resolved=resolved
+        )
     except Exception as exc:
         raise HTTPException(
             status_code=500,
