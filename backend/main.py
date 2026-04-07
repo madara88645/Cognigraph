@@ -7,6 +7,8 @@ from typing import Any, Dict, List, Tuple
 from urllib import error as urlerror
 from urllib import request as urlrequest
 
+from contextlib import asynccontextmanager
+
 import brian2 as b2
 import httpx
 from fastapi import FastAPI, HTTPException
@@ -55,6 +57,17 @@ def _load_dotenv_file() -> None:
 
 
 _load_dotenv_file()
+
+# Global HTTPX Client
+http_client: httpx.AsyncClient = None  # type: ignore
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global http_client
+    http_client = httpx.AsyncClient(timeout=45.0)
+    yield
+    await http_client.aclose()
 
 
 class SimulateRequest(BaseModel):
@@ -202,8 +215,14 @@ async def classify_scenario(prompt: str) -> Dict[str, Any]:
     }
 
     try:
-        async with httpx.AsyncClient(timeout=45.0) as client:
-            response = await client.post(OPENROUTER_URL, json=payload, headers=headers)
+        if http_client is None:
+            # Fallback for when run outside of the FastAPI app lifecycle (e.g., direct test calls)
+            async with httpx.AsyncClient(timeout=45.0) as temp_client:
+                response = await temp_client.post(OPENROUTER_URL, json=payload, headers=headers)
+                response.raise_for_status()
+                raw = response.text
+        else:
+            response = await http_client.post(OPENROUTER_URL, json=payload, headers=headers)
             response.raise_for_status()
             raw = response.text
     except httpx.HTTPStatusError as exc:
@@ -321,7 +340,7 @@ def run_snn(
     return spikes
 
 
-app = FastAPI(title="CogniGraph API", version="1.0.0")
+app = FastAPI(title="CogniGraph API", version="1.0.0", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
 
