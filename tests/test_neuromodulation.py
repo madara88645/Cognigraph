@@ -5,11 +5,28 @@ from backend.main import _extract_chat_message_text, run_snn
 from backend.neuromodulation import (
     CORTISOL_U_CRIT,
     NEUROMOD_GLOW_HEX,
+    _lerp_toward_neutral,
     build_vfx_profile,
     resolve_cortisol_piecewise,
     resolve_snn_modulation,
+    snn_params_to_dict,
+    ResolvedSnnParams,
     validate_classification_payload,
 )
+
+
+def test_lerp_toward_neutral() -> None:
+    # At intensity 0, always returns 1.0 (neutral)
+    assert _lerp_toward_neutral(2.0, 0.0) == 1.0
+    assert _lerp_toward_neutral(0.5, 0.0) == 1.0
+
+    # At intensity 1, returns the full multiplier
+    assert _lerp_toward_neutral(2.0, 1.0) == 2.0
+    assert _lerp_toward_neutral(0.5, 1.0) == 0.5
+
+    # At fractional intensity, returns interpolated value
+    assert _lerp_toward_neutral(2.0, 0.5) == 1.5
+    assert _lerp_toward_neutral(0.5, 0.5) == 0.75
 
 
 def test_extract_chat_message_text_list_parts() -> None:
@@ -103,6 +120,29 @@ def test_validate_rejects_bad_payload(payload: dict, match: str) -> None:
     assert match in str(exc.value).lower() or match.replace("_", " ") in str(exc.value).lower()
 
 
+def test_validate_explanation_too_long() -> None:
+    with pytest.raises(ValueError, match="exceeds maximum length"):
+        validate_classification_payload(
+            {
+                "active_lobe": "frontal",
+                "dominant_neuromodulator": "baseline",
+                "explanation": "x" * 2001,
+            }
+        )
+
+
+def test_validate_rationale_too_long() -> None:
+    with pytest.raises(ValueError, match="exceeds maximum length"):
+        validate_classification_payload(
+            {
+                "active_lobe": "frontal",
+                "dominant_neuromodulator": "baseline",
+                "explanation": "Valid explanation.",
+                "neuromodulator_rationale": "x" * 501,
+            }
+        )
+
+
 def test_glow_hex_per_modulator() -> None:
     assert NEUROMOD_GLOW_HEX["adrenaline"] == "#FF4500"
     assert NEUROMOD_GLOW_HEX["dopamine"] == "#FFD700"
@@ -191,3 +231,31 @@ def test_run_snn_gaba_total_spikes_below_adrenaline() -> None:
     total_ad = sum(len(sp_ad[l]["times_ms"]) for l in sp_ad)
 
     assert total_gaba < total_ad
+
+
+def test_snn_params_to_dict_formatting() -> None:
+    p = ResolvedSnnParams(
+        v_thresh=0.85,
+        tau_ms=22.0,
+        refractory_ms=6.0,
+        epsp=0.45,
+        v_center=0.45,
+        v_spread=0.1,
+        active_rate_hz=120.0,
+        background_rate_hz=12.0,
+        lobe_rates_hz=(("frontal", 120.0), ("parietal", 12.0)),
+    )
+    d = snn_params_to_dict(p)
+
+    # Assert specific keys map correctly
+    assert d["v_thresh"] == 0.85
+    assert d["tau_ms"] == 22.0
+    assert d["refractory_ms"] == 6.0
+    assert d["epsp"] == 0.45
+    assert d["v_center"] == 0.45
+    assert d["v_spread"] == 0.1
+    assert d["active_rate_hz"] == 120.0
+    assert d["background_rate_hz"] == 12.0
+
+    # Assert lobe_rates_hz is not included in the dictionary
+    assert "lobe_rates_hz" not in d
