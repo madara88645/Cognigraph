@@ -97,11 +97,17 @@ Static files are mounted at `/static` from the `frontend/` directory.
 
 ## Deploy
 
+### Live deployments
+
+- Vercel (production): [https://cognigraph-tau.vercel.app](https://cognigraph-tau.vercel.app)
+- Fly.io (production): [https://cognigraph-13906.fly.dev](https://cognigraph-13906.fly.dev)
+
 ### Security model for API key
 
-- `OPENROUTER_API_KEY` is **server-side only**.
-- Do not add API key input to frontend.
-- Configure secrets in hosting platform settings.
+- Each user can provide their own OpenRouter key in the UI (`API Settings` panel).
+- The key is stored in the user's browser local storage and sent as `X-OpenRouter-Api-Key`.
+- Server-side env key (`OPENROUTER_API_KEY`) is still supported as fallback.
+- For shared/public devices, users should clear their saved key after use.
 
 ### Vercel
 
