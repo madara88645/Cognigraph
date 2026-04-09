@@ -4,7 +4,13 @@ import os
 from unittest.mock import patch
 from fastapi.testclient import TestClient
 
-from backend.main import _parse_model_json, _strip_markdown_fences, _load_dotenv_file, app
+from backend.main import (
+    _load_dotenv_file,
+    _parse_model_json,
+    _resolve_openrouter_api_key,
+    _strip_markdown_fences,
+    app,
+)
 
 client = TestClient(app)
 
@@ -81,6 +87,28 @@ def test_serve_index_not_found():
         response = client.get("/")
         assert response.status_code == 500
         assert response.json() == {"detail": "Frontend index.html not found."}
+
+
+def test_healthz_success():
+    response = client.get("/healthz")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
+def test_resolve_openrouter_api_key_prefers_override():
+    with patch.dict(os.environ, {"OPENROUTER_API_KEY": "server-key"}, clear=True):
+        assert _resolve_openrouter_api_key("user-key") == "user-key"
+
+
+def test_resolve_openrouter_api_key_reads_environment():
+    with patch.dict(os.environ, {"OPENROUTER_API_KEY": "server-key"}, clear=True):
+        assert _resolve_openrouter_api_key("") == "server-key"
+
+
+def test_resolve_openrouter_api_key_missing_raises():
+    with patch.dict(os.environ, {}, clear=True):
+        with pytest.raises(RuntimeError, match="OPENROUTER_API_KEY is not set"):
+            _resolve_openrouter_api_key("")
 
 @patch("backend.main.ENV_FILE")
 def test_load_dotenv_file_not_exists(mock_env_file):

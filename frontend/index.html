@@ -104,6 +104,28 @@
               class="w-full bg-slate-900/30 border border-slate-700/50 rounded-xl p-3 text-sm text-slate-100 placeholder:text-slate-600 outline-none focus:border-white transition-colors resize-none h-20"
               placeholder="E.g., Solving a complex math problem..."
             ></textarea>
+            <div class="rounded-xl border border-amber-300/25 bg-amber-500/10 px-3 py-2">
+              <div class="flex items-center justify-between gap-2">
+                <p class="text-[10px] uppercase tracking-widest text-amber-200 font-semibold">API Settings</p>
+                <button id="toggle-settings-btn" class="text-[10px] uppercase font-semibold text-amber-100 border border-amber-200/40 rounded-full px-2 py-1 hover:text-white hover:border-amber-100">Show</button>
+              </div>
+              <p class="mt-1 text-[11px] leading-relaxed text-amber-100/90">
+                Each user can use their own OpenRouter key. Saved locally in your browser.
+              </p>
+              <div id="settings-panel" class="hidden mt-2 space-y-2">
+                <input
+                  id="api-key-input"
+                  type="password"
+                  class="w-full bg-slate-900/40 border border-amber-200/40 rounded-lg p-2 text-xs text-slate-100 placeholder:text-slate-500 outline-none focus:border-amber-100"
+                  placeholder="sk-or-v1-..."
+                />
+                <div class="flex items-center gap-2">
+                  <button id="save-api-key-btn" class="text-[10px] uppercase font-semibold text-slate-900 bg-amber-200 rounded-full px-3 py-1 hover:bg-amber-100">Save Key</button>
+                  <button id="clear-api-key-btn" class="text-[10px] uppercase font-semibold text-amber-100 border border-amber-200/40 rounded-full px-3 py-1 hover:text-white">Clear</button>
+                  <span id="api-key-status" class="text-[10px] text-amber-100/90">Not set</span>
+                </div>
+              </div>
+            </div>
             <button
               id="simulate-btn"
               class="w-full bg-white text-black font-semibold uppercase tracking-wider text-xs py-2.5 rounded-xl hover:bg-slate-200 disabled:opacity-50 disabled:hover:bg-white"
@@ -332,6 +354,14 @@
       const legendPanel       = document.getElementById("legend-panel");
       const logPanel          = document.getElementById("log-panel");
       const canvasHost        = document.getElementById("brain-canvas");
+      const settingsToggleButton = document.getElementById("toggle-settings-btn");
+      const settingsPanel = document.getElementById("settings-panel");
+      const apiKeyInput = document.getElementById("api-key-input");
+      const saveApiKeyButton = document.getElementById("save-api-key-btn");
+      const clearApiKeyButton = document.getElementById("clear-api-key-btn");
+      const apiKeyStatus = document.getElementById("api-key-status");
+
+      const API_KEY_STORAGE_KEY = "cognigraph.openrouter_api_key";
 
       /* ═══════════════════════════════════════════════
          THREE.JS SCENE
@@ -553,6 +583,23 @@
 
       function updateSpeedLabel() {
         speedLabel.textContent = `${playback.speed.toFixed(2)}x`;
+      }
+
+      function getSavedApiKey() {
+        return localStorage.getItem(API_KEY_STORAGE_KEY) || "";
+      }
+
+      function setSavedApiKey(value) {
+        if (!value) {
+          localStorage.removeItem(API_KEY_STORAGE_KEY);
+          return;
+        }
+        localStorage.setItem(API_KEY_STORAGE_KEY, value);
+      }
+
+      function refreshApiKeyStatus() {
+        const value = getSavedApiKey();
+        apiKeyStatus.textContent = value ? "Key saved" : "Not set";
       }
 
       /* ═══════════════════════════════════════════════
@@ -1317,15 +1364,26 @@
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
         try {
+          const savedApiKey = getSavedApiKey();
+          const headers = { "Content-Type": "application/json" };
+          if (savedApiKey) {
+            headers["X-OpenRouter-Api-Key"] = savedApiKey;
+          }
           const response = await fetch("/simulate", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers,
             body: JSON.stringify({ prompt }),
             signal: controller.signal,
           });
           const body = await response.json().catch(() => ({}));
           if (!response.ok) {
-            throw new Error(formatFastApiDetail(body.detail, response.status));
+            const detail = formatFastApiDetail(body.detail, response.status);
+            if (response.status === 503 && detail.includes("OPENROUTER_API_KEY is not set")) {
+              throw new Error(
+                "OPENROUTER_API_KEY is missing. Add your key in API Settings or set it on the server."
+              );
+            }
+            throw new Error(detail);
           }
           return body;
         } finally {
@@ -1402,6 +1460,25 @@
           autoRotate = !autoRotate;
           rotateButton.textContent = `Auto-Rotate: ${autoRotate ? "ON" : "OFF"}`;
         });
+        settingsToggleButton.addEventListener("click", () => {
+          settingsPanel.classList.toggle("hidden");
+          settingsToggleButton.textContent = settingsPanel.classList.contains("hidden")
+            ? "Show"
+            : "Hide";
+        });
+        saveApiKeyButton.addEventListener("click", () => {
+          const value = apiKeyInput.value.trim();
+          setSavedApiKey(value);
+          apiKeyInput.value = "";
+          refreshApiKeyStatus();
+          log(value ? "Personal OpenRouter key saved locally." : "Empty key ignored.", value ? "info" : "warn");
+        });
+        clearApiKeyButton.addEventListener("click", () => {
+          setSavedApiKey("");
+          apiKeyInput.value = "";
+          refreshApiKeyStatus();
+          log("Personal OpenRouter key cleared from local storage.");
+        });
         simulateButton.addEventListener("click", handleSimulateClick);
         replayButton.addEventListener("click", () => {
           if (!lastPayload) return;
@@ -1438,6 +1515,8 @@
         });
         window.addEventListener("resize", onResize);
       }
+
+      refreshApiKeyStatus();
 
       function onResize() {
         const w = Math.max(1, canvasHost.clientWidth);
