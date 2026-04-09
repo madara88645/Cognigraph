@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager
 
 import brian2 as b2
 import httpx
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -163,7 +163,10 @@ def _extract_chat_message_text(message: Any) -> str:
     return str(content).strip()
 
 
-async def classify_scenario(prompt: str) -> Dict[str, Any]:
+def _resolve_openrouter_api_key(api_key_override: str = "") -> str:
+    override = api_key_override.strip()
+    if override:
+        return override
     api_key = (
         os.getenv("OPENROUTER_API_KEY")
         or os.getenv("openrouter_api_key")
@@ -172,8 +175,13 @@ async def classify_scenario(prompt: str) -> Dict[str, Any]:
     )
     if not api_key:
         raise RuntimeError(
-            "OPENROUTER_API_KEY is not set. Configure the environment variable and retry."
+            "OPENROUTER_API_KEY is not set. Add your key in Settings or configure server env."
         )
+    return api_key
+
+
+async def classify_scenario(prompt: str, api_key_override: str = "") -> Dict[str, Any]:
+    api_key = _resolve_openrouter_api_key(api_key_override)
 
     instruction = (
         "You are a neuroscience classifier.\n"
@@ -364,13 +372,16 @@ def healthz() -> Dict[str, str]:
 
 
 @app.post("/simulate", response_model=SimulateResponse)
-async def simulate(request: SimulateRequest) -> SimulateResponse:
+async def simulate(
+    request: SimulateRequest,
+    x_openrouter_api_key: str = Header(default="", alias="X-OpenRouter-Api-Key"),
+) -> SimulateResponse:
     prompt = request.prompt.strip()
     if not prompt:
         raise HTTPException(status_code=400, detail="Prompt cannot be empty.")
 
     try:
-        llm_result = await classify_scenario(prompt)
+        llm_result = await classify_scenario(prompt, api_key_override=x_openrouter_api_key)
     except RuntimeError as exc:
         message = str(exc)
         if "OPENROUTER_API_KEY is not set" in message:
