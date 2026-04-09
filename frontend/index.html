@@ -104,6 +104,12 @@
               class="w-full bg-slate-900/30 border border-slate-700/50 rounded-xl p-3 text-sm text-slate-100 placeholder:text-slate-600 outline-none focus:border-white transition-colors resize-none h-20"
               placeholder="E.g., Solving a complex math problem..."
             ></textarea>
+            <div class="rounded-xl border border-amber-300/25 bg-amber-500/10 px-3 py-2">
+              <p class="text-[10px] uppercase tracking-widest text-amber-200 font-semibold">Deployment Config</p>
+              <p class="mt-1 text-[11px] leading-relaxed text-amber-100/90">
+                API key is server-side only. Configure <span class="font-mono">OPENROUTER_API_KEY</span> in Vercel or Fly.io environment settings.
+              </p>
+            </div>
             <button
               id="simulate-btn"
               class="w-full bg-white text-black font-semibold uppercase tracking-wider text-xs py-2.5 rounded-xl hover:bg-slate-200 disabled:opacity-50 disabled:hover:bg-white"
@@ -1325,7 +1331,13 @@
           });
           const body = await response.json().catch(() => ({}));
           if (!response.ok) {
-            throw new Error(formatFastApiDetail(body.detail, response.status));
+            const detail = formatFastApiDetail(body.detail, response.status);
+            if (response.status === 503 && detail.includes("OPENROUTER_API_KEY is not set")) {
+              throw new Error(
+                "Server is missing OPENROUTER_API_KEY. Set it in Vercel/Fly environment variables and redeploy."
+              );
+            }
+            throw new Error(detail);
           }
           return body;
         } finally {

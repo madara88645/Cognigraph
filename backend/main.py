@@ -38,7 +38,7 @@ FRONTEND_DIR = PROJECT_ROOT / "frontend"
 FRONTEND_INDEX = FRONTEND_DIR / "index.html"
 ENV_FILE = PROJECT_ROOT / ".env"
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "x-ai/grok-4.1-fast")
+DEFAULT_OPENROUTER_MODEL = "x-ai/grok-4.1-fast"
 
 
 def _load_dotenv_file() -> None:
@@ -56,6 +56,8 @@ def _load_dotenv_file() -> None:
 
 
 _load_dotenv_file()
+
+OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", DEFAULT_OPENROUTER_MODEL)
 
 # Global HTTPX Client
 http_client: httpx.AsyncClient = None  # type: ignore
@@ -354,6 +356,11 @@ def serve_index() -> FileResponse:
     if not FRONTEND_INDEX.exists():
         raise HTTPException(status_code=500, detail="Frontend index.html not found.")
     return FileResponse(FRONTEND_INDEX)
+
+
+@app.get("/healthz")
+def healthz() -> Dict[str, str]:
+    return {"status": "ok"}
 
 
 @app.post("/simulate", response_model=SimulateResponse)

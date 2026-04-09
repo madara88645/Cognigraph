@@ -82,6 +82,12 @@ def test_serve_index_not_found():
         assert response.status_code == 500
         assert response.json() == {"detail": "Frontend index.html not found."}
 
+
+def test_healthz_success():
+    response = client.get("/healthz")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
 @patch("backend.main.ENV_FILE")
 def test_load_dotenv_file_not_exists(mock_env_file):
     mock_env_file.exists.return_value = False

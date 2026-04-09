@@ -59,6 +59,14 @@ Then open [http://127.0.0.1:8000](http://127.0.0.1:8000).
 
 **Windows:** double-click `start-cognigraph.bat`, or use `Baslat-Cognigraph.bat` for Turkish messages.
 
+### Production-style local run
+
+Use this command for production-like testing (no `--reload`):
+
+```bash
+python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
+```
+
 ## Tests
 
 ```bash
@@ -72,6 +80,7 @@ Configuration: [`pytest.ini`](pytest.ini), tests under [`tests/`](tests/).
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/` | Serves the web UI (`frontend/index.html`). |
+| `GET` | `/healthz` | Lightweight health check endpoint for platform probes. |
 | `POST` | `/simulate` | Runs classification + SNN + returns spikes and VFX echo. |
 
 **`POST /simulate`** JSON body:
@@ -85,6 +94,87 @@ Configuration: [`pytest.ini`](pytest.ini), tests under [`tests/`](tests/).
 If `OPENROUTER_API_KEY` is missing, the API returns **503** with a clear message.
 
 Static files are mounted at `/static` from the `frontend/` directory.
+
+## Deploy
+
+### Security model for API key
+
+- `OPENROUTER_API_KEY` is **server-side only**.
+- Do not add API key input to frontend.
+- Configure secrets in hosting platform settings.
+
+### Vercel
+
+1. Install CLI and login:
+   ```bash
+   npm i -g vercel
+   vercel login
+   ```
+2. In project root, deploy:
+   ```bash
+   vercel
+   ```
+3. In Vercel dashboard, set env vars:
+   - `OPENROUTER_API_KEY` (required)
+   - `OPENROUTER_MODEL` (optional)
+4. Redeploy after env changes:
+   ```bash
+   vercel --prod
+   ```
+
+This repo includes `vercel.json` that routes requests to `backend/main.py` and sets Python function timeout.
+
+### Fly.io
+
+1. Install and auth:
+   ```bash
+   fly auth login
+   ```
+2. Create app (once) and deploy:
+   ```bash
+   fly launch --no-deploy
+   fly deploy
+   ```
+3. Set secret key:
+   ```bash
+   fly secrets set OPENROUTER_API_KEY=your_key_here
+   ```
+4. Optional model override:
+   ```bash
+   fly secrets set OPENROUTER_MODEL=x-ai/grok-4.1-fast
+   ```
+5. Redeploy after secret/config changes:
+   ```bash
+   fly deploy
+   ```
+
+This repo includes `fly.toml` and `Dockerfile` configured for `uvicorn backend.main:app`.
+
+## Deployment smoke tests
+
+Run these checks against deployed URL (`$BASE_URL`):
+
+```bash
+curl -fsS "$BASE_URL/healthz"
+curl -fsS "$BASE_URL/" > /dev/null
+curl -sS -X POST "$BASE_URL/simulate" \
+  -H "Content-Type: application/json" \
+  -d "{\"prompt\":\"Solving a complex math problem\"}"
+```
+
+Expected behavior:
+- `/healthz` returns `{"status":"ok"}`.
+- `/` returns HTML.
+- `/simulate` returns JSON with `active_lobe`, `dominant_neuromodulator`, `spikes`.
+- If key is missing, `/simulate` returns `503` with key configuration hint.
+
+## Recent Changes
+
+- Security hardening in LLM error handling to avoid exposing sensitive upstream details to API clients.
+- Faster request handling by reusing `httpx.AsyncClient` through FastAPI lifespan.
+- SNN runtime optimization by removing repeated dictionary creation inside the `run_snn` loop.
+- `build_vfx_profile` optimization by moving static profile definitions to module scope.
+- Added test coverage for `_strip_markdown_fences`, `_load_dotenv_file`, `_lerp_toward_neutral`, `snn_params_to_dict`, payload length validation, and `GET /` (`serve_index`).
 
 ## License
 
