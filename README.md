@@ -43,7 +43,7 @@ pip install -r requirements.txt
 
 1. Copy `.env.example` to `.env` in the project root.
 2. Set `OPENROUTER_API_KEY` from [OpenRouter](https://openrouter.ai/).
-3. Optionally set **`OPENROUTER_DEMO_MODEL`** (default: `openai/gpt-oss-120b`) — used for **anonymous / no-browser-key** traffic on public demos, with a stronger educator-style system prompt. For a no-cost tier on OpenRouter, try `openai/gpt-oss-120b:free` (rate limits apply). See [models](https://openrouter.ai/models).
+3. Optionally set **`OPENROUTER_DEMO_MODEL`** (default: `qwen/qwen3.5-flash-02-23`) — used for **anonymous / no-browser-key** traffic on public demos, with a stronger educator-style system prompt. Alternatives: `openai/gpt-oss-120b`, or `openai/gpt-oss-120b:free` for a no-cost tier (rate limits apply). See [models](https://openrouter.ai/models).
 4. Optionally set **`OPENROUTER_MODEL`** (default: `x-ai/grok-4.1-fast`) — used only when a visitor saves their **own** key in the UI (`X-OpenRouter-Api-Key`); they pay OpenRouter, not you.
 
 Never commit `.env`; it is listed in `.gitignore`.
@@ -116,7 +116,7 @@ Static files are mounted at `/static` from the `frontend/` directory.
 - The key is stored in the user's browser local storage and sent as `X-OpenRouter-Api-Key`.
 - Optional model id from the same panel is sent as `X-OpenRouter-Model` when a user key is present; if omitted or invalid, the server uses **`OPENROUTER_MODEL`**. Without a user key, `X-OpenRouter-Model` is ignored (shared traffic always uses **`OPENROUTER_DEMO_MODEL`**).
 - Server-side env key (`OPENROUTER_API_KEY`) is still supported as fallback for visitors who do not add a key.
-- Requests **without** `X-OpenRouter-Api-Key` use **`OPENROUTER_DEMO_MODEL`** (default `openai/gpt-oss-120b`) plus a neuroscientist-educator system prompt; requests **with** a user key use **`OPENROUTER_MODEL`** or the validated `X-OpenRouter-Model` value (billing is on their OpenRouter account).
+- Requests **without** `X-OpenRouter-Api-Key` use **`OPENROUTER_DEMO_MODEL`** (default `qwen/qwen3.5-flash-02-23`) plus a neuroscientist-educator system prompt; requests **with** a user key use **`OPENROUTER_MODEL`** or the validated `X-OpenRouter-Model` value (billing is on their OpenRouter account).
 - For shared/public devices, users should clear their saved key after use.
 
 ### Vercel
@@ -132,14 +132,14 @@ Static files are mounted at `/static` from the `frontend/` directory.
    ```
 3. In Vercel dashboard, set env vars:
    - `OPENROUTER_API_KEY` (required)
-   - `OPENROUTER_DEMO_MODEL` (optional; default is `openai/gpt-oss-120b` for shared demo quality)
+   - `OPENROUTER_DEMO_MODEL` (optional; default is `qwen/qwen3.5-flash-02-23` for fast shared demo)
    - `OPENROUTER_MODEL` (optional; only affects users who add their own key in the UI)
 4. Redeploy after env changes:
    ```bash
    vercel --prod
    ```
 
-This repo includes `vercel.json` that routes requests to `backend/main.py` and sets Python function timeout.
+`vercel.json` routes all traffic to `api/index.py` (FastAPI) and sets **`maxDuration`: 60** seconds for that function. **`POST /simulate`** often needs **15–25+ seconds** (OpenRouter + Brian2). On **Vercel Hobby**, serverless functions are still capped at **10 seconds**, so previews and production can **504 / timeout** no matter how you redeploy — use **Vercel Pro** (or deploy the API on **Fly.io**, where the process is long-lived) for reliable `/simulate` on previews.
 
 ### Fly.io
 
@@ -158,7 +158,7 @@ This repo includes `vercel.json` that routes requests to `backend/main.py` and s
    ```
 4. Optional model overrides:
    ```bash
-   fly secrets set OPENROUTER_DEMO_MODEL=openai/gpt-oss-120b
+   fly secrets set OPENROUTER_DEMO_MODEL=qwen/qwen3.5-flash-02-23
    fly secrets set OPENROUTER_MODEL=x-ai/grok-4.1-fast
    ```
    Use **`OPENROUTER_DEMO_MODEL`** for the shared demo; **`OPENROUTER_MODEL`** only applies to BYOK requests.
@@ -189,7 +189,7 @@ Expected behavior:
 
 ## Recent Changes
 
-- Shared demo traffic uses **`OPENROUTER_DEMO_MODEL`** (default GPT-OSS 120B + educator prompt); BYOK traffic uses **`OPENROUTER_MODEL`**.
+- Shared demo traffic uses **`OPENROUTER_DEMO_MODEL`** (default Qwen 3.5 Flash + educator prompt); BYOK traffic uses **`OPENROUTER_MODEL`**.
 - Security hardening in LLM error handling to avoid exposing sensitive upstream details to API clients.
 - Faster request handling by reusing `httpx.AsyncClient` through FastAPI lifespan.
 - SNN runtime optimization by removing repeated dictionary creation inside the `run_snn` loop.

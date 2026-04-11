@@ -40,8 +40,8 @@ FRONTEND_INDEX = FRONTEND_DIR / "index.html"
 ENV_FILE = PROJECT_ROOT / ".env"
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_OPENROUTER_MODEL = "x-ai/grok-4.1-fast"
-# Used when the request has no X-OpenRouter-Api-Key (server env key only). Default is GPT-OSS 120B on OpenRouter; override with e.g. openai/gpt-oss-120b:free if you prefer the free tier.
-DEFAULT_OPENROUTER_DEMO_MODEL = "openai/gpt-oss-120b"
+# Used when the request has no X-OpenRouter-Api-Key (server env key only). Default is Qwen 3.5 Flash on OpenRouter (faster/cheaper than GPT-OSS for short JSON classification).
+DEFAULT_OPENROUTER_DEMO_MODEL = "qwen/qwen3.5-flash-02-23"
 
 
 def _load_dotenv_file() -> None:
