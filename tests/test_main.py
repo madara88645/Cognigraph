@@ -132,6 +132,40 @@ def test_select_openrouter_model_uses_byok_model_when_header_present():
         assert _select_openrouter_model("sk-or-user") == "expensive-model"
 
 
+def test_select_openrouter_model_ignores_model_override_without_byok():
+    with patch.multiple(
+        "backend.main",
+        OPENROUTER_MODEL="expensive-model",
+        OPENROUTER_DEMO_MODEL="cheap-model",
+    ):
+        assert _select_openrouter_model("", "anthropic/claude-3-haiku") == "cheap-model"
+        assert _select_openrouter_model("   ", "openai/gpt-4o") == "cheap-model"
+
+
+def test_select_openrouter_model_byok_respects_model_slug():
+    with patch.multiple(
+        "backend.main",
+        OPENROUTER_MODEL="expensive-model",
+        OPENROUTER_DEMO_MODEL="cheap-model",
+    ):
+        assert _select_openrouter_model("sk", "openai/gpt-4o") == "openai/gpt-4o"
+        assert _select_openrouter_model("sk", "  meta-llama/llama-3.1-8b-instruct  ") == (
+            "meta-llama/llama-3.1-8b-instruct"
+        )
+
+
+def test_select_openrouter_model_byok_invalid_slug_falls_back_to_env():
+    with patch.multiple(
+        "backend.main",
+        OPENROUTER_MODEL="expensive-model",
+        OPENROUTER_DEMO_MODEL="cheap-model",
+    ):
+        assert _select_openrouter_model("sk", "") == "expensive-model"
+        assert _select_openrouter_model("sk", "evil\nmodel") == "expensive-model"
+        assert _select_openrouter_model("sk", "x" * 200) == "expensive-model"
+        assert _select_openrouter_model("sk", "../../etc/passwd") == "expensive-model"
+
+
 def test_classification_system_instruction_demo_includes_persona():
     text = _classification_system_instruction("")
     assert "senior cognitive neuroscientist" in text

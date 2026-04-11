@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 from urllib import error as urlerror
@@ -183,11 +184,24 @@ def _resolve_openrouter_api_key(api_key_override: str = "") -> str:
     return api_key
 
 
-def _select_openrouter_model(api_key_override: str) -> str:
-    """BYOK requests use OPENROUTER_MODEL; shared host key uses OPENROUTER_DEMO_MODEL."""
-    if api_key_override.strip():
-        return OPENROUTER_MODEL
-    return OPENROUTER_DEMO_MODEL
+def _normalize_byok_model_slug(raw: str) -> str:
+    """Return a safe OpenRouter model id, or '' to use server OPENROUTER_MODEL."""
+    s = (raw or "").strip()
+    if not s or len(s) > 128 or ".." in s:
+        return ""
+    if not re.fullmatch(r"[a-zA-Z0-9/_.:-]+", s):
+        return ""
+    return s
+
+
+def _select_openrouter_model(api_key_override: str, model_override: str = "") -> str:
+    """Shared host key → demo model only. BYOK → optional X-OpenRouter-Model else OPENROUTER_MODEL."""
+    if not api_key_override.strip():
+        return OPENROUTER_DEMO_MODEL
+    chosen = _normalize_byok_model_slug(model_override)
+    if chosen:
+        return chosen
+    return OPENROUTER_MODEL
 
 
 # Shared JSON/schema rules for lobe + neuromodulator classification (appended after role-specific intro).
@@ -241,9 +255,13 @@ def _classification_system_instruction(api_key_override: str) -> str:
     return _NEUROSCIENTIST_DEMO_PERSONA + _CLASSIFICATION_TASK
 
 
-async def classify_scenario(prompt: str, api_key_override: str = "") -> Dict[str, Any]:
+async def classify_scenario(
+    prompt: str,
+    api_key_override: str = "",
+    model_override: str = "",
+) -> Dict[str, Any]:
     api_key = _resolve_openrouter_api_key(api_key_override)
-    model_name = _select_openrouter_model(api_key_override)
+    model_name = _select_openrouter_model(api_key_override, model_override)
 
     instruction = _classification_system_instruction(api_key_override)
     payload = {
@@ -413,13 +431,18 @@ def healthz() -> Dict[str, str]:
 async def simulate(
     request: SimulateRequest,
     x_openrouter_api_key: str = Header(default="", alias="X-OpenRouter-Api-Key"),
+    x_openrouter_model: str = Header(default="", alias="X-OpenRouter-Model"),
 ) -> SimulateResponse:
     prompt = request.prompt.strip()
     if not prompt:
         raise HTTPException(status_code=400, detail="Prompt cannot be empty.")
 
     try:
-        llm_result = await classify_scenario(prompt, api_key_override=x_openrouter_api_key)
+        llm_result = await classify_scenario(
+            prompt,
+            api_key_override=x_openrouter_api_key,
+            model_override=x_openrouter_model,
+        )
     except RuntimeError as exc:
         message = str(exc)
         if "OPENROUTER_API_KEY is not set" in message:

@@ -4,7 +4,7 @@
   <img src="docs/readme/banner.png" alt="CogniGraph — neural network and brain visualization banner" width="100%" />
 </p>
 
-**CogniGraph** (repository folder: `Cognigraph`) is a small educational demo: you describe a real-world scenario, an LLM classifies brain lobe and neuromodulator tone, a [Brian2](https://brian2.readthedocs.io/) spiking neural network (SNN) is simulated, and a web UI visualizes activity on a 3D brain model.
+**CogniGraph** (repository folder: `Cognigraph`) is a small educational demo: you describe a real-world scenario, an LLM classifies brain lobe and neuromodulator tone, a [Brian2](https://brian2.readthedocs.io/) spiking neural network (SNN) is simulated, and a web UI visualizes activity on a 3D brain model. The UI is a single page served from `/`; optional OpenRouter keys are entered only in the in-page **API Settings** panel (no separate auth route or redirect).
 
 **This is not medical software.** Outputs are for visualization and learning only, not diagnosis or treatment. The UI includes context for modeled stress-hormone axes (for example HPA / cortisol) as simulation metaphors, not clinical measurements.
 
@@ -90,6 +90,13 @@ Configuration: [`pytest.ini`](pytest.ini), tests under [`tests/`](tests/).
 |-------|------|-------------|
 | `prompt` | string | Scenario text (1–1000 characters). |
 
+Optional request headers (same origin as the UI; not required for the shared demo):
+
+| Header | When | Description |
+|--------|------|-------------|
+| `X-OpenRouter-Api-Key` | BYOK | Visitor's OpenRouter key; billing on their account. |
+| `X-OpenRouter-Model` | BYOK | OpenRouter model slug (e.g. `openai/gpt-4o`). Ignored without `X-OpenRouter-Api-Key`. Invalid values fall back to `OPENROUTER_MODEL`. |
+
 **Response** (simplified): `active_lobe`, `dominant_neuromodulator`, `neuromodulator_intensity`, `neuromodulator_rationale`, `explanation`, `duration_ms`, `spikes` (per-lobe spike indices and times), `snn_modulation`, `vfx_profile`.
 
 If `OPENROUTER_API_KEY` is missing, the API returns **503** with a clear message.
@@ -107,8 +114,9 @@ Static files are mounted at `/static` from the `frontend/` directory.
 
 - Each user can provide their own OpenRouter key in the UI (`API Settings` panel).
 - The key is stored in the user's browser local storage and sent as `X-OpenRouter-Api-Key`.
+- Optional model id from the same panel is sent as `X-OpenRouter-Model` when a user key is present; if omitted or invalid, the server uses **`OPENROUTER_MODEL`**. Without a user key, `X-OpenRouter-Model` is ignored (shared traffic always uses **`OPENROUTER_DEMO_MODEL`**).
 - Server-side env key (`OPENROUTER_API_KEY`) is still supported as fallback for visitors who do not add a key.
-- Requests **without** `X-OpenRouter-Api-Key` use **`OPENROUTER_DEMO_MODEL`** (default `openai/gpt-oss-120b`) plus a neuroscientist-educator system prompt; requests **with** a user key use **`OPENROUTER_MODEL`** (billing is on their OpenRouter account).
+- Requests **without** `X-OpenRouter-Api-Key` use **`OPENROUTER_DEMO_MODEL`** (default `openai/gpt-oss-120b`) plus a neuroscientist-educator system prompt; requests **with** a user key use **`OPENROUTER_MODEL`** or the validated `X-OpenRouter-Model` value (billing is on their OpenRouter account).
 - For shared/public devices, users should clear their saved key after use.
 
 ### Vercel
