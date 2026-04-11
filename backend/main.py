@@ -39,6 +39,8 @@ FRONTEND_INDEX = FRONTEND_DIR / "index.html"
 ENV_FILE = PROJECT_ROOT / ".env"
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_OPENROUTER_MODEL = "x-ai/grok-4.1-fast"
+# Used when the request has no X-OpenRouter-Api-Key (server env key only). Default is GPT-OSS 120B on OpenRouter; override with e.g. openai/gpt-oss-120b:free if you prefer the free tier.
+DEFAULT_OPENROUTER_DEMO_MODEL = "openai/gpt-oss-120b"
 
 
 def _load_dotenv_file() -> None:
@@ -58,6 +60,7 @@ def _load_dotenv_file() -> None:
 _load_dotenv_file()
 
 OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", DEFAULT_OPENROUTER_MODEL)
+OPENROUTER_DEMO_MODEL = os.getenv("OPENROUTER_DEMO_MODEL", DEFAULT_OPENROUTER_DEMO_MODEL)
 
 # Global HTTPX Client
 http_client: httpx.AsyncClient = None  # type: ignore
@@ -180,36 +183,71 @@ def _resolve_openrouter_api_key(api_key_override: str = "") -> str:
     return api_key
 
 
+def _select_openrouter_model(api_key_override: str) -> str:
+    """BYOK requests use OPENROUTER_MODEL; shared host key uses OPENROUTER_DEMO_MODEL."""
+    if api_key_override.strip():
+        return OPENROUTER_MODEL
+    return OPENROUTER_DEMO_MODEL
+
+
+# Shared JSON/schema rules for lobe + neuromodulator classification (appended after role-specific intro).
+_CLASSIFICATION_TASK = (
+    "Given a real-world scenario, choose:\n"
+    "1) The single primary active brain lobe from: "
+    "frontal, parietal, occipital, temporal, cerebellum.\n"
+    "2) The single dominant neuromodulator tone from: "
+    "adrenaline, noradrenaline, dopamine, serotonin, gaba, acetylcholine, cortisol, baseline.\n"
+    "Return STRICT JSON only with keys:\n"
+    "active_lobe, dominant_neuromodulator, neuromodulator_intensity (0.0-1.0), "
+    "explanation, neuromodulator_rationale (one short sentence; may be empty string).\n"
+    "If the scenario is emotionally neutral, use baseline with neuromodulator_intensity <= 0.3.\n"
+    "Disambiguation — cortisol vs noradrenaline: If the scenario centers on HPA-axis cortisol "
+    "(e.g. morning cortisol awakening response, CAR, diurnal cortisol pulse, glucocorticoid stress "
+    "hormone, explicit 'cortisol' as the driver of the state), you MUST set "
+    "dominant_neuromodulator to cortisol. Do not pick noradrenaline merely because the person "
+    "feels alert or vigilant; noradrenaline is for LC-NE vigilance, surprise, or phasic attention "
+    "when cortisol/HPA is not the stated focus. If the user names cortisol or CAR, cortisol wins.\n"
+    "For cortisol, neuromodulator_intensity selects the regime: <=0.5 means optimal acute arousal "
+    "(e.g. waking up, short manageable challenge); >0.5 means toxic/chronic load "
+    "(e.g. chronic stress, exam panic, overtraining, burnout). Do not use cortisol for neutral scenes "
+    "unless stress is clearly described; otherwise prefer baseline or a sharper modulator.\n"
+    "Do not output concentrations or invented units. No markdown fences. No extra keys. No prose.\n"
+    'Example: {"active_lobe":"frontal","dominant_neuromodulator":"dopamine",'
+    '"neuromodulator_intensity":0.7,"explanation":"...","neuromodulator_rationale":"..."}'
+)
+
+# Strong educator voice for public demo traffic (server key only).
+_NEUROSCIENTIST_DEMO_PERSONA = (
+    "You are a senior cognitive neuroscientist and computational neuroscience educator helping a "
+    "general audience explore brain–behavior links in a classroom-style demo.\n"
+    "You integrate neuroanatomy, systems-level reasoning, and neuromodulation (including stress-axis "
+    "metaphors only when the scenario warrants it). You write with clarity and intellectual honesty.\n"
+    "Non-negotiable constraints:\n"
+    "- This is an educational visualization, not medical software. Never diagnose, treat, or imply you "
+    "measured a real person's brain or hormones.\n"
+    "- Map each scenario to exactly one primary lobe and one dominant neuromodulator tone as specified "
+    "below; prefer the single best interpretation. If the scenario is underspecified, choose the most "
+    "plausible reading and note the ambiguity briefly inside `explanation`—still output valid JSON.\n"
+    "- Keep `explanation` concise (roughly one or two short sentences) and accessible; avoid long "
+    "lists of citations or unexplained jargon.\n"
+    "- Output format: respond with the JSON object only—no markdown code fences, no commentary before "
+    "or after, and no keys beyond those listed.\n\n"
+)
+
+
+def _classification_system_instruction(api_key_override: str) -> str:
+    if api_key_override.strip():
+        return "You are a neuroscience classifier.\n" + _CLASSIFICATION_TASK
+    return _NEUROSCIENTIST_DEMO_PERSONA + _CLASSIFICATION_TASK
+
+
 async def classify_scenario(prompt: str, api_key_override: str = "") -> Dict[str, Any]:
     api_key = _resolve_openrouter_api_key(api_key_override)
+    model_name = _select_openrouter_model(api_key_override)
 
-    instruction = (
-        "You are a neuroscience classifier.\n"
-        "Given a real-world scenario, choose:\n"
-        "1) The single primary active brain lobe from: "
-        "frontal, parietal, occipital, temporal, cerebellum.\n"
-        "2) The single dominant neuromodulator tone from: "
-        "adrenaline, noradrenaline, dopamine, serotonin, gaba, acetylcholine, cortisol, baseline.\n"
-        "Return STRICT JSON only with keys:\n"
-        "active_lobe, dominant_neuromodulator, neuromodulator_intensity (0.0-1.0), "
-        "explanation, neuromodulator_rationale (one short sentence; may be empty string).\n"
-        "If the scenario is emotionally neutral, use baseline with neuromodulator_intensity <= 0.3.\n"
-        "Disambiguation — cortisol vs noradrenaline: If the scenario centers on HPA-axis cortisol "
-        "(e.g. morning cortisol awakening response, CAR, diurnal cortisol pulse, glucocorticoid stress "
-        "hormone, explicit 'cortisol' as the driver of the state), you MUST set "
-        "dominant_neuromodulator to cortisol. Do not pick noradrenaline merely because the person "
-        "feels alert or vigilant; noradrenaline is for LC-NE vigilance, surprise, or phasic attention "
-        "when cortisol/HPA is not the stated focus. If the user names cortisol or CAR, cortisol wins.\n"
-        "For cortisol, neuromodulator_intensity selects the regime: <=0.5 means optimal acute arousal "
-        "(e.g. waking up, short manageable challenge); >0.5 means toxic/chronic load "
-        "(e.g. chronic stress, exam panic, overtraining, burnout). Do not use cortisol for neutral scenes "
-        "unless stress is clearly described; otherwise prefer baseline or a sharper modulator.\n"
-        "Do not output concentrations or invented units. No markdown fences. No extra keys. No prose.\n"
-        'Example: {"active_lobe":"frontal","dominant_neuromodulator":"dopamine",'
-        '"neuromodulator_intensity":0.7,"explanation":"...","neuromodulator_rationale":"..."}'
-    )
+    instruction = _classification_system_instruction(api_key_override)
     payload = {
-        "model": OPENROUTER_MODEL,
+        "model": model_name,
         "messages": [
             {"role": "system", "content": instruction},
             {"role": "user", "content": f"Scenario: {prompt}"},

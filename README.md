@@ -43,7 +43,8 @@ pip install -r requirements.txt
 
 1. Copy `.env.example` to `.env` in the project root.
 2. Set `OPENROUTER_API_KEY` from [OpenRouter](https://openrouter.ai/).
-3. Optionally set `OPENROUTER_MODEL` (default in code: `x-ai/grok-4.1-fast`).
+3. Optionally set **`OPENROUTER_DEMO_MODEL`** (default: `openai/gpt-oss-120b`) — used for **anonymous / no-browser-key** traffic on public demos, with a stronger educator-style system prompt. For a no-cost tier on OpenRouter, try `openai/gpt-oss-120b:free` (rate limits apply). See [models](https://openrouter.ai/models).
+4. Optionally set **`OPENROUTER_MODEL`** (default: `x-ai/grok-4.1-fast`) — used only when a visitor saves their **own** key in the UI (`X-OpenRouter-Api-Key`); they pay OpenRouter, not you.
 
 Never commit `.env`; it is listed in `.gitignore`.
 
@@ -106,7 +107,8 @@ Static files are mounted at `/static` from the `frontend/` directory.
 
 - Each user can provide their own OpenRouter key in the UI (`API Settings` panel).
 - The key is stored in the user's browser local storage and sent as `X-OpenRouter-Api-Key`.
-- Server-side env key (`OPENROUTER_API_KEY`) is still supported as fallback.
+- Server-side env key (`OPENROUTER_API_KEY`) is still supported as fallback for visitors who do not add a key.
+- Requests **without** `X-OpenRouter-Api-Key` use **`OPENROUTER_DEMO_MODEL`** (default `openai/gpt-oss-120b`) plus a neuroscientist-educator system prompt; requests **with** a user key use **`OPENROUTER_MODEL`** (billing is on their OpenRouter account).
 - For shared/public devices, users should clear their saved key after use.
 
 ### Vercel
@@ -122,7 +124,8 @@ Static files are mounted at `/static` from the `frontend/` directory.
    ```
 3. In Vercel dashboard, set env vars:
    - `OPENROUTER_API_KEY` (required)
-   - `OPENROUTER_MODEL` (optional)
+   - `OPENROUTER_DEMO_MODEL` (optional; default is `openai/gpt-oss-120b` for shared demo quality)
+   - `OPENROUTER_MODEL` (optional; only affects users who add their own key in the UI)
 4. Redeploy after env changes:
    ```bash
    vercel --prod
@@ -145,10 +148,12 @@ This repo includes `vercel.json` that routes requests to `backend/main.py` and s
    ```bash
    fly secrets set OPENROUTER_API_KEY=your_key_here
    ```
-4. Optional model override:
+4. Optional model overrides:
    ```bash
+   fly secrets set OPENROUTER_DEMO_MODEL=openai/gpt-oss-120b
    fly secrets set OPENROUTER_MODEL=x-ai/grok-4.1-fast
    ```
+   Use **`OPENROUTER_DEMO_MODEL`** for the shared demo; **`OPENROUTER_MODEL`** only applies to BYOK requests.
 5. Redeploy after secret/config changes:
    ```bash
    fly deploy
@@ -176,6 +181,7 @@ Expected behavior:
 
 ## Recent Changes
 
+- Shared demo traffic uses **`OPENROUTER_DEMO_MODEL`** (default GPT-OSS 120B + educator prompt); BYOK traffic uses **`OPENROUTER_MODEL`**.
 - Security hardening in LLM error handling to avoid exposing sensitive upstream details to API clients.
 - Faster request handling by reusing `httpx.AsyncClient` through FastAPI lifespan.
 - SNN runtime optimization by removing repeated dictionary creation inside the `run_snn` loop.

@@ -5,9 +5,11 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from backend.main import (
+    _classification_system_instruction,
     _load_dotenv_file,
     _parse_model_json,
     _resolve_openrouter_api_key,
+    _select_openrouter_model,
     _strip_markdown_fences,
     app,
 )
@@ -109,6 +111,38 @@ def test_resolve_openrouter_api_key_missing_raises():
     with patch.dict(os.environ, {}, clear=True):
         with pytest.raises(RuntimeError, match="OPENROUTER_API_KEY is not set"):
             _resolve_openrouter_api_key("")
+
+
+def test_select_openrouter_model_uses_demo_without_byok():
+    with patch.multiple(
+        "backend.main",
+        OPENROUTER_MODEL="expensive-model",
+        OPENROUTER_DEMO_MODEL="cheap-model",
+    ):
+        assert _select_openrouter_model("") == "cheap-model"
+        assert _select_openrouter_model("   ") == "cheap-model"
+
+
+def test_select_openrouter_model_uses_byok_model_when_header_present():
+    with patch.multiple(
+        "backend.main",
+        OPENROUTER_MODEL="expensive-model",
+        OPENROUTER_DEMO_MODEL="cheap-model",
+    ):
+        assert _select_openrouter_model("sk-or-user") == "expensive-model"
+
+
+def test_classification_system_instruction_demo_includes_persona():
+    text = _classification_system_instruction("")
+    assert "senior cognitive neuroscientist" in text
+    assert "educational visualization" in text
+    assert "STRICT JSON only" in text or "STRICT JSON" in text
+
+
+def test_classification_system_instruction_byok_is_compact():
+    text = _classification_system_instruction("user-key")
+    assert text.startswith("You are a neuroscience classifier.")
+    assert "senior cognitive neuroscientist" not in text
 
 @patch("backend.main.ENV_FILE")
 def test_load_dotenv_file_not_exists(mock_env_file):

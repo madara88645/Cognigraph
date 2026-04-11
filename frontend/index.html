@@ -178,8 +178,16 @@
                 <button id="toggle-settings-btn" class="text-[10px] uppercase font-semibold text-amber-100 border border-amber-200/40 rounded-full px-2 py-1 hover:text-white hover:border-amber-100">Show</button>
               </div>
               <p class="mt-1 text-[11px] leading-relaxed text-amber-100/90">
-                Each user can use their own OpenRouter key. Saved locally in your browser.
+                If the site owner enabled it, you can click <strong class="text-amber-50">Analyze</strong> with no setup. Optional: add your own key below — then <em>you</em> pay OpenRouter, not the host.
               </p>
+              <details class="mt-2 text-[10px] leading-relaxed text-amber-100/85 pointer-events-auto">
+                <summary class="cursor-pointer select-none hover:text-amber-50 outline-none font-medium">What is OpenRouter?</summary>
+                <p class="mt-1.5 border-l border-amber-200/30 pl-2">
+                  <a href="https://openrouter.ai/" target="_blank" rel="noopener noreferrer" class="text-amber-50 underline decoration-amber-200/50 underline-offset-2">OpenRouter</a>
+                  is a single API that routes to many AI models (like a switchboard). CogniGraph uses it once per scenario to classify your text, then runs a brain simulation on this server.
+                  You do <strong class="text-amber-50">not</strong> need an OpenRouter account for the basic demo when a shared key is configured.
+                </p>
+              </details>
               <div id="settings-panel" class="hidden mt-2 space-y-2">
                 <input
                   id="api-key-input"
