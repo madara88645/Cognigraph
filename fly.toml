@@ -10,9 +10,11 @@ primary_region = "fra"
 [http_service]
   internal_port = 8000
   force_https = true
-  auto_stop_machines = true
+  # Keep one machine warm so /simulate (including via the Vercel UI proxy) does
+  # not pay a 15–30s Brian2 cold-start on the first request after idle.
+  auto_stop_machines = false
   auto_start_machines = true
-  min_machines_running = 0
+  min_machines_running = 1
   processes = ["app"]
 
   [[http_service.checks]]

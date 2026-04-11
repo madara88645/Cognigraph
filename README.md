@@ -107,10 +107,12 @@ Static files are mounted at `/static` from the `frontend/` directory.
 
 ### Live deployments
 
-- Vercel (production): [https://cognigraph-tau.vercel.app](https://cognigraph-tau.vercel.app)
-- Fly.io (production): [https://cognigraph-13906.fly.dev](https://cognigraph-13906.fly.dev)
+- **Fly.io (primary `/simulate` backend):** [https://cognigraph-13906.fly.dev](https://cognigraph-13906.fly.dev)
+- **Vercel (UI mirror, proxies `/simulate` to Fly):** [https://cognigraph-tau.vercel.app](https://cognigraph-tau.vercel.app)
 
-**Latency:** `Analyze` is usually **well under a minute** on a warm process. **Vercel** cold-starts the Python + Brian2 stack per deployment pattern, so the **first** request after idle can feel slow. For predictable, visitor-friendly demos, prefer **Fly** (long-lived VM) or local `uvicorn`.
+**How the two hosts relate:** Fly runs the full FastAPI + Brian2 stack in a long-lived Docker VM (warm via `min_machines_running = 1`). Vercel serves the static UI and **rewrites** `/simulate` and `/healthz` to Fly as external proxies (`vercel.json`), so the Vercel page works end-to-end **without needing `OPENROUTER_API_KEY` on Vercel** — the server key lives on Fly. Same-origin rewrites mean the browser still POSTs to `cognigraph-tau.vercel.app/simulate`, so CORS does not apply and BYOK headers (`X-OpenRouter-Api-Key`, `X-OpenRouter-Model`) pass through untouched.
+
+**Latency:** `Analyze` is typically **6–10 seconds** on a warm Fly machine (LLM + Brian2). The Vercel-proxied path adds a small edge hop on top. The old Vercel-Python-function path (cold-starting Brian2 inside a 10–60s serverless budget) is no longer used for `/simulate`.
 
 ### Security model for API key
 
@@ -123,6 +125,8 @@ Static files are mounted at `/static` from the `frontend/` directory.
 
 ### Vercel
 
+Vercel is configured as a **UI mirror** — it serves the static frontend and proxies the dynamic endpoints (`/simulate`, `/healthz`) to Fly via external rewrites in `vercel.json`. Do **not** set LLM-related env vars on Vercel; the server key lives on Fly and flows through the proxy.
+
 1. Install CLI and login:
    ```bash
    npm i -g vercel
@@ -132,16 +136,13 @@ Static files are mounted at `/static` from the `frontend/` directory.
    ```bash
    vercel
    ```
-3. In Vercel dashboard, set env vars:
-   - `OPENROUTER_API_KEY` (required)
-   - `OPENROUTER_DEMO_MODEL` (optional; default is `qwen/qwen3.5-flash-02-23` for fast shared demo)
-   - `OPENROUTER_MODEL` (optional; only affects users who add their own key in the UI)
-4. Redeploy after env changes:
+3. No `OPENROUTER_API_KEY` or model env vars are needed on Vercel. Fly owns them.
+4. Redeploy to production after any `vercel.json` change:
    ```bash
    vercel --prod
    ```
 
-`vercel.json` routes all traffic to `src/index.py`, which re-exports the FastAPI `app` from `backend.main` (Vercel’s FastAPI detector expects paths like `src/index.py`, not `api/index.py`). We do **not** set `maxDuration` in `vercel.json`: Vercel only validates `functions` glob keys against the legacy **`api/`** directory, so patterns for `src/*.py` fail at build time. On **Vercel Pro**, open the project → **Settings** → **Functions** (or **Fluid compute** / duration controls, depending on UI) and raise the **maximum duration** for Python (aim for **60s** or more) so **`POST /simulate`** (often **15–25+ seconds** for OpenRouter + Brian2) does not 504. **Hobby** stays capped around **10 seconds** — use **Pro** or **Fly.io** for reliable `/simulate`.
+**Why the proxy instead of running Python on Vercel?** Vercel’s Python functions cold-start Brian2 inside a strict function-duration budget (Hobby ~10s, Pro default 15s and up to 300s only via per-project config). The `functions` key in `vercel.json` only validates globs against the legacy `api/` directory, so `src/index.py` — required for Vercel’s FastAPI auto-detection — cannot have its `maxDuration` declared in `vercel.json` at all. Rather than fight both constraints at once, `/simulate` is delegated to Fly (long-lived VM, no function duration cap, no Brian2 cold-start after warm). The Vercel Python function in `src/index.py` remains for serving `/` and `/static/*` only.
 
 ### Fly.io
 
@@ -169,7 +170,7 @@ Static files are mounted at `/static` from the `frontend/` directory.
    fly deploy
    ```
 
-This repo includes `fly.toml` and `Dockerfile` configured for `uvicorn backend.main:app`.
+This repo includes `fly.toml` and `Dockerfile` configured for `uvicorn backend.main:app`. `fly.toml` sets `min_machines_running = 1` so one machine stays warm — this avoids a 15–30s Brian2 cold-start on the first request after idle, including requests that arrive via the Vercel UI proxy.
 
 ## Deployment smoke tests
 
@@ -191,6 +192,8 @@ Expected behavior:
 
 ## Recent Changes
 
+- Vercel is now a UI mirror that **proxies `/simulate` and `/healthz` to Fly** via external rewrites in `vercel.json`; Fly is the single `/simulate` backend. No LLM env vars live on Vercel anymore.
+- `fly.toml` sets `min_machines_running = 1` (and disables `auto_stop_machines`) so Brian2 stays warm and the first request after idle is not a 15–30s cold-start.
 - Shared demo traffic uses **`OPENROUTER_DEMO_MODEL`** (default Qwen 3.5 Flash + educator prompt); BYOK traffic uses **`OPENROUTER_MODEL`**.
 - Security hardening in LLM error handling to avoid exposing sensitive upstream details to API clients.
 - Faster request handling by reusing `httpx.AsyncClient` through FastAPI lifespan.
