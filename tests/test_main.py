@@ -144,6 +144,7 @@ def test_classification_system_instruction_byok_is_compact():
     assert text.startswith("You are a neuroscience classifier.")
     assert "senior cognitive neuroscientist" not in text
 
+
 @patch("backend.main.ENV_FILE")
 def test_load_dotenv_file_not_exists(mock_env_file):
     mock_env_file.exists.return_value = False
