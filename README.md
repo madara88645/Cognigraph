@@ -13,7 +13,7 @@
 **Neural Activation Viewer** — scenario input, playback controls, and cognitive analysis (example: *Doing a heavy deadlift*).
 
 <p align="center">
-  <img src="docs/readme/screenshot-ui.png" alt="CogniGraph UI: scenario field, Simulate Activation, active lobe and neuromodulator readout" width="92%" />
+  <img src="docs/readme/screenshot-ui.png" alt="CogniGraph UI: scenario field, Analyze, active lobe and neuromodulator readout" width="92%" />
 </p>
 
 **Simulation view** — colored lobe mesh, spike counters, HPA context, and event log after playback completes.
@@ -181,6 +181,18 @@ Expected behavior:
 - SNN runtime optimization by removing repeated dictionary creation inside the `run_snn` loop.
 - `build_vfx_profile` optimization by moving static profile definitions to module scope.
 - Added test coverage for `_strip_markdown_fences`, `_load_dotenv_file`, `_lerp_toward_neutral`, `snn_params_to_dict`, payload length validation, and `GET /` (`serve_index`).
+
+## Sharing (English copy)
+
+Use this blurb when posting to LinkedIn, X, Reddit, or a blog. Replace `YOUR_REPO_URL` if you publish the source.
+
+> **CogniGraph** — Describe a scenario; an LLM picks a brain lobe and neuromodulator tone; a Brian2 spiking network runs; a 3D brain visualizes the result. Live demo: https://cognigraph-tau.vercel.app — **Not medical software**; for learning and demos only.
+
+Optional one-liner for tight character limits:
+
+> Educational brain + SNN demo (LLM → Brian2 → 3D). Not clinical. https://cognigraph-tau.vercel.app
+
+After sharing, smoke-test the live URL (`/healthz` and a sample `POST /simulate`) as described under [Deployment smoke tests](#deployment-smoke-tests). Without a configured key, `POST /simulate` should still return a clear JSON error about `OPENROUTER_API_KEY` rather than a generic failure — that confirms the route is live.
 
 ## License
 

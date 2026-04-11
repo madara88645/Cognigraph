@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CogniGraph v2.0</title>
+    <title>CogniGraph</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tweenjs/tween.js@23.1.3/dist/tween.umd.js"></script>
     <style>
@@ -76,6 +76,50 @@
       button:active {
         transform: translateY(1px);
       }
+      @media (max-width: 1024px) {
+        .cognigraph-shell {
+          padding: 0.75rem !important;
+        }
+        .cognigraph-top-row {
+          flex-direction: column;
+          align-items: stretch !important;
+        }
+        .cognigraph-input-panel {
+          width: 100% !important;
+          max-width: 100% !important;
+        }
+        .cognigraph-middle-col {
+          position: relative !important;
+          min-height: 0;
+        }
+        .cognigraph-middle-col .analysis-panel,
+        .cognigraph-middle-col .cognigraph-signatures-panel {
+          position: relative !important;
+          top: auto !important;
+          right: auto !important;
+          left: auto !important;
+          transform: none !important;
+          width: 100% !important;
+          max-width: 100% !important;
+          margin-bottom: 0.75rem;
+        }
+        .cognigraph-bottom-row {
+          flex-direction: column;
+          align-items: stretch !important;
+        }
+        .cognigraph-bottom-row .cognigraph-spacer {
+          display: none;
+        }
+        .cognigraph-bottom-row .cognigraph-timeline-panel {
+          max-width: 100% !important;
+          order: -1;
+        }
+        .cognigraph-bottom-row .cognigraph-log-panel {
+          width: 100% !important;
+          height: auto;
+          min-height: 6rem;
+        }
+      }
     </style>
   </head>
   <body class="h-screen w-screen overflow-hidden text-slate-200">
@@ -83,18 +127,42 @@
       <div id="brain-canvas" class="absolute inset-0"></div>
 
       <!-- Free-floating panels layer -->
-      <section class="pointer-events-none absolute inset-0 p-6 flex flex-col justify-between">
+      <section class="cognigraph-shell pointer-events-none absolute inset-0 p-6 flex flex-col justify-between">
 
         <!-- Top Row: outer row does not capture hits (only panels do) -->
-        <div class="pointer-events-none flex justify-between items-start gap-6">
+        <div class="cognigraph-top-row pointer-events-none flex justify-between items-start gap-6">
           <!-- Top Left: Branding & Status -->
-          <div class="pointer-events-auto glass-panel px-5 py-3 flex flex-col gap-1">
-            <h1 class="text-sm font-semibold tracking-widest uppercase accent-text">CogniGraph 2.0</h1>
+          <div class="pointer-events-auto glass-panel px-5 py-3 flex flex-col gap-1 max-w-md">
+            <h1 class="text-sm font-semibold tracking-widest uppercase accent-text">CogniGraph</h1>
             <p id="status-chip" class="text-[10px] tracking-wide sub-text">Initializing...</p>
+            <details class="mt-2 text-[10px] sub-text pointer-events-auto">
+              <summary class="cursor-pointer select-none hover:text-slate-300 outline-none">How it works</summary>
+              <ol class="mt-2 pl-4 list-decimal space-y-1 text-slate-400 leading-relaxed">
+                <li>Describe a real-world scenario in the text box.</li>
+                <li>Click <strong class="text-slate-300">Analyze</strong> — the LLM and simulation often need <strong class="text-slate-300">15–20 seconds</strong>.</li>
+                <li>Scrub the timeline to replay spikes on the 3D brain.</li>
+              </ol>
+            </details>
+            <div class="mt-2 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                id="copy-demo-link-btn"
+                class="text-[10px] uppercase font-semibold text-slate-400 hover:text-white border border-slate-600 rounded-full px-2 py-1"
+              >
+                Copy live demo link
+              </button>
+              <a
+                id="open-demo-link"
+                href="https://cognigraph-tau.vercel.app"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-[10px] uppercase font-semibold text-slate-500 hover:text-slate-300 underline decoration-slate-600 underline-offset-2"
+              >Open demo</a>
+            </div>
           </div>
 
           <!-- Top Right: Input & Simulation -->
-          <div class="pointer-events-auto glass-panel p-5 w-80 md:w-96 flex flex-col gap-4">
+          <div class="cognigraph-input-panel pointer-events-auto glass-panel p-5 w-80 md:w-96 flex flex-col gap-4">
             <div class="flex justify-between items-center">
               <span class="text-xs font-medium uppercase tracking-widest sub-text">Sequence Input</span>
               <button id="rotate-btn" class="text-[10px] uppercase font-semibold text-slate-400 hover:text-white border border-slate-700 rounded-full px-2 py-1">Auto-Rotate</button>
@@ -136,7 +204,7 @@
         </div>
 
         <!-- Middle: wrapper must NOT capture pointer events — otherwise OrbitControls cannot rotate the brain -->
-        <div class="flex-1 pointer-events-none relative min-h-0">
+        <div class="cognigraph-middle-col flex-1 pointer-events-none relative min-h-0">
            <!-- Analysis floating panel (Middle Right) -->
            <div class="pointer-events-auto analysis-panel glass-panel absolute right-0 top-1/2 -translate-y-1/2 p-5 w-72 flex flex-col gap-3.5">
               <h2 class="text-xs font-semibold uppercase tracking-widest text-slate-300 border-b border-slate-600/60 pb-2">Analysis</h2>
@@ -160,23 +228,23 @@
            </div>
 
            <!-- Signatures (Middle Left) -->
-           <div class="pointer-events-auto absolute left-0 top-1/2 -translate-y-1/2 glass-panel p-4 w-48 flex flex-col gap-3">
+           <div class="cognigraph-signatures-panel pointer-events-auto absolute left-0 top-1/2 -translate-y-1/2 glass-panel p-4 w-48 flex flex-col gap-3">
               <h2 class="text-[10px] font-medium uppercase tracking-widest sub-text border-b border-slate-700/50 pb-2">Signatures</h2>
               <div id="legend-panel" class="flex flex-col gap-2 text-[10px] font-medium"></div>
            </div>
         </div>
 
         <!-- Bottom Row -->
-        <div class="pointer-events-none flex justify-between items-end gap-6">
+        <div class="cognigraph-bottom-row pointer-events-none flex justify-between items-end gap-6">
 
           <!-- Bottom Left: Log -->
-          <div class="pointer-events-auto glass-panel p-4 w-64 h-32 flex flex-col gap-2">
+          <div class="cognigraph-log-panel pointer-events-auto glass-panel p-4 w-64 h-32 flex flex-col gap-2">
             <span class="text-[10px] font-medium uppercase tracking-widest sub-text">Event Log</span>
             <div id="log-panel" class="thin-scroll flex-1 overflow-y-auto whitespace-pre-wrap text-[9px] font-mono text-slate-400"></div>
           </div>
 
           <!-- Bottom Center: Playback (Floating Island) -->
-          <div class="pointer-events-auto glass-panel px-6 py-4 flex-1 max-w-xl mx-auto flex flex-col gap-3">
+          <div class="cognigraph-timeline-panel pointer-events-auto glass-panel px-6 py-4 flex-1 max-w-xl mx-auto flex flex-col gap-3">
              <div class="flex justify-between items-center text-[10px] font-medium uppercase tracking-widest sub-text">
                 <span>Timeline</span>
                 <span id="timeline-label" class="font-mono">0ms</span>
@@ -200,7 +268,7 @@
           </div>
 
           <!-- Spacer for layout balance (no hit capture) -->
-          <div class="pointer-events-none w-64 shrink-0" aria-hidden="true"></div>
+          <div class="cognigraph-spacer pointer-events-none w-64 shrink-0" aria-hidden="true"></div>
 
         </div>
 
@@ -360,8 +428,11 @@
       const saveApiKeyButton = document.getElementById("save-api-key-btn");
       const clearApiKeyButton = document.getElementById("clear-api-key-btn");
       const apiKeyStatus = document.getElementById("api-key-status");
+      const copyDemoLinkButton = document.getElementById("copy-demo-link-btn");
+      const openDemoLink = document.getElementById("open-demo-link");
 
       const API_KEY_STORAGE_KEY = "cognigraph.openrouter_api_key";
+      const PRIMARY_LIVE_DEMO_URL = "https://cognigraph-tau.vercel.app";
 
       /* ═══════════════════════════════════════════════
          THREE.JS SCENE
@@ -494,6 +565,7 @@
       updateSpeedLabel();
       updateTimelineUi();
       hookUiEvents();
+      if (openDemoLink) openDemoLink.href = PRIMARY_LIVE_DEMO_URL;
       onResize();
       render();
       initSceneAsync();
@@ -1369,19 +1441,42 @@
           if (savedApiKey) {
             headers["X-OpenRouter-Api-Key"] = savedApiKey;
           }
-          const response = await fetch("/simulate", {
-            method: "POST",
-            headers,
-            body: JSON.stringify({ prompt }),
-            signal: controller.signal,
-          });
+          let response;
+          try {
+            response = await fetch("/simulate", {
+              method: "POST",
+              headers,
+              body: JSON.stringify({ prompt }),
+              signal: controller.signal,
+            });
+          } catch (fetchErr) {
+            const name = fetchErr instanceof Error ? fetchErr.name : "";
+            if (name === "AbortError") {
+              throw new Error("Request timed out. Check your connection and try again.");
+            }
+            throw new Error(
+              "Network error — could not reach the server. If you are running locally, ensure the API is up."
+            );
+          }
           const body = await response.json().catch(() => ({}));
           if (!response.ok) {
             const detail = formatFastApiDetail(body.detail, response.status);
-            if (response.status === 503 && detail.includes("OPENROUTER_API_KEY is not set")) {
-              throw new Error(
-                "OPENROUTER_API_KEY is missing. Add your key in API Settings or set it on the server."
-              );
+            if (response.status === 503) {
+              const lower = detail.toLowerCase();
+              if (
+                lower.includes("openrouter") ||
+                lower.includes("api_key") ||
+                lower.includes("api key") ||
+                lower.includes("not set")
+              ) {
+                throw new Error(
+                  "No OpenRouter key available. Add your key under API Settings (saved in this browser) or ask the host to set OPENROUTER_API_KEY on the server."
+                );
+              }
+              throw new Error(detail || "Service temporarily unavailable (503). Try again later.");
+            }
+            if (response.status >= 500) {
+              throw new Error(detail || "Server error. Try again in a moment.");
             }
             throw new Error(detail);
           }
@@ -1403,7 +1498,7 @@
           return;
         }
         simulateButton.disabled = true;
-        setStatus("Running backend classification + SNN...");
+        setStatus("Analyzing… (LLM + SNN often takes 15–20s)");
         log(`Submitting: "${prompt}"`);
         try {
           const payload = await callSimulation(prompt);
@@ -1416,7 +1511,9 @@
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           log(msg, "error");
-          setStatus("Simulation failed");
+          const short =
+            msg.length > 120 ? `${msg.slice(0, 117)}…` : msg;
+          setStatus(`Failed — ${short}`);
         } finally {
           simulateButton.disabled = false;
         }
@@ -1479,6 +1576,18 @@
           refreshApiKeyStatus();
           log("Personal OpenRouter key cleared from local storage.");
         });
+        if (copyDemoLinkButton) {
+          copyDemoLinkButton.addEventListener("click", async () => {
+            const url = PRIMARY_LIVE_DEMO_URL;
+            try {
+              await navigator.clipboard.writeText(url);
+              log(`Copied demo link: ${url}`);
+              setStatus("Demo link copied to clipboard");
+            } catch {
+              log("Could not copy to clipboard. Copy manually: " + url, "warn");
+            }
+          });
+        }
         simulateButton.addEventListener("click", handleSimulateClick);
         replayButton.addEventListener("click", () => {
           if (!lastPayload) return;
