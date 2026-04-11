@@ -139,7 +139,7 @@ Static files are mounted at `/static` from the `frontend/` directory.
    vercel --prod
    ```
 
-`vercel.json` routes all traffic to `api/index.py` (FastAPI) and sets **`maxDuration`: 60** seconds for Python functions under `api/` (via the `api/**/*.py` glob — Vercel requires a glob pattern, not a single file path). **`POST /simulate`** often needs **15–25+ seconds** (OpenRouter + Brian2). On **Vercel Hobby**, serverless functions are still capped at **10 seconds**, so previews and production can **504 / timeout** no matter how you redeploy — use **Vercel Pro** (or deploy the API on **Fly.io**, where the process is long-lived) for reliable `/simulate` on previews.
+`vercel.json` routes all traffic to `src/index.py`, which re-exports the FastAPI `app` from `backend.main` (Vercel’s FastAPI detector expects entrypoints like `src/index.py`, not `api/index.py`). **`maxDuration`: 60** applies via the `src/*.py` glob. **`POST /simulate`** often needs **15–25+ seconds** (OpenRouter + Brian2). On **Vercel Hobby**, serverless functions are still capped at **10 seconds**, so previews and production can **504 / timeout** no matter how you redeploy — use **Vercel Pro** (or deploy the API on **Fly.io**, where the process is long-lived) for reliable `/simulate` on previews.
 
 ### Fly.io
 
