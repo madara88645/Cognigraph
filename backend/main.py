@@ -64,7 +64,7 @@ OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", DEFAULT_OPENROUTER_MODEL)
 OPENROUTER_DEMO_MODEL = os.getenv("OPENROUTER_DEMO_MODEL", DEFAULT_OPENROUTER_DEMO_MODEL)
 
 # OpenRouter can exceed 45s on cold/slow models; align with browser client (3m) headroom.
-OPENROUTER_HTTP_TIMEOUT_SEC = float(os.getenv("OPENROUTER_HTTP_TIMEOUT_SEC", "120"))
+OPENROUTER_HTTP_TIMEOUT_SEC = float(os.getenv("OPENROUTER_HTTP_TIMEOUT_SEC", "240"))
 
 # Global HTTPX Client
 http_client: httpx.AsyncClient = None  # type: ignore
