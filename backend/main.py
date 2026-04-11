@@ -4,7 +4,7 @@ import logging
 import os
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from urllib import error as urlerror
 from urllib import request as urlrequest
 
@@ -12,7 +12,7 @@ from contextlib import asynccontextmanager
 
 import brian2 as b2
 import httpx
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -63,14 +63,34 @@ _load_dotenv_file()
 OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", DEFAULT_OPENROUTER_MODEL)
 OPENROUTER_DEMO_MODEL = os.getenv("OPENROUTER_DEMO_MODEL", DEFAULT_OPENROUTER_DEMO_MODEL)
 
+# OpenRouter can exceed 45s on cold/slow models; align with browser client (3m) headroom.
+OPENROUTER_HTTP_TIMEOUT_SEC = float(os.getenv("OPENROUTER_HTTP_TIMEOUT_SEC", "120"))
+
 # Global HTTPX Client
 http_client: httpx.AsyncClient = None  # type: ignore
+
+
+def _openrouter_http_referer(http_request: Optional[Request]) -> str:
+    """OpenRouter uses Referer for attribution; localhost breaks production keys/site rules."""
+    explicit = (os.getenv("OPENROUTER_HTTP_REFERER") or "").strip()
+    if explicit:
+        return explicit.rstrip("/")
+    vercel = (os.getenv("VERCEL_URL") or "").strip()
+    if vercel:
+        base = vercel if vercel.startswith("http") else f"https://{vercel}"
+        return base.rstrip("/")
+    if http_request is not None:
+        proto = http_request.headers.get("x-forwarded-proto", "https")
+        host = http_request.headers.get("x-forwarded-host") or http_request.headers.get("host")
+        if host:
+            return f"{proto}://{host}".rstrip("/")
+    return "http://localhost:8000"
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global http_client
-    http_client = httpx.AsyncClient(timeout=45.0)
+    http_client = httpx.AsyncClient(timeout=OPENROUTER_HTTP_TIMEOUT_SEC)
     yield
     await http_client.aclose()
 
@@ -259,6 +279,7 @@ async def classify_scenario(
     prompt: str,
     api_key_override: str = "",
     model_override: str = "",
+    http_request: Optional[Request] = None,
 ) -> Dict[str, Any]:
     api_key = _resolve_openrouter_api_key(api_key_override)
     model_name = _select_openrouter_model(api_key_override, model_override)
@@ -272,17 +293,18 @@ async def classify_scenario(
         ],
         "temperature": 0.2,
     }
+    referer = _openrouter_http_referer(http_request)
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
-        "HTTP-Referer": "http://localhost:8000",
+        "HTTP-Referer": referer,
         "X-Title": "CogniGraph",
     }
 
     try:
         if http_client is None:
             # Fallback for when run outside of the FastAPI app lifecycle (e.g., direct test calls)
-            async with httpx.AsyncClient(timeout=45.0) as temp_client:
+            async with httpx.AsyncClient(timeout=OPENROUTER_HTTP_TIMEOUT_SEC) as temp_client:
                 response = await temp_client.post(OPENROUTER_URL, json=payload, headers=headers)
                 response.raise_for_status()
                 raw = response.text
@@ -429,11 +451,12 @@ def healthz() -> Dict[str, str]:
 
 @app.post("/simulate", response_model=SimulateResponse)
 async def simulate(
-    request: SimulateRequest,
+    payload: SimulateRequest,
+    http_request: Request,
     x_openrouter_api_key: str = Header(default="", alias="X-OpenRouter-Api-Key"),
     x_openrouter_model: str = Header(default="", alias="X-OpenRouter-Model"),
 ) -> SimulateResponse:
-    prompt = request.prompt.strip()
+    prompt = payload.prompt.strip()
     if not prompt:
         raise HTTPException(status_code=400, detail="Prompt cannot be empty.")
 
@@ -442,16 +465,15 @@ async def simulate(
             prompt,
             api_key_override=x_openrouter_api_key,
             model_override=x_openrouter_model,
+            http_request=http_request,
         )
     except RuntimeError as exc:
         message = str(exc)
         if "OPENROUTER_API_KEY is not set" in message:
             raise HTTPException(status_code=503, detail=message) from exc
         logger.exception("Failed to classify scenario with OpenRouter.")
-        raise HTTPException(
-            status_code=502,
-            detail="Failed to classify scenario with OpenRouter.",
-        ) from exc
+        safe = message if len(message) <= 2000 else f"{message[:2000]}…"
+        raise HTTPException(status_code=502, detail=safe) from exc
     except Exception as exc:
         logger.exception("Unexpected LLM classification failure.")
         raise HTTPException(
