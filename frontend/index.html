@@ -139,7 +139,7 @@
               <summary class="cursor-pointer select-none hover:text-slate-300 outline-none">How it works</summary>
               <ol class="mt-2 pl-4 list-decimal space-y-1 text-slate-400 leading-relaxed">
                 <li>Describe a real-world scenario in the text box.</li>
-                <li>Click <strong class="text-slate-300">Analyze</strong> — often <strong class="text-slate-300">15–40 seconds</strong>; the <strong class="text-slate-300">first request</strong> on a hosted preview can take <strong class="text-slate-300">several minutes</strong> (cold start + model).</li>
+                <li>Click <strong class="text-slate-300">Analyze</strong> — typically <strong class="text-slate-300">15–45 seconds</strong> once the host is warm. Serverless previews can spike on the <strong class="text-slate-300">first</strong> run; for steady speed use a long-running deploy (e.g. Fly) per the README.</li>
                 <li>Scrub the timeline to replay spikes on the 3D brain.</li>
               </ol>
             </details>
@@ -355,8 +355,8 @@
         desaturate: 0.0,
         scatter_flash_prob: 0.0,
       };
-      /** Browser-side cap for POST /simulate (cold start + slow OpenRouter + Brian2 can exceed 3m on Vercel). */
-      const REQUEST_TIMEOUT_MS = 300000;
+      /** Hard cap for POST /simulate; warm runs are usually well under a minute. */
+      const REQUEST_TIMEOUT_MS = 120000;
       const BACKEND_NEURONS_PER_LOBE = 100;
 
       // Neon lobe colors — vibrant for wireframe glow
@@ -1510,7 +1510,7 @@
             const name = fetchErr instanceof Error ? fetchErr.name : "";
             if (name === "AbortError") {
               throw new Error(
-                "No response within 5 minutes. On Vercel the first run can cold-start Python + Brian2 and the LLM step may be slow — try again, or check deployment logs if it always stalls."
+                "No response within 2 minutes. If you are on a serverless preview, try Analyze again after the first cold start, or use the Fly deployment for more predictable latency (see README)."
               );
             }
             throw new Error(
@@ -1557,7 +1557,7 @@
           return;
         }
         simulateButton.disabled = true;
-        setStatus("Analyzing… (first hosted run can take a few minutes)");
+        setStatus("Analyzing… (usually under a minute when warm)");
         log(`Submitting: "${prompt}"`);
         try {
           const payload = await callSimulation(prompt);

@@ -110,6 +110,8 @@ Static files are mounted at `/static` from the `frontend/` directory.
 - Vercel (production): [https://cognigraph-tau.vercel.app](https://cognigraph-tau.vercel.app)
 - Fly.io (production): [https://cognigraph-13906.fly.dev](https://cognigraph-13906.fly.dev)
 
+**Latency:** `Analyze` is usually **well under a minute** on a warm process. **Vercel** cold-starts the Python + Brian2 stack per deployment pattern, so the **first** request after idle can feel slow. For predictable, visitor-friendly demos, prefer **Fly** (long-lived VM) or local `uvicorn`.
+
 ### Security model for API key
 
 - Each user can provide their own OpenRouter key in the UI (`API Settings` panel).

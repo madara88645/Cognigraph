@@ -10,7 +10,6 @@ from urllib import request as urlrequest
 
 from contextlib import asynccontextmanager
 
-import brian2 as b2
 import httpx
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.responses import FileResponse
@@ -63,8 +62,8 @@ _load_dotenv_file()
 OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", DEFAULT_OPENROUTER_MODEL)
 OPENROUTER_DEMO_MODEL = os.getenv("OPENROUTER_DEMO_MODEL", DEFAULT_OPENROUTER_DEMO_MODEL)
 
-# OpenRouter can exceed 45s on cold/slow models; align with browser client (3m) headroom.
-OPENROUTER_HTTP_TIMEOUT_SEC = float(os.getenv("OPENROUTER_HTTP_TIMEOUT_SEC", "240"))
+# Single LLM call should finish well under this on a healthy provider; override if needed.
+OPENROUTER_HTTP_TIMEOUT_SEC = float(os.getenv("OPENROUTER_HTTP_TIMEOUT_SEC", "90"))
 
 # Global HTTPX Client
 http_client: httpx.AsyncClient = None  # type: ignore
@@ -347,6 +346,8 @@ def run_snn(
     duration_ms: int = 1000,
     neurons_per_lobe: int = 100,
 ) -> Dict[str, Dict[str, List[float]]]:
+    import brian2 as b2
+
     if active_lobe not in LOBE_NAMES:
         raise ValueError(f"Unknown lobe: {active_lobe}")
     if duration_ms <= 0:
