@@ -2,16 +2,16 @@ import asyncio
 import json
 import logging
 import os
+import re
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from urllib import error as urlerror
 from urllib import request as urlrequest
 
 from contextlib import asynccontextmanager
 
-import brian2 as b2
 import httpx
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -39,6 +39,8 @@ FRONTEND_INDEX = FRONTEND_DIR / "index.html"
 ENV_FILE = PROJECT_ROOT / ".env"
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_OPENROUTER_MODEL = "x-ai/grok-4.1-fast"
+# Used when the request has no X-OpenRouter-Api-Key (server env key only). Default is Qwen 3.5 Flash on OpenRouter (faster/cheaper than GPT-OSS for short JSON classification).
+DEFAULT_OPENROUTER_DEMO_MODEL = "qwen/qwen3.5-flash-02-23"
 
 
 def _load_dotenv_file() -> None:
@@ -58,15 +60,36 @@ def _load_dotenv_file() -> None:
 _load_dotenv_file()
 
 OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", DEFAULT_OPENROUTER_MODEL)
+OPENROUTER_DEMO_MODEL = os.getenv("OPENROUTER_DEMO_MODEL", DEFAULT_OPENROUTER_DEMO_MODEL)
+
+# Single LLM call should finish well under this on a healthy provider; override if needed.
+OPENROUTER_HTTP_TIMEOUT_SEC = float(os.getenv("OPENROUTER_HTTP_TIMEOUT_SEC", "90"))
 
 # Global HTTPX Client
 http_client: httpx.AsyncClient = None  # type: ignore
 
 
+def _openrouter_http_referer(http_request: Optional[Request]) -> str:
+    """OpenRouter uses Referer for attribution; localhost breaks production keys/site rules."""
+    explicit = (os.getenv("OPENROUTER_HTTP_REFERER") or "").strip()
+    if explicit:
+        return explicit.rstrip("/")
+    vercel = (os.getenv("VERCEL_URL") or "").strip()
+    if vercel:
+        base = vercel if vercel.startswith("http") else f"https://{vercel}"
+        return base.rstrip("/")
+    if http_request is not None:
+        proto = http_request.headers.get("x-forwarded-proto", "https")
+        host = http_request.headers.get("x-forwarded-host") or http_request.headers.get("host")
+        if host:
+            return f"{proto}://{host}".rstrip("/")
+    return "http://localhost:8000"
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global http_client
-    http_client = httpx.AsyncClient(timeout=45.0)
+    http_client = httpx.AsyncClient(timeout=OPENROUTER_HTTP_TIMEOUT_SEC)
     yield
     await http_client.aclose()
 
@@ -180,53 +203,107 @@ def _resolve_openrouter_api_key(api_key_override: str = "") -> str:
     return api_key
 
 
-async def classify_scenario(prompt: str, api_key_override: str = "") -> Dict[str, Any]:
-    api_key = _resolve_openrouter_api_key(api_key_override)
+def _normalize_byok_model_slug(raw: str) -> str:
+    """Return a safe OpenRouter model id, or '' to use server OPENROUTER_MODEL."""
+    s = (raw or "").strip()
+    if not s or len(s) > 128 or ".." in s:
+        return ""
+    if not re.fullmatch(r"[a-zA-Z0-9/_.:-]+", s):
+        return ""
+    return s
 
-    instruction = (
-        "You are a neuroscience classifier.\n"
-        "Given a real-world scenario, choose:\n"
-        "1) The single primary active brain lobe from: "
-        "frontal, parietal, occipital, temporal, cerebellum.\n"
-        "2) The single dominant neuromodulator tone from: "
-        "adrenaline, noradrenaline, dopamine, serotonin, gaba, acetylcholine, cortisol, baseline.\n"
-        "Return STRICT JSON only with keys:\n"
-        "active_lobe, dominant_neuromodulator, neuromodulator_intensity (0.0-1.0), "
-        "explanation, neuromodulator_rationale (one short sentence; may be empty string).\n"
-        "If the scenario is emotionally neutral, use baseline with neuromodulator_intensity <= 0.3.\n"
-        "Disambiguation — cortisol vs noradrenaline: If the scenario centers on HPA-axis cortisol "
-        "(e.g. morning cortisol awakening response, CAR, diurnal cortisol pulse, glucocorticoid stress "
-        "hormone, explicit 'cortisol' as the driver of the state), you MUST set "
-        "dominant_neuromodulator to cortisol. Do not pick noradrenaline merely because the person "
-        "feels alert or vigilant; noradrenaline is for LC-NE vigilance, surprise, or phasic attention "
-        "when cortisol/HPA is not the stated focus. If the user names cortisol or CAR, cortisol wins.\n"
-        "For cortisol, neuromodulator_intensity selects the regime: <=0.5 means optimal acute arousal "
-        "(e.g. waking up, short manageable challenge); >0.5 means toxic/chronic load "
-        "(e.g. chronic stress, exam panic, overtraining, burnout). Do not use cortisol for neutral scenes "
-        "unless stress is clearly described; otherwise prefer baseline or a sharper modulator.\n"
-        "Do not output concentrations or invented units. No markdown fences. No extra keys. No prose.\n"
-        'Example: {"active_lobe":"frontal","dominant_neuromodulator":"dopamine",'
-        '"neuromodulator_intensity":0.7,"explanation":"...","neuromodulator_rationale":"..."}'
-    )
+
+def _select_openrouter_model(api_key_override: str, model_override: str = "") -> str:
+    """Shared host key → demo model only. BYOK → optional X-OpenRouter-Model else OPENROUTER_MODEL."""
+    if not api_key_override.strip():
+        return OPENROUTER_DEMO_MODEL
+    chosen = _normalize_byok_model_slug(model_override)
+    if chosen:
+        return chosen
+    return OPENROUTER_MODEL
+
+
+# Shared JSON/schema rules for lobe + neuromodulator classification (appended after role-specific intro).
+_CLASSIFICATION_TASK = (
+    "Given a real-world scenario, choose:\n"
+    "1) The single primary active brain lobe from: "
+    "frontal, parietal, occipital, temporal, cerebellum.\n"
+    "2) The single dominant neuromodulator tone from: "
+    "adrenaline, noradrenaline, dopamine, serotonin, gaba, acetylcholine, cortisol, baseline.\n"
+    "Return STRICT JSON only with keys:\n"
+    "active_lobe, dominant_neuromodulator, neuromodulator_intensity (0.0-1.0), "
+    "explanation, neuromodulator_rationale (one short sentence; may be empty string).\n"
+    "If the scenario is emotionally neutral, use baseline with neuromodulator_intensity <= 0.3.\n"
+    "Disambiguation — cortisol vs noradrenaline: If the scenario centers on HPA-axis cortisol "
+    "(e.g. morning cortisol awakening response, CAR, diurnal cortisol pulse, glucocorticoid stress "
+    "hormone, explicit 'cortisol' as the driver of the state), you MUST set "
+    "dominant_neuromodulator to cortisol. Do not pick noradrenaline merely because the person "
+    "feels alert or vigilant; noradrenaline is for LC-NE vigilance, surprise, or phasic attention "
+    "when cortisol/HPA is not the stated focus. If the user names cortisol or CAR, cortisol wins.\n"
+    "For cortisol, neuromodulator_intensity selects the regime: <=0.5 means optimal acute arousal "
+    "(e.g. waking up, short manageable challenge); >0.5 means toxic/chronic load "
+    "(e.g. chronic stress, exam panic, overtraining, burnout). Do not use cortisol for neutral scenes "
+    "unless stress is clearly described; otherwise prefer baseline or a sharper modulator.\n"
+    "Do not output concentrations or invented units. No markdown fences. No extra keys. No prose.\n"
+    'Example: {"active_lobe":"frontal","dominant_neuromodulator":"dopamine",'
+    '"neuromodulator_intensity":0.7,"explanation":"...","neuromodulator_rationale":"..."}'
+)
+
+# Strong educator voice for public demo traffic (server key only).
+_NEUROSCIENTIST_DEMO_PERSONA = (
+    "You are a senior cognitive neuroscientist and computational neuroscience educator helping a "
+    "general audience explore brain–behavior links in a classroom-style demo.\n"
+    "You integrate neuroanatomy, systems-level reasoning, and neuromodulation (including stress-axis "
+    "metaphors only when the scenario warrants it). You write with clarity and intellectual honesty.\n"
+    "Non-negotiable constraints:\n"
+    "- This is an educational visualization, not medical software. Never diagnose, treat, or imply you "
+    "measured a real person's brain or hormones.\n"
+    "- Map each scenario to exactly one primary lobe and one dominant neuromodulator tone as specified "
+    "below; prefer the single best interpretation. If the scenario is underspecified, choose the most "
+    "plausible reading and note the ambiguity briefly inside `explanation`—still output valid JSON.\n"
+    "- Keep `explanation` concise (roughly one or two short sentences) and accessible; avoid long "
+    "lists of citations or unexplained jargon.\n"
+    "- Output format: respond with the JSON object only—no markdown code fences, no commentary before "
+    "or after, and no keys beyond those listed.\n\n"
+)
+
+
+def _classification_system_instruction(api_key_override: str) -> str:
+    if api_key_override.strip():
+        return "You are a neuroscience classifier.\n" + _CLASSIFICATION_TASK
+    return _NEUROSCIENTIST_DEMO_PERSONA + _CLASSIFICATION_TASK
+
+
+async def classify_scenario(
+    prompt: str,
+    api_key_override: str = "",
+    model_override: str = "",
+    http_request: Optional[Request] = None,
+) -> Dict[str, Any]:
+    api_key = _resolve_openrouter_api_key(api_key_override)
+    model_name = _select_openrouter_model(api_key_override, model_override)
+
+    instruction = _classification_system_instruction(api_key_override)
     payload = {
-        "model": OPENROUTER_MODEL,
+        "model": model_name,
         "messages": [
             {"role": "system", "content": instruction},
             {"role": "user", "content": f"Scenario: {prompt}"},
         ],
         "temperature": 0.2,
     }
+    referer = _openrouter_http_referer(http_request)
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
-        "HTTP-Referer": "http://localhost:8000",
+        "HTTP-Referer": referer,
         "X-Title": "CogniGraph",
     }
 
     try:
         if http_client is None:
             # Fallback for when run outside of the FastAPI app lifecycle (e.g., direct test calls)
-            async with httpx.AsyncClient(timeout=45.0) as temp_client:
+            async with httpx.AsyncClient(timeout=OPENROUTER_HTTP_TIMEOUT_SEC) as temp_client:
                 response = await temp_client.post(OPENROUTER_URL, json=payload, headers=headers)
                 response.raise_for_status()
                 raw = response.text
@@ -269,6 +346,8 @@ def run_snn(
     duration_ms: int = 1000,
     neurons_per_lobe: int = 100,
 ) -> Dict[str, Dict[str, List[float]]]:
+    import brian2 as b2
+
     if active_lobe not in LOBE_NAMES:
         raise ValueError(f"Unknown lobe: {active_lobe}")
     if duration_ms <= 0:
@@ -373,24 +452,29 @@ def healthz() -> Dict[str, str]:
 
 @app.post("/simulate", response_model=SimulateResponse)
 async def simulate(
-    request: SimulateRequest,
+    payload: SimulateRequest,
+    http_request: Request,
     x_openrouter_api_key: str = Header(default="", alias="X-OpenRouter-Api-Key"),
+    x_openrouter_model: str = Header(default="", alias="X-OpenRouter-Model"),
 ) -> SimulateResponse:
-    prompt = request.prompt.strip()
+    prompt = payload.prompt.strip()
     if not prompt:
         raise HTTPException(status_code=400, detail="Prompt cannot be empty.")
 
     try:
-        llm_result = await classify_scenario(prompt, api_key_override=x_openrouter_api_key)
+        llm_result = await classify_scenario(
+            prompt,
+            api_key_override=x_openrouter_api_key,
+            model_override=x_openrouter_model,
+            http_request=http_request,
+        )
     except RuntimeError as exc:
         message = str(exc)
         if "OPENROUTER_API_KEY is not set" in message:
             raise HTTPException(status_code=503, detail=message) from exc
         logger.exception("Failed to classify scenario with OpenRouter.")
-        raise HTTPException(
-            status_code=502,
-            detail="Failed to classify scenario with OpenRouter.",
-        ) from exc
+        safe = message if len(message) <= 2000 else f"{message[:2000]}…"
+        raise HTTPException(status_code=502, detail=safe) from exc
     except Exception as exc:
         logger.exception("Unexpected LLM classification failure.")
         raise HTTPException(

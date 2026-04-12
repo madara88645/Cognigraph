@@ -1,9 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/api/index.py"
-    }
+    { "source": "/simulate", "destination": "https://cognigraph-13906.fly.dev/simulate" },
+    { "source": "/healthz",  "destination": "https://cognigraph-13906.fly.dev/healthz" },
+    { "source": "/(.*)",     "destination": "/src/index.py" }
   ]
 }

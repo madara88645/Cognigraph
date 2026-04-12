@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CogniGraph v2.0</title>
+    <title>CogniGraph</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tweenjs/tween.js@23.1.3/dist/tween.umd.js"></script>
     <style>
@@ -45,11 +45,62 @@
       .sub-text {
         color: #94a3b8;
       }
-      /* Analysis: higher contrast than generic sub-text */
+      /* Analysis: higher contrast than generic sub-text.
+         Fixed position (right-0). When API Settings is open on wide screens,
+         opacity eases down so overlap reads as layered; input panel stays on
+         top via z-index. ≤1024px: recessed dimming is disabled in rules below. */
       .analysis-panel {
         background: rgba(15, 18, 26, 0.88);
         border-color: rgba(255, 255, 255, 0.12);
         min-width: 17rem;
+        /* Defense-in-depth: a very long `explanation` field must not push
+           this absolutely-positioned panel outside its middle-col parent and
+           overlap the top-row input panel or the bottom-row controls. */
+        max-height: calc(100vh - 8rem);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        z-index: 1;
+      }
+      @media (min-width: 1025px) {
+        .cognigraph-middle-col .analysis-panel {
+          transition: opacity 0.28s ease;
+        }
+        .cognigraph-middle-col .analysis-panel.analysis-panel--recessed {
+          opacity: 0.48;
+        }
+      }
+      /* The top-right input panel is laid out in-flow: when API Settings
+         expands it otherwise grows downward into the vertical strip where
+         the absolutely-positioned .analysis-panel sits (both are w-72/w-96
+         flush right), which visually collides with the explanation text.
+         Cap the panel to the viewport, keep textarea + Analyze button fixed,
+         and let the API Settings body scroll internally when needed. */
+      .cognigraph-input-panel {
+        max-height: calc(100vh - 3rem);
+        overflow: hidden;
+        /* Ensure the panel paints above any overlap with absolutely-
+           positioned siblings in sibling flex rows. */
+        position: relative;
+        z-index: 5;
+      }
+      .cognigraph-settings-body {
+        /* Flex child that holds the API Settings content. Allowed to shrink
+           below its intrinsic height (min-height:0 is the magic that makes
+           overflow-y:auto actually activate inside a flex column). */
+        min-height: 0;
+        flex: 0 1 auto;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+      }
+      /* Subtle scrollbar so the glass-panel aesthetic is preserved. */
+      .cognigraph-settings-body::-webkit-scrollbar,
+      .analysis-panel::-webkit-scrollbar {
+        width: 6px;
+      }
+      .cognigraph-settings-body::-webkit-scrollbar-thumb,
+      .analysis-panel::-webkit-scrollbar-thumb {
+        background: rgba(148, 163, 184, 0.35);
+        border-radius: 3px;
       }
       .analysis-label {
         color: #cbd5e1;
@@ -76,6 +127,50 @@
       button:active {
         transform: translateY(1px);
       }
+      @media (max-width: 1024px) {
+        .cognigraph-shell {
+          padding: 0.75rem !important;
+        }
+        .cognigraph-top-row {
+          flex-direction: column;
+          align-items: stretch !important;
+        }
+        .cognigraph-input-panel {
+          width: 100% !important;
+          max-width: 100% !important;
+        }
+        .cognigraph-middle-col {
+          position: relative !important;
+          min-height: 0;
+        }
+        .cognigraph-middle-col .analysis-panel,
+        .cognigraph-middle-col .cognigraph-signatures-panel {
+          position: relative !important;
+          top: auto !important;
+          right: auto !important;
+          left: auto !important;
+          transform: none !important;
+          width: 100% !important;
+          max-width: 100% !important;
+          margin-bottom: 0.75rem;
+        }
+        .cognigraph-bottom-row {
+          flex-direction: column;
+          align-items: stretch !important;
+        }
+        .cognigraph-bottom-row .cognigraph-spacer {
+          display: none;
+        }
+        .cognigraph-bottom-row .cognigraph-timeline-panel {
+          max-width: 100% !important;
+          order: -1;
+        }
+        .cognigraph-bottom-row .cognigraph-log-panel {
+          width: 100% !important;
+          height: auto;
+          min-height: 6rem;
+        }
+      }
     </style>
   </head>
   <body class="h-screen w-screen overflow-hidden text-slate-200">
@@ -83,44 +178,88 @@
       <div id="brain-canvas" class="absolute inset-0"></div>
 
       <!-- Free-floating panels layer -->
-      <section class="pointer-events-none absolute inset-0 p-6 flex flex-col justify-between">
+      <section class="cognigraph-shell pointer-events-none absolute inset-0 p-6 flex flex-col justify-between">
 
         <!-- Top Row: outer row does not capture hits (only panels do) -->
-        <div class="pointer-events-none flex justify-between items-start gap-6">
+        <div class="cognigraph-top-row pointer-events-none flex justify-between items-start gap-6">
           <!-- Top Left: Branding & Status -->
-          <div class="pointer-events-auto glass-panel px-5 py-3 flex flex-col gap-1">
-            <h1 class="text-sm font-semibold tracking-widest uppercase accent-text">CogniGraph 2.0</h1>
+          <div class="pointer-events-auto glass-panel px-5 py-3 flex flex-col gap-1 max-w-md">
+            <h1 class="text-sm font-semibold tracking-widest uppercase accent-text">CogniGraph</h1>
             <p id="status-chip" class="text-[10px] tracking-wide sub-text">Initializing...</p>
+            <details class="mt-2 text-[10px] sub-text pointer-events-auto">
+              <summary class="cursor-pointer select-none hover:text-slate-300 outline-none">How it works</summary>
+              <ol class="mt-2 pl-4 list-decimal space-y-1 text-slate-400 leading-relaxed">
+                <li>Describe a real-world scenario in the text box.</li>
+                <li>Click <strong class="text-slate-300">Analyze</strong> — typically <strong class="text-slate-300">15–45 seconds</strong> once the host is warm. Serverless previews can spike on the <strong class="text-slate-300">first</strong> run; for steady speed use a long-running deploy (e.g. Fly) per the README.</li>
+                <li>Scrub the timeline to replay spikes on the 3D brain.</li>
+              </ol>
+            </details>
+            <div class="mt-2 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                id="copy-demo-link-btn"
+                class="text-[10px] uppercase font-semibold text-slate-400 hover:text-white border border-slate-600 rounded-full px-2 py-1"
+              >
+                Copy app link
+              </button>
+              <a
+                id="open-demo-link"
+                href="https://cognigraph-tau.vercel.app"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-[10px] uppercase font-semibold text-slate-500 hover:text-slate-300 underline decoration-slate-600 underline-offset-2"
+              >Open live demo</a>
+            </div>
           </div>
 
           <!-- Top Right: Input & Simulation -->
-          <div class="pointer-events-auto glass-panel p-5 w-80 md:w-96 flex flex-col gap-4">
+          <div class="cognigraph-input-panel pointer-events-auto glass-panel p-5 w-80 md:w-96 flex flex-col gap-4">
             <div class="flex justify-between items-center">
               <span class="text-xs font-medium uppercase tracking-widest sub-text">Sequence Input</span>
               <button id="rotate-btn" class="text-[10px] uppercase font-semibold text-slate-400 hover:text-white border border-slate-700 rounded-full px-2 py-1">Auto-Rotate</button>
             </div>
             <textarea
               id="prompt"
-              class="w-full bg-slate-900/30 border border-slate-700/50 rounded-xl p-3 text-sm text-slate-100 placeholder:text-slate-600 outline-none focus:border-white transition-colors resize-none h-20"
+              class="w-full shrink-0 bg-slate-900/30 border border-slate-700/50 rounded-xl p-3 text-sm text-slate-100 placeholder:text-slate-600 outline-none focus:border-white transition-colors resize-none h-20"
               placeholder="E.g., Solving a complex math problem..."
             ></textarea>
-            <div class="rounded-xl border border-amber-300/25 bg-amber-500/10 px-3 py-2">
+            <div class="cognigraph-settings-body rounded-xl border border-amber-300/25 bg-amber-500/10 px-3 py-2">
               <div class="flex items-center justify-between gap-2">
                 <p class="text-[10px] uppercase tracking-widest text-amber-200 font-semibold">API Settings</p>
                 <button id="toggle-settings-btn" class="text-[10px] uppercase font-semibold text-amber-100 border border-amber-200/40 rounded-full px-2 py-1 hover:text-white hover:border-amber-100">Show</button>
               </div>
               <p class="mt-1 text-[11px] leading-relaxed text-amber-100/90">
-                Each user can use their own OpenRouter key. Saved locally in your browser.
+                <strong class="text-amber-50">This page is the demo.</strong> With the host's shared setup, click <strong class="text-amber-50">Analyze</strong> right away — shared demo model (typically Qwen 3.5 Flash). Optional: save your OpenRouter key and, if you like, a <strong class="text-amber-50">model id</strong> in the same panel — no other page, no redirect. Your requests then use your account; leave model blank to use the host's BYOK default.
               </p>
+              <details class="mt-2 text-[10px] leading-relaxed text-amber-100/85 pointer-events-auto">
+                <summary class="cursor-pointer select-none hover:text-amber-50 outline-none font-medium">What is OpenRouter?</summary>
+                <p class="mt-1.5 border-l border-amber-200/30 pl-2">
+                  <a href="https://openrouter.ai/" target="_blank" rel="noopener noreferrer" class="text-amber-50 underline decoration-amber-200/50 underline-offset-2">OpenRouter</a>
+                  (opens in a new tab) is one API that routes to many models. CogniGraph calls it once per scenario to classify your text, then runs the brain simulation on this server.
+                  You only need an OpenRouter account if you choose to add your own key. If this deployment has no server key (for example some self-hosted installs), add a key here or configure <code class="text-amber-50/95">OPENROUTER_API_KEY</code> on the server.
+                </p>
+              </details>
               <div id="settings-panel" class="hidden mt-2 space-y-2">
+                <label for="api-key-input" class="text-[10px] uppercase tracking-wide text-amber-100/80 font-medium">OpenRouter API key</label>
                 <input
                   id="api-key-input"
                   type="password"
                   class="w-full bg-slate-900/40 border border-amber-200/40 rounded-lg p-2 text-xs text-slate-100 placeholder:text-slate-500 outline-none focus:border-amber-100"
                   placeholder="sk-or-v1-..."
+                  autocomplete="off"
                 />
-                <div class="flex items-center gap-2">
-                  <button id="save-api-key-btn" class="text-[10px] uppercase font-semibold text-slate-900 bg-amber-200 rounded-full px-3 py-1 hover:bg-amber-100">Save Key</button>
+                <label for="openrouter-model-input" class="text-[10px] uppercase tracking-wide text-amber-100/80 font-medium">Model id (only with your key)</label>
+                <input
+                  id="openrouter-model-input"
+                  type="text"
+                  class="w-full bg-slate-900/40 border border-amber-200/40 rounded-lg p-2 text-xs text-slate-100 placeholder:text-slate-500 outline-none focus:border-amber-100 font-mono"
+                  placeholder="e.g. openai/gpt-4o — optional"
+                  spellcheck="false"
+                  autocomplete="off"
+                />
+                <p class="text-[10px] text-amber-100/70 leading-snug">Empty model → host default for personal keys. Ignored when you use the shared demo (no key).</p>
+                <div class="flex flex-wrap items-center gap-2">
+                  <button id="save-api-key-btn" class="text-[10px] uppercase font-semibold text-slate-900 bg-amber-200 rounded-full px-3 py-1 hover:bg-amber-100">Save settings</button>
                   <button id="clear-api-key-btn" class="text-[10px] uppercase font-semibold text-amber-100 border border-amber-200/40 rounded-full px-3 py-1 hover:text-white">Clear</button>
                   <span id="api-key-status" class="text-[10px] text-amber-100/90">Not set</span>
                 </div>
@@ -128,7 +267,7 @@
             </div>
             <button
               id="simulate-btn"
-              class="w-full bg-white text-black font-semibold uppercase tracking-wider text-xs py-2.5 rounded-xl hover:bg-slate-200 disabled:opacity-50 disabled:hover:bg-white"
+              class="w-full shrink-0 bg-white text-black font-semibold uppercase tracking-wider text-xs py-2.5 rounded-xl hover:bg-slate-200 disabled:opacity-50 disabled:hover:bg-white"
             >
               Analyze
             </button>
@@ -136,7 +275,7 @@
         </div>
 
         <!-- Middle: wrapper must NOT capture pointer events — otherwise OrbitControls cannot rotate the brain -->
-        <div class="flex-1 pointer-events-none relative min-h-0">
+        <div class="cognigraph-middle-col flex-1 pointer-events-none relative min-h-0">
            <!-- Analysis floating panel (Middle Right) -->
            <div class="pointer-events-auto analysis-panel glass-panel absolute right-0 top-1/2 -translate-y-1/2 p-5 w-72 flex flex-col gap-3.5">
               <h2 class="text-xs font-semibold uppercase tracking-widest text-slate-300 border-b border-slate-600/60 pb-2">Analysis</h2>
@@ -160,23 +299,23 @@
            </div>
 
            <!-- Signatures (Middle Left) -->
-           <div class="pointer-events-auto absolute left-0 top-1/2 -translate-y-1/2 glass-panel p-4 w-48 flex flex-col gap-3">
+           <div class="cognigraph-signatures-panel pointer-events-auto absolute left-0 top-1/2 -translate-y-1/2 glass-panel p-4 w-48 flex flex-col gap-3">
               <h2 class="text-[10px] font-medium uppercase tracking-widest sub-text border-b border-slate-700/50 pb-2">Signatures</h2>
               <div id="legend-panel" class="flex flex-col gap-2 text-[10px] font-medium"></div>
            </div>
         </div>
 
         <!-- Bottom Row -->
-        <div class="pointer-events-none flex justify-between items-end gap-6">
+        <div class="cognigraph-bottom-row pointer-events-none flex justify-between items-end gap-6">
 
           <!-- Bottom Left: Log -->
-          <div class="pointer-events-auto glass-panel p-4 w-64 h-32 flex flex-col gap-2">
+          <div class="cognigraph-log-panel pointer-events-auto glass-panel p-4 w-64 h-32 flex flex-col gap-2">
             <span class="text-[10px] font-medium uppercase tracking-widest sub-text">Event Log</span>
             <div id="log-panel" class="thin-scroll flex-1 overflow-y-auto whitespace-pre-wrap text-[9px] font-mono text-slate-400"></div>
           </div>
 
           <!-- Bottom Center: Playback (Floating Island) -->
-          <div class="pointer-events-auto glass-panel px-6 py-4 flex-1 max-w-xl mx-auto flex flex-col gap-3">
+          <div class="cognigraph-timeline-panel pointer-events-auto glass-panel px-6 py-4 flex-1 max-w-xl mx-auto flex flex-col gap-3">
              <div class="flex justify-between items-center text-[10px] font-medium uppercase tracking-widest sub-text">
                 <span>Timeline</span>
                 <span id="timeline-label" class="font-mono">0ms</span>
@@ -200,7 +339,7 @@
           </div>
 
           <!-- Spacer for layout balance (no hit capture) -->
-          <div class="pointer-events-none w-64 shrink-0" aria-hidden="true"></div>
+          <div class="cognigraph-spacer pointer-events-none w-64 shrink-0" aria-hidden="true"></div>
 
         </div>
 
@@ -267,7 +406,8 @@
         desaturate: 0.0,
         scatter_flash_prob: 0.0,
       };
-      const REQUEST_TIMEOUT_MS = 45000;
+      /** Hard cap for POST /simulate; warm runs are usually well under a minute. */
+      const REQUEST_TIMEOUT_MS = 120000;
       const BACKEND_NEURONS_PER_LOBE = 100;
 
       // Neon lobe colors — vibrant for wireframe glow
@@ -357,11 +497,24 @@
       const settingsToggleButton = document.getElementById("toggle-settings-btn");
       const settingsPanel = document.getElementById("settings-panel");
       const apiKeyInput = document.getElementById("api-key-input");
+      const openrouterModelInput = document.getElementById("openrouter-model-input");
       const saveApiKeyButton = document.getElementById("save-api-key-btn");
       const clearApiKeyButton = document.getElementById("clear-api-key-btn");
       const apiKeyStatus = document.getElementById("api-key-status");
+      const copyDemoLinkButton = document.getElementById("copy-demo-link-btn");
+      const openDemoLink = document.getElementById("open-demo-link");
+      const analysisPanelEl = document.querySelector(".analysis-panel");
 
       const API_KEY_STORAGE_KEY = "cognigraph.openrouter_api_key";
+      const MODEL_STORAGE_KEY = "cognigraph.openrouter_model";
+      const PRIMARY_LIVE_DEMO_URL = "https://cognigraph-tau.vercel.app";
+      const PRIMARY_LIVE_DEMO_ORIGIN = (() => {
+        try {
+          return new URL(PRIMARY_LIVE_DEMO_URL).origin;
+        } catch {
+          return PRIMARY_LIVE_DEMO_URL;
+        }
+      })();
 
       /* ═══════════════════════════════════════════════
          THREE.JS SCENE
@@ -494,6 +647,12 @@
       updateSpeedLabel();
       updateTimelineUi();
       hookUiEvents();
+      if (openDemoLink) {
+        openDemoLink.href = PRIMARY_LIVE_DEMO_URL;
+        if (window.location.origin === PRIMARY_LIVE_DEMO_ORIGIN) {
+          openDemoLink.classList.add("hidden");
+        }
+      }
       onResize();
       render();
       initSceneAsync();
@@ -597,9 +756,27 @@
         localStorage.setItem(API_KEY_STORAGE_KEY, value);
       }
 
-      function refreshApiKeyStatus() {
-        const value = getSavedApiKey();
-        apiKeyStatus.textContent = value ? "Key saved" : "Not set";
+      function getSavedModel() {
+        return localStorage.getItem(MODEL_STORAGE_KEY) || "";
+      }
+
+      function setSavedModel(value) {
+        const v = (value || "").trim();
+        if (!v) {
+          localStorage.removeItem(MODEL_STORAGE_KEY);
+          return;
+        }
+        localStorage.setItem(MODEL_STORAGE_KEY, v);
+      }
+
+      function refreshApiSettingsStatus() {
+        const key = getSavedApiKey();
+        const model = getSavedModel();
+        if (!key) {
+          apiKeyStatus.textContent = "Not set";
+          return;
+        }
+        apiKeyStatus.textContent = model ? `Key saved · ${model}` : "Key saved · default model";
       }
 
       /* ═══════════════════════════════════════════════
@@ -1368,20 +1545,49 @@
           const headers = { "Content-Type": "application/json" };
           if (savedApiKey) {
             headers["X-OpenRouter-Api-Key"] = savedApiKey;
+            const modelSlug = getSavedModel().trim();
+            if (modelSlug) {
+              headers["X-OpenRouter-Model"] = modelSlug;
+            }
           }
-          const response = await fetch("/simulate", {
-            method: "POST",
-            headers,
-            body: JSON.stringify({ prompt }),
-            signal: controller.signal,
-          });
+          let response;
+          try {
+            response = await fetch("/simulate", {
+              method: "POST",
+              headers,
+              body: JSON.stringify({ prompt }),
+              signal: controller.signal,
+            });
+          } catch (fetchErr) {
+            const name = fetchErr instanceof Error ? fetchErr.name : "";
+            if (name === "AbortError") {
+              throw new Error(
+                "No response within 2 minutes. If you are on a serverless preview, try Analyze again after the first cold start, or use the Fly deployment for more predictable latency (see README)."
+              );
+            }
+            throw new Error(
+              "Network error — could not reach the server. If you are running locally, ensure the API is up."
+            );
+          }
           const body = await response.json().catch(() => ({}));
           if (!response.ok) {
             const detail = formatFastApiDetail(body.detail, response.status);
-            if (response.status === 503 && detail.includes("OPENROUTER_API_KEY is not set")) {
-              throw new Error(
-                "OPENROUTER_API_KEY is missing. Add your key in API Settings or set it on the server."
-              );
+            if (response.status === 503) {
+              const lower = detail.toLowerCase();
+              if (
+                lower.includes("openrouter") ||
+                lower.includes("api_key") ||
+                lower.includes("api key") ||
+                lower.includes("not set")
+              ) {
+                throw new Error(
+                  "Shared demo key is not configured on the server. You can still use this page: open API Settings → Show, paste your OpenRouter key, and Save (stored in this browser only). Or ask the host to set OPENROUTER_API_KEY."
+                );
+              }
+              throw new Error(detail || "Service temporarily unavailable (503). Try again later.");
+            }
+            if (response.status >= 500) {
+              throw new Error(detail || "Server error. Try again in a moment.");
             }
             throw new Error(detail);
           }
@@ -1403,7 +1609,7 @@
           return;
         }
         simulateButton.disabled = true;
-        setStatus("Running backend classification + SNN...");
+        setStatus("Analyzing… (usually under a minute when warm)");
         log(`Submitting: "${prompt}"`);
         try {
           const payload = await callSimulation(prompt);
@@ -1416,7 +1622,9 @@
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           log(msg, "error");
-          setStatus("Simulation failed");
+          const short =
+            msg.length > 120 ? `${msg.slice(0, 117)}…` : msg;
+          setStatus(`Failed — ${short}`);
         } finally {
           simulateButton.disabled = false;
         }
@@ -1465,20 +1673,48 @@
           settingsToggleButton.textContent = settingsPanel.classList.contains("hidden")
             ? "Show"
             : "Hide";
+          syncAnalysisRecessedState();
         });
         saveApiKeyButton.addEventListener("click", () => {
-          const value = apiKeyInput.value.trim();
-          setSavedApiKey(value);
-          apiKeyInput.value = "";
-          refreshApiKeyStatus();
-          log(value ? "Personal OpenRouter key saved locally." : "Empty key ignored.", value ? "info" : "warn");
+          const keyFromField = apiKeyInput.value.trim();
+          const modelVal = openrouterModelInput ? openrouterModelInput.value.trim() : "";
+          if (keyFromField) {
+            setSavedApiKey(keyFromField);
+            apiKeyInput.value = "";
+          }
+          setSavedModel(modelVal);
+          if (openrouterModelInput) {
+            openrouterModelInput.value = getSavedModel();
+          }
+          refreshApiSettingsStatus();
+          if (keyFromField) {
+            log("API key saved in this browser.", "info");
+          } else if (getSavedApiKey()) {
+            log("Model preference saved.", "info");
+          } else {
+            log("Paste an API key to save, or use Clear to reset saved settings.", "warn");
+          }
         });
         clearApiKeyButton.addEventListener("click", () => {
           setSavedApiKey("");
+          setSavedModel("");
           apiKeyInput.value = "";
-          refreshApiKeyStatus();
-          log("Personal OpenRouter key cleared from local storage.");
+          if (openrouterModelInput) openrouterModelInput.value = "";
+          refreshApiSettingsStatus();
+          log("Saved API key and model cleared from this browser.");
         });
+        if (copyDemoLinkButton) {
+          copyDemoLinkButton.addEventListener("click", async () => {
+            const url = String(window.location.href || "").trim() || PRIMARY_LIVE_DEMO_URL;
+            try {
+              await navigator.clipboard.writeText(url);
+              log(`Copied app link: ${url}`);
+              setStatus("App link copied to clipboard");
+            } catch {
+              log("Could not copy to clipboard. Copy manually: " + url, "warn");
+            }
+          });
+        }
         simulateButton.addEventListener("click", handleSimulateClick);
         replayButton.addEventListener("click", () => {
           if (!lastPayload) return;
@@ -1516,7 +1752,11 @@
         window.addEventListener("resize", onResize);
       }
 
-      refreshApiKeyStatus();
+      if (openrouterModelInput) {
+        openrouterModelInput.value = getSavedModel();
+      }
+      refreshApiSettingsStatus();
+      syncAnalysisRecessedState();
 
       function onResize() {
         const w = Math.max(1, canvasHost.clientWidth);
@@ -1528,6 +1768,15 @@
         composer.setSize(w * dpr, h * dpr);
         bloomPass.setSize(w * dpr, h * dpr);
         fxaaPass.material.uniforms.resolution.value.set(1 / (w * dpr), 1 / (h * dpr));
+        syncAnalysisRecessedState();
+      }
+
+      /** Wide layout only: dim Analysis while API Settings form is open so overlap reads as layered, not a bug. */
+      function syncAnalysisRecessedState() {
+        if (!analysisPanelEl || !settingsPanel) return;
+        const expanded = !settingsPanel.classList.contains("hidden");
+        const wide = window.innerWidth > 1024;
+        analysisPanelEl.classList.toggle("analysis-panel--recessed", expanded && wide);
       }
 
       /* ═══════════════════════════════════════════════

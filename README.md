@@ -4,7 +4,7 @@
   <img src="docs/readme/banner.png" alt="CogniGraph — neural network and brain visualization banner" width="100%" />
 </p>
 
-**CogniGraph** (repository folder: `Cognigraph`) is a small educational demo: you describe a real-world scenario, an LLM classifies brain lobe and neuromodulator tone, a [Brian2](https://brian2.readthedocs.io/) spiking neural network (SNN) is simulated, and a web UI visualizes activity on a 3D brain model.
+**CogniGraph** (repository folder: `Cognigraph`) is a small educational demo: you describe a real-world scenario, an LLM classifies brain lobe and neuromodulator tone, a [Brian2](https://brian2.readthedocs.io/) spiking neural network (SNN) is simulated, and a web UI visualizes activity on a 3D brain model. The UI is a single page served from `/`; optional OpenRouter keys are entered only in the in-page **API Settings** panel (no separate auth route or redirect).
 
 **This is not medical software.** Outputs are for visualization and learning only, not diagnosis or treatment. The UI includes context for modeled stress-hormone axes (for example HPA / cortisol) as simulation metaphors, not clinical measurements.
 
@@ -13,7 +13,7 @@
 **Neural Activation Viewer** — scenario input, playback controls, and cognitive analysis (example: *Doing a heavy deadlift*).
 
 <p align="center">
-  <img src="docs/readme/screenshot-ui.png" alt="CogniGraph UI: scenario field, Simulate Activation, active lobe and neuromodulator readout" width="92%" />
+  <img src="docs/readme/screenshot-ui.png" alt="CogniGraph UI: scenario field, Analyze, active lobe and neuromodulator readout" width="92%" />
 </p>
 
 **Simulation view** — colored lobe mesh, spike counters, HPA context, and event log after playback completes.
@@ -43,7 +43,8 @@ pip install -r requirements.txt
 
 1. Copy `.env.example` to `.env` in the project root.
 2. Set `OPENROUTER_API_KEY` from [OpenRouter](https://openrouter.ai/).
-3. Optionally set `OPENROUTER_MODEL` (default in code: `x-ai/grok-4.1-fast`).
+3. Optionally set **`OPENROUTER_DEMO_MODEL`** (default: `qwen/qwen3.5-flash-02-23`) — used for **anonymous / no-browser-key** traffic on public demos, with a stronger educator-style system prompt. Alternatives: `openai/gpt-oss-120b`, or `openai/gpt-oss-120b:free` for a no-cost tier (rate limits apply). See [models](https://openrouter.ai/models).
+4. Optionally set **`OPENROUTER_MODEL`** (default: `x-ai/grok-4.1-fast`) — used only when a visitor saves their **own** key in the UI (`X-OpenRouter-Api-Key`); they pay OpenRouter, not you.
 
 Never commit `.env`; it is listed in `.gitignore`.
 
@@ -89,6 +90,13 @@ Configuration: [`pytest.ini`](pytest.ini), tests under [`tests/`](tests/).
 |-------|------|-------------|
 | `prompt` | string | Scenario text (1–1000 characters). |
 
+Optional request headers (same origin as the UI; not required for the shared demo):
+
+| Header | When | Description |
+|--------|------|-------------|
+| `X-OpenRouter-Api-Key` | BYOK | Visitor's OpenRouter key; billing on their account. |
+| `X-OpenRouter-Model` | BYOK | OpenRouter model slug (e.g. `openai/gpt-4o`). Ignored without `X-OpenRouter-Api-Key`. Invalid values fall back to `OPENROUTER_MODEL`. |
+
 **Response** (simplified): `active_lobe`, `dominant_neuromodulator`, `neuromodulator_intensity`, `neuromodulator_rationale`, `explanation`, `duration_ms`, `spikes` (per-lobe spike indices and times), `snn_modulation`, `vfx_profile`.
 
 If `OPENROUTER_API_KEY` is missing, the API returns **503** with a clear message.
@@ -97,13 +105,27 @@ Static files are mounted at `/static` from the `frontend/` directory.
 
 ## Deploy
 
+### Live deployments
+
+- **Fly.io (primary `/simulate` backend):** [https://cognigraph-13906.fly.dev](https://cognigraph-13906.fly.dev)
+- **Vercel (UI mirror, proxies `/simulate` to Fly):** [https://cognigraph-tau.vercel.app](https://cognigraph-tau.vercel.app)
+
+**How the two hosts relate:** Fly runs the full FastAPI + Brian2 stack in a long-lived Docker VM (warm via `min_machines_running = 1`). Vercel serves the static UI and **rewrites** `/simulate` and `/healthz` to Fly as external proxies (`vercel.json`), so the Vercel page works end-to-end **without needing `OPENROUTER_API_KEY` on Vercel** — the server key lives on Fly. Same-origin rewrites mean the browser still POSTs to `cognigraph-tau.vercel.app/simulate`, so CORS does not apply and BYOK headers (`X-OpenRouter-Api-Key`, `X-OpenRouter-Model`) pass through untouched.
+
+**Latency:** `Analyze` is typically **6–10 seconds** on a warm Fly machine (LLM + Brian2). The Vercel-proxied path adds a small edge hop on top. The old Vercel-Python-function path (cold-starting Brian2 inside a 10–60s serverless budget) is no longer used for `/simulate`.
+
 ### Security model for API key
 
-- `OPENROUTER_API_KEY` is **server-side only**.
-- Do not add API key input to frontend.
-- Configure secrets in hosting platform settings.
+- Each user can provide their own OpenRouter key in the UI (`API Settings` panel).
+- The key is stored in the user's browser local storage and sent as `X-OpenRouter-Api-Key`.
+- Optional model id from the same panel is sent as `X-OpenRouter-Model` when a user key is present; if omitted or invalid, the server uses **`OPENROUTER_MODEL`**. Without a user key, `X-OpenRouter-Model` is ignored (shared traffic always uses **`OPENROUTER_DEMO_MODEL`**).
+- Server-side env key (`OPENROUTER_API_KEY`) is still supported as fallback for visitors who do not add a key.
+- Requests **without** `X-OpenRouter-Api-Key` use **`OPENROUTER_DEMO_MODEL`** (default `qwen/qwen3.5-flash-02-23`) plus a neuroscientist-educator system prompt; requests **with** a user key use **`OPENROUTER_MODEL`** or the validated `X-OpenRouter-Model` value (billing is on their OpenRouter account).
+- For shared/public devices, users should clear their saved key after use.
 
 ### Vercel
+
+Vercel is configured as a **UI mirror** — it serves the static frontend and proxies the dynamic endpoints (`/simulate`, `/healthz`) to Fly via external rewrites in `vercel.json`. Do **not** set LLM-related env vars on Vercel; the server key lives on Fly and flows through the proxy.
 
 1. Install CLI and login:
    ```bash
@@ -114,15 +136,13 @@ Static files are mounted at `/static` from the `frontend/` directory.
    ```bash
    vercel
    ```
-3. In Vercel dashboard, set env vars:
-   - `OPENROUTER_API_KEY` (required)
-   - `OPENROUTER_MODEL` (optional)
-4. Redeploy after env changes:
+3. No `OPENROUTER_API_KEY` or model env vars are needed on Vercel. Fly owns them.
+4. Redeploy to production after any `vercel.json` change:
    ```bash
    vercel --prod
    ```
 
-This repo includes `vercel.json` that routes requests to `backend/main.py` and sets Python function timeout.
+**Why the proxy instead of running Python on Vercel?** Vercel’s Python functions cold-start Brian2 inside a strict function-duration budget (Hobby ~10s, Pro default 15s and up to 300s only via per-project config). The `functions` key in `vercel.json` only validates globs against the legacy `api/` directory, so `src/index.py` — required for Vercel’s FastAPI auto-detection — cannot have its `maxDuration` declared in `vercel.json` at all. Rather than fight both constraints at once, `/simulate` is delegated to Fly (long-lived VM, no function duration cap, no Brian2 cold-start after warm). The Vercel Python function in `src/index.py` remains for serving `/` and `/static/*` only.
 
 ### Fly.io
 
@@ -139,16 +159,18 @@ This repo includes `vercel.json` that routes requests to `backend/main.py` and s
    ```bash
    fly secrets set OPENROUTER_API_KEY=your_key_here
    ```
-4. Optional model override:
+4. Optional model overrides:
    ```bash
+   fly secrets set OPENROUTER_DEMO_MODEL=qwen/qwen3.5-flash-02-23
    fly secrets set OPENROUTER_MODEL=x-ai/grok-4.1-fast
    ```
+   Use **`OPENROUTER_DEMO_MODEL`** for the shared demo; **`OPENROUTER_MODEL`** only applies to BYOK requests.
 5. Redeploy after secret/config changes:
    ```bash
    fly deploy
    ```
 
-This repo includes `fly.toml` and `Dockerfile` configured for `uvicorn backend.main:app`.
+This repo includes `fly.toml` and `Dockerfile` configured for `uvicorn backend.main:app`. `fly.toml` sets `min_machines_running = 1` so one machine stays warm — this avoids a 15–30s Brian2 cold-start on the first request after idle, including requests that arrive via the Vercel UI proxy.
 
 ## Deployment smoke tests
 
@@ -170,11 +192,26 @@ Expected behavior:
 
 ## Recent Changes
 
+- Vercel is now a UI mirror that **proxies `/simulate` and `/healthz` to Fly** via external rewrites in `vercel.json`; Fly is the single `/simulate` backend. No LLM env vars live on Vercel anymore.
+- `fly.toml` sets `min_machines_running = 1` (and disables `auto_stop_machines`) so Brian2 stays warm and the first request after idle is not a 15–30s cold-start.
+- Shared demo traffic uses **`OPENROUTER_DEMO_MODEL`** (default Qwen 3.5 Flash + educator prompt); BYOK traffic uses **`OPENROUTER_MODEL`**.
 - Security hardening in LLM error handling to avoid exposing sensitive upstream details to API clients.
 - Faster request handling by reusing `httpx.AsyncClient` through FastAPI lifespan.
 - SNN runtime optimization by removing repeated dictionary creation inside the `run_snn` loop.
 - `build_vfx_profile` optimization by moving static profile definitions to module scope.
 - Added test coverage for `_strip_markdown_fences`, `_load_dotenv_file`, `_lerp_toward_neutral`, `snn_params_to_dict`, payload length validation, and `GET /` (`serve_index`).
+
+## Sharing (English copy)
+
+Use this blurb when posting to LinkedIn, X, Reddit, or a blog. Replace `YOUR_REPO_URL` if you publish the source.
+
+> **CogniGraph** — Describe a scenario; an LLM picks a brain lobe and neuromodulator tone; a Brian2 spiking network runs; a 3D brain visualizes the result. Live demo: https://cognigraph-tau.vercel.app — **Not medical software**; for learning and demos only.
+
+Optional one-liner for tight character limits:
+
+> Educational brain + SNN demo (LLM → Brian2 → 3D). Not clinical. https://cognigraph-tau.vercel.app
+
+After sharing, smoke-test the live URL (`/healthz` and a sample `POST /simulate`) as described under [Deployment smoke tests](#deployment-smoke-tests). Without a configured key, `POST /simulate` should still return a clear JSON error about `OPENROUTER_API_KEY` rather than a generic failure — that confirms the route is live.
 
 ## License
 
