@@ -45,11 +45,62 @@
       .sub-text {
         color: #94a3b8;
       }
-      /* Analysis: higher contrast than generic sub-text */
+      /* Analysis: higher contrast than generic sub-text.
+         Fixed position (right-0). When API Settings is open on wide screens,
+         opacity eases down so overlap reads as layered; input panel stays on
+         top via z-index. ≤1024px: recessed dimming is disabled in rules below. */
       .analysis-panel {
         background: rgba(15, 18, 26, 0.88);
         border-color: rgba(255, 255, 255, 0.12);
         min-width: 17rem;
+        /* Defense-in-depth: a very long `explanation` field must not push
+           this absolutely-positioned panel outside its middle-col parent and
+           overlap the top-row input panel or the bottom-row controls. */
+        max-height: calc(100vh - 8rem);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        z-index: 1;
+      }
+      @media (min-width: 1025px) {
+        .cognigraph-middle-col .analysis-panel {
+          transition: opacity 0.28s ease;
+        }
+        .cognigraph-middle-col .analysis-panel.analysis-panel--recessed {
+          opacity: 0.48;
+        }
+      }
+      /* The top-right input panel is laid out in-flow: when API Settings
+         expands it otherwise grows downward into the vertical strip where
+         the absolutely-positioned .analysis-panel sits (both are w-72/w-96
+         flush right), which visually collides with the explanation text.
+         Cap the panel to the viewport, keep textarea + Analyze button fixed,
+         and let the API Settings body scroll internally when needed. */
+      .cognigraph-input-panel {
+        max-height: calc(100vh - 3rem);
+        overflow: hidden;
+        /* Ensure the panel paints above any overlap with absolutely-
+           positioned siblings in sibling flex rows. */
+        position: relative;
+        z-index: 5;
+      }
+      .cognigraph-settings-body {
+        /* Flex child that holds the API Settings content. Allowed to shrink
+           below its intrinsic height (min-height:0 is the magic that makes
+           overflow-y:auto actually activate inside a flex column). */
+        min-height: 0;
+        flex: 0 1 auto;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+      }
+      /* Subtle scrollbar so the glass-panel aesthetic is preserved. */
+      .cognigraph-settings-body::-webkit-scrollbar,
+      .analysis-panel::-webkit-scrollbar {
+        width: 6px;
+      }
+      .cognigraph-settings-body::-webkit-scrollbar-thumb,
+      .analysis-panel::-webkit-scrollbar-thumb {
+        background: rgba(148, 163, 184, 0.35);
+        border-radius: 3px;
       }
       .analysis-label {
         color: #cbd5e1;
@@ -169,10 +220,10 @@
             </div>
             <textarea
               id="prompt"
-              class="w-full bg-slate-900/30 border border-slate-700/50 rounded-xl p-3 text-sm text-slate-100 placeholder:text-slate-600 outline-none focus:border-white transition-colors resize-none h-20"
+              class="w-full shrink-0 bg-slate-900/30 border border-slate-700/50 rounded-xl p-3 text-sm text-slate-100 placeholder:text-slate-600 outline-none focus:border-white transition-colors resize-none h-20"
               placeholder="E.g., Solving a complex math problem..."
             ></textarea>
-            <div class="rounded-xl border border-amber-300/25 bg-amber-500/10 px-3 py-2">
+            <div class="cognigraph-settings-body rounded-xl border border-amber-300/25 bg-amber-500/10 px-3 py-2">
               <div class="flex items-center justify-between gap-2">
                 <p class="text-[10px] uppercase tracking-widest text-amber-200 font-semibold">API Settings</p>
                 <button id="toggle-settings-btn" class="text-[10px] uppercase font-semibold text-amber-100 border border-amber-200/40 rounded-full px-2 py-1 hover:text-white hover:border-amber-100">Show</button>
@@ -216,7 +267,7 @@
             </div>
             <button
               id="simulate-btn"
-              class="w-full bg-white text-black font-semibold uppercase tracking-wider text-xs py-2.5 rounded-xl hover:bg-slate-200 disabled:opacity-50 disabled:hover:bg-white"
+              class="w-full shrink-0 bg-white text-black font-semibold uppercase tracking-wider text-xs py-2.5 rounded-xl hover:bg-slate-200 disabled:opacity-50 disabled:hover:bg-white"
             >
               Analyze
             </button>
@@ -452,6 +503,7 @@
       const apiKeyStatus = document.getElementById("api-key-status");
       const copyDemoLinkButton = document.getElementById("copy-demo-link-btn");
       const openDemoLink = document.getElementById("open-demo-link");
+      const analysisPanelEl = document.querySelector(".analysis-panel");
 
       const API_KEY_STORAGE_KEY = "cognigraph.openrouter_api_key";
       const MODEL_STORAGE_KEY = "cognigraph.openrouter_model";
@@ -1621,6 +1673,7 @@
           settingsToggleButton.textContent = settingsPanel.classList.contains("hidden")
             ? "Show"
             : "Hide";
+          syncAnalysisRecessedState();
         });
         saveApiKeyButton.addEventListener("click", () => {
           const keyFromField = apiKeyInput.value.trim();
@@ -1703,6 +1756,7 @@
         openrouterModelInput.value = getSavedModel();
       }
       refreshApiSettingsStatus();
+      syncAnalysisRecessedState();
 
       function onResize() {
         const w = Math.max(1, canvasHost.clientWidth);
@@ -1714,6 +1768,15 @@
         composer.setSize(w * dpr, h * dpr);
         bloomPass.setSize(w * dpr, h * dpr);
         fxaaPass.material.uniforms.resolution.value.set(1 / (w * dpr), 1 / (h * dpr));
+        syncAnalysisRecessedState();
+      }
+
+      /** Wide layout only: dim Analysis while API Settings form is open so overlap reads as layered, not a bug. */
+      function syncAnalysisRecessedState() {
+        if (!analysisPanelEl || !settingsPanel) return;
+        const expanded = !settingsPanel.classList.contains("hidden");
+        const wide = window.innerWidth > 1024;
+        analysisPanelEl.classList.toggle("analysis-panel--recessed", expanded && wide);
       }
 
       /* ═══════════════════════════════════════════════
