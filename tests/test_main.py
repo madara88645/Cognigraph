@@ -8,6 +8,7 @@ from backend.main import (
     _classification_system_instruction,
     _load_dotenv_file,
     _parse_model_json,
+    _normalize_byok_model_slug,
     _resolve_openrouter_api_key,
     _select_openrouter_model,
     _strip_markdown_fences,
@@ -164,6 +165,40 @@ def test_select_openrouter_model_byok_invalid_slug_falls_back_to_env():
         assert _select_openrouter_model("sk", "evil\nmodel") == "expensive-model"
         assert _select_openrouter_model("sk", "x" * 200) == "expensive-model"
         assert _select_openrouter_model("sk", "../../etc/passwd") == "expensive-model"
+
+
+def test_normalize_byok_model_slug_valid():
+    assert _normalize_byok_model_slug("openai/gpt-4o") == "openai/gpt-4o"
+    assert _normalize_byok_model_slug("meta-llama/llama-3.1-8b-instruct") == "meta-llama/llama-3.1-8b-instruct"
+    assert _normalize_byok_model_slug("anthropic/claude-3.5-sonnet:beta") == "anthropic/claude-3.5-sonnet:beta"
+    assert _normalize_byok_model_slug("my_custom_model_123") == "my_custom_model_123"
+
+def test_normalize_byok_model_slug_whitespace_stripped():
+    assert _normalize_byok_model_slug("   openai/gpt-4o  ") == "openai/gpt-4o"
+    assert _normalize_byok_model_slug("\n\t  meta-llama/llama-3 \r\n") == "meta-llama/llama-3"
+
+def test_normalize_byok_model_slug_empty_and_none():
+    assert _normalize_byok_model_slug("") == ""
+    assert _normalize_byok_model_slug(None) == "" # type: ignore
+    assert _normalize_byok_model_slug("   ") == ""
+    assert _normalize_byok_model_slug("\n\t\r") == ""
+
+def test_normalize_byok_model_slug_too_long():
+    assert _normalize_byok_model_slug("a" * 128) == "a" * 128
+    assert _normalize_byok_model_slug("a" * 129) == ""
+
+def test_normalize_byok_model_slug_directory_traversal():
+    assert _normalize_byok_model_slug("../etc/passwd") == ""
+    assert _normalize_byok_model_slug("some/model/../path") == ""
+    assert _normalize_byok_model_slug("..") == ""
+
+def test_normalize_byok_model_slug_invalid_characters():
+    assert _normalize_byok_model_slug("model space") == ""
+    assert _normalize_byok_model_slug("model<script>") == ""
+    assert _normalize_byok_model_slug("model;drop") == ""
+    assert _normalize_byok_model_slug("evil\nmodel") == ""
+    assert _normalize_byok_model_slug("model\\with\\slash") == ""
+    assert _normalize_byok_model_slug("model\"quote") == ""
 
 
 def test_classification_system_instruction_demo_includes_persona():
