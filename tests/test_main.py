@@ -8,8 +8,8 @@ from fastapi.testclient import TestClient
 from backend.main import (
     _classification_system_instruction,
     _load_dotenv_file,
-    _parse_model_json,
     _normalize_byok_model_slug,
+    _parse_model_json,
     _resolve_openrouter_api_key,
     _select_openrouter_model,
     _strip_markdown_fences,
