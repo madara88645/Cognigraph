@@ -14,7 +14,9 @@ from backend.main import (
     _select_openrouter_model,
     _strip_markdown_fences,
     app,
+    run_snn,
 )
+from backend.neuromodulation import resolve_snn_modulation
 
 client = TestClient(app)
 
@@ -166,9 +168,9 @@ def test_select_openrouter_model_byok_respects_model_slug():
         OPENROUTER_DEMO_MODEL="cheap-model",
     ):
         assert _select_openrouter_model("sk", "openai/gpt-4o") == "openai/gpt-4o"
-        assert _select_openrouter_model("sk", "  meta-llama/llama-3.1-8b-instruct  ") == (
-            "meta-llama/llama-3.1-8b-instruct"
-        )
+        assert _select_openrouter_model(
+            "sk", "  meta-llama/llama-3.1-8b-instruct  "
+        ) == ("meta-llama/llama-3.1-8b-instruct")
 
 
 def test_select_openrouter_model_byok_invalid_slug_falls_back_to_env():
@@ -275,3 +277,10 @@ def test_load_dotenv_file_existing_vars_not_overwritten(mock_env_file):
     with patch.dict(os.environ, {"TEST_VAR6": "old_value"}, clear=True):
         _load_dotenv_file()
         assert os.environ.get("TEST_VAR6") == "old_value"
+
+
+def test_run_snn_invalid_lobe():
+    """Verify that calling run_snn with an invalid lobe raises a ValueError."""
+    params = resolve_snn_modulation("adrenaline", 1.0)
+    with pytest.raises(ValueError, match="Unknown lobe: invalid_lobe"):
+        run_snn("invalid_lobe", params)  # type: ignore
