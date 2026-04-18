@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, Literal, Optional, Tuple, TypedDict
+from typing import Any, Literal, TypedDict, cast
 
 LobeName = Literal["frontal", "parietal", "occipital", "temporal", "cerebellum"]
 NeuromodulatorName = Literal[
@@ -17,7 +17,7 @@ NeuromodulatorName = Literal[
     "baseline",
 ]
 
-LOBE_NAMES: Tuple[str, ...] = (
+LOBE_NAMES: tuple[str, ...] = (
     "frontal",
     "parietal",
     "occipital",
@@ -25,7 +25,16 @@ LOBE_NAMES: Tuple[str, ...] = (
     "cerebellum",
 )
 
-NEUROMODULATOR_NAMES: Tuple[str, ...] = (
+
+class ClassificationResult(TypedDict):
+    active_lobe: LobeName
+    explanation: str
+    dominant_neuromodulator: NeuromodulatorName
+    neuromodulator_intensity: float
+    neuromodulator_rationale: str
+
+
+NEUROMODULATOR_NAMES: tuple[str, ...] = (
     "adrenaline",
     "noradrenaline",
     "dopamine",
@@ -37,7 +46,7 @@ NEUROMODULATOR_NAMES: Tuple[str, ...] = (
 )
 
 # Canonical glow hex for API echo / UI sync (plan 3.3a); cortisol uses piecewise in build_vfx_profile
-NEUROMOD_GLOW_HEX: Dict[str, str] = {
+NEUROMOD_GLOW_HEX: dict[str, str] = {
     "adrenaline": "#FF4500",
     "noradrenaline": "#FF4500",
     "dopamine": "#FFD700",
@@ -60,7 +69,7 @@ class SnnModulationSpec:
     drive_noise_mult: float
 
 
-NEUROMODULATOR_TABLE: Dict[str, SnnModulationSpec] = {
+NEUROMODULATOR_TABLE: dict[str, SnnModulationSpec] = {
     "baseline": SnnModulationSpec(1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0),
     "adrenaline": SnnModulationSpec(1.35, 1.25, -0.06, 0.85, 0.75, 1.1, 1.3),
     "noradrenaline": SnnModulationSpec(1.45, 0.85, -0.04, 0.9, 0.85, 1.05, 1.15),
@@ -100,7 +109,7 @@ class ResolvedSnnParams:
     active_rate_hz: float
     background_rate_hz: float
     # When set, run_snn uses these Poisson rates per lobe (cortisol toxic / inverted-U leg).
-    lobe_rates_hz: Optional[Tuple[Tuple[str, float], ...]] = None
+    lobe_rates_hz: tuple[tuple[str, float], ...] | None = None
 
 
 CORTISOL_U_CRIT = 0.5
@@ -160,7 +169,7 @@ def resolve_cortisol_piecewise(
     active_hz = max(RATE_HZ_MIN, min(RATE_HZ_MAX, active_hz))
     inactive_hz = max(RATE_HZ_MIN, min(RATE_HZ_MAX, inactive_hz))
 
-    lobe_rates: Tuple[Tuple[str, float], ...] = tuple(
+    lobe_rates: tuple[tuple[str, float], ...] = tuple(
         (lobe, active_hz if lobe == active_lobe else inactive_hz) for lobe in LOBE_NAMES
     )
 
@@ -197,7 +206,7 @@ def resolve_snn_modulation(
     intensity: float,
     base_active_hz: float = BASE_ACTIVE_HZ,
     base_bg_hz: float = BASE_BG_HZ,
-    active_lobe: Optional[str] = None,
+    active_lobe: str | None = None,
 ) -> ResolvedSnnParams:
     intensity = max(0.0, min(1.0, intensity))
     if neuromodulator == "cortisol":
@@ -291,7 +300,7 @@ def _vfx_cortisol_piecewise(u: float) -> VfxProfileDict:
     }
 
 
-VFX_PROFILE_TABLE: Dict[str, VfxProfileDict] = {
+VFX_PROFILE_TABLE: dict[str, VfxProfileDict] = {
     "adrenaline": {
         "bloom_mult": 1.25,
         "bloom_activity_boost_mult": 1.2,
@@ -386,13 +395,14 @@ VFX_PROFILE_KEYS = (
     "active_lobe_bloom_scale",
 )
 
+
 def build_vfx_profile(neuromodulator: str, intensity: float) -> VfxProfileDict:
     """Timing/bloom coefficients; glow_hex is mandatory for client."""
     intensity = max(0.0, min(1.0, intensity))
     if neuromodulator == "cortisol":
-        out = _vfx_cortisol_piecewise(intensity)
-        out["glow_hex"] = str(out.get("glow_hex", "#FFBF00"))
-        return out
+        cort = _vfx_cortisol_piecewise(intensity)
+        cort["glow_hex"] = str(cort.get("glow_hex", "#FFBF00"))
+        return cort
 
     glow_hex = NEUROMOD_GLOW_HEX.get(neuromodulator, NEUROMOD_GLOW_HEX["baseline"])
 
@@ -412,7 +422,7 @@ def build_vfx_profile(neuromodulator: str, intensity: float) -> VfxProfileDict:
     return out
 
 
-def snn_params_to_dict(p: ResolvedSnnParams) -> Dict[str, float]:
+def snn_params_to_dict(p: ResolvedSnnParams) -> dict[str, float]:
     return {
         "v_thresh": p.v_thresh,
         "tau_ms": p.tau_ms,
@@ -425,7 +435,7 @@ def snn_params_to_dict(p: ResolvedSnnParams) -> Dict[str, float]:
     }
 
 
-def validate_classification_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
+def validate_classification_payload(payload: dict[str, Any]) -> ClassificationResult:
     if not isinstance(payload, dict):
         raise ValueError("Model output is not a JSON object.")
 
@@ -470,9 +480,9 @@ def validate_classification_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
         raise ValueError("neuromodulator_rationale exceeds maximum length.")
 
     return {
-        "active_lobe": active_lobe,
+        "active_lobe": cast(LobeName, active_lobe),
         "explanation": explanation,
-        "dominant_neuromodulator": mod,
+        "dominant_neuromodulator": cast(NeuromodulatorName, mod),
         "neuromodulator_intensity": neuromodulator_intensity,
         "neuromodulator_rationale": neuromodulator_rationale,
     }

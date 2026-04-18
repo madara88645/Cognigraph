@@ -1,5 +1,6 @@
 import timeit
 
+
 def run_benchmark():
     # Call it 100,000 times
     setup = "from backend.neuromodulation import build_vfx_profile"
@@ -9,6 +10,7 @@ def run_benchmark():
     best_time = min(times)
 
     print(f"Best time for 100,000 calls: {best_time:.4f} seconds")
+
 
 if __name__ == "__main__":
     run_benchmark()
