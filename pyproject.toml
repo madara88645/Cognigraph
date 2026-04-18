@@ -2,7 +2,7 @@
 name = "cognigraph"
 version = "0.1.0"
 description = "Educational FastAPI + Brian2 + Three.js demo"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
     "fastapi",
     "uvicorn",
