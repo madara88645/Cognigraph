@@ -1,3 +1,16 @@
+[project]
+name = "cognigraph"
+version = "0.1.0"
+description = "Educational FastAPI + Brian2 + Three.js demo"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "brian2",
+    "numpy<2.3",
+    "httpx",
+]
+
 [tool.ruff]
 line-length = 100
 target-version = "py310"
