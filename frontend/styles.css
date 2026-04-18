@@ -1,0 +1,259 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&display=swap");
+
+body {
+  margin: 0;
+  background: radial-gradient(ellipse 120% 80% at 50% 20%, #1a1f2e 0%, #0f1115 45%, #08090c 100%);
+  font-family: "Space Grotesk", sans-serif;
+}
+#brain-canvas {
+  touch-action: none;
+}
+#brain-canvas canvas {
+  display: block;
+}
+.glass-panel {
+  background: rgba(20, 24, 32, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+.thin-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.thin-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.15);
+}
+input[type="range"] {
+  accent-color: #fff;
+}
+.accent-text {
+  color: #f1f5f9;
+}
+.sub-text {
+  color: #94a3b8;
+}
+.analysis-panel {
+  background: rgba(15, 18, 26, 0.88);
+  border-color: rgba(255, 255, 255, 0.12);
+  min-width: 17rem;
+  max-height: calc(100vh - 8rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  z-index: 1;
+}
+@media (min-width: 1025px) {
+  .cognigraph-middle-col .analysis-panel {
+    transition: opacity 0.28s ease;
+  }
+  .cognigraph-middle-col .analysis-panel.analysis-panel--recessed {
+    opacity: 0.48;
+  }
+}
+.cognigraph-input-panel {
+  max-height: calc(100vh - 3rem);
+  overflow: hidden;
+  position: relative;
+  z-index: 5;
+}
+.cognigraph-settings-body {
+  min-height: 0;
+  flex: 0 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.cognigraph-settings-body::-webkit-scrollbar,
+.analysis-panel::-webkit-scrollbar {
+  width: 6px;
+}
+.cognigraph-settings-body::-webkit-scrollbar-thumb,
+.analysis-panel::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+  border-radius: 3px;
+}
+.analysis-label {
+  color: #cbd5e1;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+.analysis-body {
+  color: #e2e8f0;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+}
+.analysis-value {
+  color: #f8fafc;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+button {
+  transition: all 0.2s ease;
+}
+button:hover {
+  transform: translateY(-1px);
+}
+button:active {
+  transform: translateY(1px);
+}
+@media (max-width: 1024px) {
+  .cognigraph-shell {
+    padding: 0.75rem !important;
+  }
+  .cognigraph-top-row {
+    flex-direction: column;
+    align-items: stretch !important;
+  }
+  .cognigraph-input-panel {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  #prompt {
+    min-height: 4.5rem !important;
+    height: auto !important;
+  }
+  #simulate-btn {
+    position: sticky;
+    bottom: 0;
+    z-index: 6;
+    box-shadow: 0 -8px 24px rgba(8, 9, 12, 0.85);
+  }
+  .cognigraph-middle-col {
+    position: relative !important;
+    min-height: 0;
+  }
+  .cognigraph-middle-col .analysis-panel,
+  .cognigraph-middle-col .cognigraph-signatures-panel {
+    position: relative !important;
+    top: auto !important;
+    right: auto !important;
+    left: auto !important;
+    transform: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-bottom: 0.75rem;
+  }
+  .cognigraph-bottom-row {
+    flex-direction: column;
+    align-items: stretch !important;
+  }
+  .cognigraph-bottom-row .cognigraph-spacer {
+    display: none;
+  }
+  .cognigraph-bottom-row .cognigraph-timeline-panel {
+    max-width: 100% !important;
+    order: -1;
+  }
+  .cognigraph-bottom-row .cognigraph-log-panel {
+    width: 100% !important;
+    height: auto;
+    min-height: 6rem;
+  }
+}
+
+/* Analyze loading spinner (paired with .cg-analyze-loading on button) */
+@keyframes cg-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+#simulate-btn.cg-analyze-loading {
+  position: relative;
+  padding-left: 2rem;
+}
+#simulate-btn.cg-analyze-loading::before {
+  content: "";
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  width: 0.85rem;
+  height: 0.85rem;
+  margin-top: -0.425rem;
+  border: 2px solid rgba(15, 23, 42, 0.35);
+  border-top-color: rgba(15, 23, 42, 0.95);
+  border-radius: 50%;
+  animation: cg-spin 0.7s linear infinite;
+}
+
+/* Toasts */
+.cg-toast-stack {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+  max-width: min(22rem, calc(100vw - 2rem));
+  pointer-events: none;
+}
+.cg-toast-stack .cg-toast {
+  pointer-events: auto;
+}
+.cg-toast {
+  background: rgba(15, 18, 26, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 0.65rem 0.85rem;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: #e2e8f0;
+  animation: cg-toast-in 0.22s ease-out;
+}
+.cg-toast--leave {
+  animation: cg-toast-out 0.2s ease-in forwards;
+}
+.cg-toast--error {
+  border-color: rgba(248, 113, 113, 0.45);
+}
+.cg-toast--warning {
+  border-color: rgba(251, 191, 36, 0.45);
+}
+.cg-toast--info {
+  border-color: rgba(56, 189, 248, 0.35);
+}
+.cg-toast--success {
+  border-color: rgba(74, 222, 128, 0.4);
+}
+.cg-toast__text {
+  flex: 1;
+  min-width: 0;
+}
+.cg-toast__close {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 0.1rem;
+}
+.cg-toast__close:hover {
+  color: #f1f5f9;
+}
+@keyframes cg-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes cg-toast-out {
+  to {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}

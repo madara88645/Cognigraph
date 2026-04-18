@@ -5,12 +5,13 @@ from backend.main import _extract_chat_message_text, run_snn
 from backend.neuromodulation import (
     CORTISOL_U_CRIT,
     NEUROMOD_GLOW_HEX,
+    LobeName,
+    ResolvedSnnParams,
     _lerp_toward_neutral,
     build_vfx_profile,
     resolve_cortisol_piecewise,
     resolve_snn_modulation,
     snn_params_to_dict,
-    ResolvedSnnParams,
     validate_classification_payload,
 )
 
@@ -33,7 +34,10 @@ def test_extract_chat_message_text_list_parts() -> None:
     text = _extract_chat_message_text(
         {
             "content": [
-                {"type": "text", "text": '{"active_lobe":"frontal","dominant_neuromodulator":"baseline",'},
+                {
+                    "type": "text",
+                    "text": '{"active_lobe":"frontal","dominant_neuromodulator":"baseline",',
+                },
                 {"type": "text", "text": '"explanation":"x"}'},
             ],
         }
@@ -109,9 +113,18 @@ def test_validate_clamps_intensity() -> None:
 @pytest.mark.parametrize(
     "payload,match",
     [
-        ({"active_lobe": "invalid", "dominant_neuromodulator": "baseline", "explanation": "x"}, "active_lobe"),
-        ({"active_lobe": "frontal", "dominant_neuromodulator": "glutamate", "explanation": "x"}, "dominant_neuromodulator"),
-        ({"active_lobe": "frontal", "dominant_neuromodulator": "baseline", "explanation": ""}, "explanation"),
+        (
+            {"active_lobe": "invalid", "dominant_neuromodulator": "baseline", "explanation": "x"},
+            "active_lobe",
+        ),
+        (
+            {"active_lobe": "frontal", "dominant_neuromodulator": "glutamate", "explanation": "x"},
+            "dominant_neuromodulator",
+        ),
+        (
+            {"active_lobe": "frontal", "dominant_neuromodulator": "baseline", "explanation": ""},
+            "explanation",
+        ),
     ],
 )
 def test_validate_rejects_bad_payload(payload: dict, match: str) -> None:
@@ -212,8 +225,8 @@ def test_run_snn_cortisol_toxic_inactive_spikes_exceed_optimal() -> None:
     sp_opt = run_snn("frontal", opt, duration_ms=200, neurons_per_lobe=40)
     np.random.seed(7)
     sp_tox = run_snn("frontal", tox, duration_ms=200, neurons_per_lobe=40)
-    inactive = "parietal"
-    assert len(sp_tox[inactive]["times_ms"]) > len(sp_opt[inactive]["times_ms"])
+    inactive: LobeName = "parietal"
+    assert len(sp_tox[inactive].times_ms) > len(sp_opt[inactive].times_ms)
 
 
 def test_run_snn_gaba_total_spikes_below_adrenaline() -> None:
@@ -222,13 +235,13 @@ def test_run_snn_gaba_total_spikes_below_adrenaline() -> None:
     r_gaba = resolve_snn_modulation("gaba", 1.0)
     np.random.seed(42)
     sp_gaba = run_snn("frontal", r_gaba, duration_ms=150, neurons_per_lobe=30)
-    total_gaba = sum(len(sp_gaba[l]["times_ms"]) for l in sp_gaba)
+    total_gaba = sum(len(sp_gaba[l].times_ms) for l in sp_gaba)
 
     np.random.seed(42)
     r_ad = resolve_snn_modulation("adrenaline", 1.0)
     np.random.seed(42)
     sp_ad = run_snn("frontal", r_ad, duration_ms=150, neurons_per_lobe=30)
-    total_ad = sum(len(sp_ad[l]["times_ms"]) for l in sp_ad)
+    total_ad = sum(len(sp_ad[l].times_ms) for l in sp_ad)
 
     assert total_gaba < total_ad
 
