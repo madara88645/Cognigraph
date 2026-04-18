@@ -1,7 +1,8 @@
 import time
-import brian2 as b2
+
 from backend.main import run_snn
-from backend.neuromodulation import ResolvedSnnParams, LobeName
+from backend.neuromodulation import ResolvedSnnParams
+
 
 def benchmark():
     resolved = ResolvedSnnParams(
@@ -13,7 +14,13 @@ def benchmark():
         v_spread=10.0,
         active_rate_hz=50.0,
         background_rate_hz=10.0,
-        lobe_rates_hz=[("frontal", 50.0), ("parietal", 20.0), ("occipital", 10.0), ("temporal", 15.0), ("cerebellum", 25.0)]
+        lobe_rates_hz=[
+            ("frontal", 50.0),
+            ("parietal", 20.0),
+            ("occipital", 10.0),
+            ("temporal", 15.0),
+            ("cerebellum", 25.0),
+        ],
     )
 
     # Warmup
@@ -29,6 +36,7 @@ def benchmark():
     avg_time = (end_time - start_time) / iterations
     print(f"Average time per run_snn: {avg_time * 1000:.2f} ms")
     return avg_time
+
 
 if __name__ == "__main__":
     benchmark()

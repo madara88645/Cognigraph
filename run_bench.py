@@ -1,20 +1,24 @@
 import asyncio
-import time
+import multiprocessing
 import os
+import time
+
 import httpx
 import uvicorn
-import multiprocessing
 
-from backend.main import app
 
 def run_server():
     uvicorn.run("backend.main:app", host="127.0.0.1", port=8001, log_level="warning")
 
+
 async def run_requests(client, num_requests):
     tasks = []
     for _ in range(num_requests):
-        tasks.append(client.post("http://127.0.0.1:8001/simulate", json={"prompt": "Doing a heavy deadlift"}))
+        tasks.append(
+            client.post("http://127.0.0.1:8001/simulate", json={"prompt": "Doing a heavy deadlift"})
+        )
     return await asyncio.gather(*tasks, return_exceptions=True)
+
 
 async def main():
     os.environ["OPENROUTER_API_KEY"] = "sk-test-fake-key"
@@ -34,7 +38,9 @@ async def main():
         responses = await run_requests(client, num_requests)
         end_time = time.time()
 
-        print(f"Concurrent benchmark time for {num_requests} requests: {end_time - start_time:.4f} seconds")
+        print(
+            f"Concurrent benchmark time for {num_requests} requests: {end_time - start_time:.4f} seconds"
+        )
 
         for idx, r in enumerate(responses):
             if isinstance(r, Exception):
@@ -44,6 +50,7 @@ async def main():
 
     server_process.terminate()
     server_process.join()
+
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -1,10 +1,13 @@
-import pytest
 import asyncio
-from fastapi.testclient import TestClient
-from backend.main import app, classify_scenario
+
+import pytest
+
+from backend.main import classify_scenario
+
 
 def test_classify_scenario_missing_key():
     import os
+
     if "OPENROUTER_API_KEY" in os.environ:
         del os.environ["OPENROUTER_API_KEY"]
     if "openrouter_api_key" in os.environ:
@@ -16,6 +19,7 @@ def test_classify_scenario_missing_key():
 
     with pytest.raises(RuntimeError, match="OPENROUTER_API_KEY is not set"):
         asyncio.run(classify_scenario("test"))
+
 
 if __name__ == "__main__":
     test_classify_scenario_missing_key()

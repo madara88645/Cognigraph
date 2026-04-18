@@ -23,5 +23,5 @@ CogniGraph is a single-app Python project (FastAPI backend + static HTML fronten
 - Requests **without** `X-OpenRouter-Api-Key` use **`OPENROUTER_DEMO_MODEL`** (default `qwen/qwen3.5-flash-02-23`) and a neuroscientist-educator system prompt; BYOK requests use **`OPENROUTER_MODEL`**.
 - When starting the dev server in a background shell, pass the key explicitly: `OPENROUTER_API_KEY="$OPENROUTER_API_KEY" python3 -m uvicorn ...` — background shells may not inherit env vars. Alternatively, write a `.env` file (the app loads it via a custom `_load_dotenv_file()` at startup, but only sets vars **not** already in `os.environ`).
 - Brian2 SNN uses NumPy codegen (`b2.prefs.codegen.target = "numpy"`), so no C compiler is needed.
-- The frontend is a single static HTML file (`frontend/index.html`) served by FastAPI; no JS build toolchain.
+- The frontend is static `frontend/index.html` with ES modules in `frontend/js/` (no bundler), served via FastAPI `/` and `/static`.
 - Simulation requests (`POST /simulate`) take ~15-20 seconds due to the LLM call + Brian2 SNN run.

@@ -1,0 +1,23 @@
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"backend/main.py" = ["SIM112", "SIM108"]
+"test_main_async.py" = ["SIM112"]
+"scripts/*.py" = ["E741"]
+"tests/test_neuromodulation.py" = ["E741"]
+
+[tool.black]
+line-length = 100
+target-version = ["py310"]
+
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true
+strict_optional = true
+warn_unused_ignores = true
