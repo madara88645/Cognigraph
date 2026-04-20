@@ -8,6 +8,7 @@ from backend.neuromodulation import (
     LobeName,
     ResolvedSnnParams,
     _lerp_toward_neutral,
+    _vfx_cortisol_piecewise,
     build_vfx_profile,
     resolve_cortisol_piecewise,
     resolve_snn_modulation,
@@ -273,8 +274,8 @@ def test_snn_params_to_dict_formatting() -> None:
     # Assert lobe_rates_hz is not included in the dictionary
     assert "lobe_rates_hz" not in d
 
+
 def test_vfx_cortisol_piecewise_boundaries() -> None:
-    from backend.neuromodulation import _vfx_cortisol_piecewise
 
     # Boundary: Absolute minimum (u=0.0)
     v_min = _vfx_cortisol_piecewise(0.0)
@@ -285,17 +286,17 @@ def test_vfx_cortisol_piecewise_boundaries() -> None:
     # Boundary: Critical transition (u=0.5)
     v_crit = _vfx_cortisol_piecewise(CORTISOL_U_CRIT)
     assert v_crit["glow_hex"] == "#FFBF00"  # t=1.0 > 0.35
-    assert v_crit["bloom_mult"] == pytest.approx(1.22) # 1.0 + 0.22*1.0
+    assert v_crit["bloom_mult"] == pytest.approx(1.22)  # 1.0 + 0.22*1.0
     assert v_crit["desaturate"] == pytest.approx(0.0)  # 0.04 * (1.0 - 1.0)
 
     # Boundary: Absolute maximum (u=1.0)
     v_max = _vfx_cortisol_piecewise(1.0)
     assert v_max["glow_hex"] == "#9A8F7A"
-    assert v_max["bloom_mult"] == pytest.approx(0.62) # 1.0 - 0.38*1.0
+    assert v_max["bloom_mult"] == pytest.approx(0.62)  # 1.0 - 0.38*1.0
     assert v_max["desaturate"] == pytest.approx(0.8)  # 0.38 + 0.42*1.0
 
+
 def test_vfx_cortisol_piecewise_color_threshold() -> None:
-    from backend.neuromodulation import _vfx_cortisol_piecewise
 
     # t = u / 0.5. Color flips when t > 0.35.
     # So the flip is at u = 0.5 * 0.35 = 0.175.
