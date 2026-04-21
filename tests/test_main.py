@@ -295,3 +295,21 @@ def test_run_snn_invalid_lobe():
     params = resolve_snn_modulation("adrenaline", 1.0)
     with pytest.raises(ValueError, match="Unknown lobe: invalid_lobe"):
         run_snn("invalid_lobe", params)  # type: ignore
+
+def test_normalize_byok_model_slug_valid_edge_cases():
+    # Single character model IDs
+    assert _normalize_byok_model_slug("a") == "a"
+    assert _normalize_byok_model_slug("Z") == "Z"
+    assert _normalize_byok_model_slug("1") == "1"
+
+    # Standalone special characters (except .. which is caught)
+    assert _normalize_byok_model_slug("-") == "-"
+    assert _normalize_byok_model_slug("_") == "_"
+    assert _normalize_byok_model_slug(":") == ":"
+    assert _normalize_byok_model_slug("/") == "/"
+    assert _normalize_byok_model_slug(".") == "."
+
+    # Complex valid combinations of special characters
+    assert _normalize_byok_model_slug("a/b-c_d:e.f") == "a/b-c_d:e.f"
+    assert _normalize_byok_model_slug("model-name_v1.0:latest/suffix") == "model-name_v1.0:latest/suffix"
+    assert _normalize_byok_model_slug("._:-/") == "._:-/"
