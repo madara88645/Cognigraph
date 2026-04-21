@@ -121,7 +121,7 @@ def test_extract_chat_message_text_list_of_dicts():
     content = [
         {"type": "text", "text": "hello "},
         {"content": "world"},
-        {"type": "image_url", "image_url": "http://example.com/image.jpg"}  # Ignored
+        {"type": "image_url", "image_url": "http://example.com/image.jpg"},  # Ignored
     ]
     assert _extract_chat_message_text({"content": content}) == "hello world"
 
@@ -134,7 +134,7 @@ def test_extract_chat_message_text_list_mixed_and_unusual():
         {"type": "text", "text": 456},  # Ignored (text is not str)
         {"content": "!"},
         {"content": 789},  # Ignored (content is not str)
-        ["nested list"]  # Ignored (not str or dict)
+        ["nested list"],  # Ignored (not str or dict)
     ]
     assert _extract_chat_message_text({"content": content}) == "hello world !"
 
