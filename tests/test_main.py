@@ -4,9 +4,12 @@ import os
 from unittest.mock import patch
 from fastapi.testclient import TestClient
 
+from unittest.mock import MagicMock
+
 from backend.main import (
     _classification_system_instruction,
     _load_dotenv_file,
+    _openrouter_http_referer,
     _parse_model_json,
     _resolve_openrouter_api_key,
     _select_openrouter_model,
@@ -225,3 +228,51 @@ def test_load_dotenv_file_existing_vars_not_overwritten(mock_env_file):
     with patch.dict(os.environ, {"TEST_VAR6": "old_value"}, clear=True):
         _load_dotenv_file()
         assert os.environ.get("TEST_VAR6") == "old_value"
+
+
+@patch.dict(os.environ, {}, clear=True)
+def test_openrouter_http_referer_none():
+    assert _openrouter_http_referer(None) == "http://localhost:8000"
+
+
+@patch.dict(os.environ, {}, clear=True)
+def test_openrouter_http_referer_no_header():
+    mock_request = MagicMock()
+    mock_request.headers = {}
+    assert _openrouter_http_referer(mock_request) == "http://localhost:8000"
+
+
+@patch.dict(os.environ, {}, clear=True)
+def test_openrouter_http_referer_with_referer():
+    mock_request = MagicMock()
+    mock_request.headers = {"referer": "https://example.com/page"}
+    assert _openrouter_http_referer(mock_request) == "http://localhost:8000"
+
+
+@patch.dict(os.environ, {}, clear=True)
+def test_openrouter_http_referer_with_host_header():
+    mock_request = MagicMock()
+    mock_request.headers = {"host": "example.com"}
+    assert _openrouter_http_referer(mock_request) == "https://example.com"
+
+
+@patch.dict(os.environ, {}, clear=True)
+def test_openrouter_http_referer_with_x_forwarded_host_header():
+    mock_request = MagicMock()
+    mock_request.headers = {"x-forwarded-host": "example.com", "host": "wrong.com", "x-forwarded-proto": "http"}
+    assert _openrouter_http_referer(mock_request) == "http://example.com"
+
+
+@patch.dict(os.environ, {"OPENROUTER_HTTP_REFERER": "https://explicit.com/"}, clear=True)
+def test_openrouter_http_referer_explicit_env():
+    assert _openrouter_http_referer(None) == "https://explicit.com"
+
+
+@patch.dict(os.environ, {"VERCEL_URL": "vercel.app/"}, clear=True)
+def test_openrouter_http_referer_vercel_env():
+    assert _openrouter_http_referer(None) == "https://vercel.app"
+
+
+@patch.dict(os.environ, {"VERCEL_URL": "http://vercel.app/"}, clear=True)
+def test_openrouter_http_referer_vercel_env_with_http():
+    assert _openrouter_http_referer(None) == "http://vercel.app"
