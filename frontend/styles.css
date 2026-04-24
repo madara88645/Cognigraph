@@ -1,5 +1,20 @@
 @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&display=swap");
 
+:root {
+  --cg-font-size-xs: 0.75rem;
+  --cg-font-size-sm: 0.8125rem;
+  --cg-font-size-body: 0.9375rem;
+  --cg-text-primary: #f8fafc;
+  --cg-text-muted: #b6c1d1;
+  --cg-text-subtle: #94a3b8;
+  --cg-radius-panel: 24px;
+  --cg-radius-control: 12px;
+  --cg-space-1: 0.25rem;
+  --cg-space-2: 0.5rem;
+  --cg-space-3: 0.75rem;
+  --cg-space-4: 1rem;
+}
+
 body {
   margin: 0;
   background: radial-gradient(ellipse 120% 80% at 50% 20%, #1a1f2e 0%, #0f1115 45%, #08090c 100%);
@@ -14,12 +29,18 @@ body {
 .glass-panel {
   background: rgba(20, 24, 32, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 24px;
+  border-radius: var(--cg-radius-panel);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+.glass-panel--info {
+  border-color: rgba(148, 163, 184, 0.24);
+}
+.glass-panel--warning {
+  border-color: rgba(251, 191, 36, 0.35);
 }
 .thin-scroll::-webkit-scrollbar {
   width: 4px;
@@ -35,7 +56,7 @@ input[type="range"] {
   color: #f1f5f9;
 }
 .sub-text {
-  color: #94a3b8;
+  color: var(--cg-text-subtle);
 }
 .analysis-panel {
   background: rgba(15, 18, 26, 0.88);
@@ -76,19 +97,19 @@ input[type="range"] {
   border-radius: 3px;
 }
 .analysis-label {
-  color: #cbd5e1;
-  font-size: 0.7rem;
+  color: #d4deea;
+  font-size: var(--cg-font-size-xs);
   font-weight: 600;
   letter-spacing: 0.06em;
 }
 .analysis-body {
-  color: #e2e8f0;
-  font-size: 0.8125rem;
+  color: #ecf2fb;
+  font-size: var(--cg-font-size-sm);
   line-height: 1.55;
 }
 .analysis-value {
-  color: #f8fafc;
-  font-size: 0.9375rem;
+  color: var(--cg-text-primary);
+  font-size: var(--cg-font-size-body);
   font-weight: 600;
 }
 button {
@@ -99,6 +120,13 @@ button:hover {
 }
 button:active {
   transform: translateY(1px);
+}
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+  outline: 2px solid rgba(148, 199, 255, 0.95);
+  outline-offset: 2px;
 }
 @media (max-width: 1024px) {
   .cognigraph-shell {
@@ -198,15 +226,15 @@ button:active {
 .cg-toast {
   background: rgba(15, 18, 26, 0.95);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
+  border-radius: var(--cg-radius-control);
   padding: 0.65rem 0.85rem;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
   display: flex;
   align-items: flex-start;
   gap: 0.5rem;
-  font-size: 0.75rem;
-  line-height: 1.45;
-  color: #e2e8f0;
+  font-size: var(--cg-font-size-sm);
+  line-height: 1.5;
+  color: #f0f6ff;
   animation: cg-toast-in 0.22s ease-out;
 }
 .cg-toast--leave {
@@ -240,6 +268,20 @@ button:active {
 }
 .cg-toast__close:hover {
   color: #f1f5f9;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  button:hover,
+  button:active {
+    transform: none;
+  }
 }
 @keyframes cg-toast-in {
   from {

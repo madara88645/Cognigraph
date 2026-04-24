@@ -18,9 +18,9 @@
         <!-- Top Row: outer row does not capture hits (only panels do) -->
         <div class="cognigraph-top-row pointer-events-none flex justify-between items-start gap-6">
           <!-- Top Left: Branding & Status -->
-          <div class="pointer-events-auto glass-panel px-5 py-3 flex flex-col gap-1 max-w-md">
+          <div class="pointer-events-auto glass-panel glass-panel--info px-5 py-3 flex flex-col gap-1 max-w-md">
             <h1 class="text-sm font-semibold tracking-widest uppercase accent-text">CogniGraph</h1>
-            <p id="status-chip" class="text-[10px] tracking-wide sub-text">Initializing...</p>
+            <p id="status-chip" class="text-[11px] tracking-wide sub-text" role="status" aria-live="polite">Initializing...</p>
             <details class="mt-2 text-[10px] sub-text pointer-events-auto">
               <summary class="cursor-pointer select-none hover:text-slate-300 outline-none">How it works</summary>
               <ol class="mt-2 pl-4 list-decimal space-y-1 text-slate-400 leading-relaxed">
@@ -51,17 +51,20 @@
           <div class="cognigraph-input-panel pointer-events-auto glass-panel p-5 w-80 md:w-96 flex flex-col gap-4">
             <div class="flex justify-between items-center">
               <span class="text-xs font-medium uppercase tracking-widest sub-text">Sequence Input</span>
-              <button id="rotate-btn" class="text-[10px] uppercase font-semibold text-slate-400 hover:text-white border border-slate-700 rounded-full px-2 py-1">Auto-Rotate</button>
+              <button id="rotate-btn" aria-pressed="true" class="text-[10px] uppercase font-semibold text-slate-400 hover:text-white border border-slate-700 rounded-full px-2 py-1">Auto-Rotate: ON</button>
             </div>
+            <label for="prompt" class="text-[11px] font-medium text-slate-200">Describe the scenario you want analyzed</label>
             <textarea
               id="prompt"
               class="w-full shrink-0 bg-slate-900/30 border border-slate-700/50 rounded-xl p-3 text-sm text-slate-100 placeholder:text-slate-600 outline-none focus:border-white transition-colors resize-none h-20"
               placeholder="E.g., Solving a complex math problem..."
+              aria-describedby="prompt-help"
             ></textarea>
+            <p id="prompt-help" class="text-[11px] text-slate-400 leading-relaxed">Tip: 1-2 concise sentences works best. You can tune playback after results load.</p>
             <div class="cognigraph-settings-body rounded-xl border border-amber-300/25 bg-amber-500/10 px-3 py-2">
               <div class="flex items-center justify-between gap-2">
                 <p class="text-[10px] uppercase tracking-widest text-amber-200 font-semibold">API Settings</p>
-                <button id="toggle-settings-btn" class="text-[10px] uppercase font-semibold text-amber-100 border border-amber-200/40 rounded-full px-2 py-1 hover:text-white hover:border-amber-100">Show</button>
+                <button id="toggle-settings-btn" aria-expanded="false" aria-controls="settings-panel" class="text-[10px] uppercase font-semibold text-amber-100 border border-amber-200/40 rounded-full px-2 py-1 hover:text-white hover:border-amber-100">Show</button>
               </div>
               <p class="mt-1 text-[11px] leading-relaxed text-amber-100/90">
                 <strong class="text-amber-50">This page is the demo.</strong> With the host's shared setup, click <strong class="text-amber-50">Analyze</strong> right away — shared demo model (typically Qwen 3.5 Flash). Optional: save your OpenRouter key and, if you like, a <strong class="text-amber-50">model id</strong> in the same panel — no other page, no redirect. Your requests then use your account; leave model blank to use the host's BYOK default.
@@ -74,7 +77,7 @@
                   You only need an OpenRouter account if you choose to add your own key. If this deployment has no server key (for example some self-hosted installs), add a key here or configure <code class="text-amber-50/95">OPENROUTER_API_KEY</code> on the server.
                 </p>
               </details>
-              <div id="settings-panel" class="hidden mt-2 space-y-2">
+              <div id="settings-panel" class="hidden mt-2 space-y-2" aria-hidden="true">
                 <label for="api-key-input" class="text-[10px] uppercase tracking-wide text-amber-100/80 font-medium">OpenRouter API key</label>
                 <input
                   id="api-key-input"
@@ -106,6 +109,7 @@
             >
               Analyze
             </button>
+            <p id="simulate-feedback" class="text-[11px] text-slate-400 leading-relaxed" aria-live="polite">Ready to analyze. Enter a scenario and click Analyze.</p>
           </div>
         </div>
 
@@ -146,30 +150,30 @@
           <!-- Bottom Left: Log -->
           <div class="cognigraph-log-panel pointer-events-auto glass-panel p-4 w-64 h-32 flex flex-col gap-2">
             <span class="text-[10px] font-medium uppercase tracking-widest sub-text">Event Log</span>
-            <div id="log-panel" class="thin-scroll flex-1 overflow-y-auto whitespace-pre-wrap text-[9px] font-mono text-slate-400"></div>
+            <div id="log-panel" class="thin-scroll flex-1 overflow-y-auto whitespace-pre-wrap text-[11px] font-mono text-slate-300"></div>
           </div>
 
           <!-- Bottom Center: Playback (Floating Island) -->
           <div class="cognigraph-timeline-panel pointer-events-auto glass-panel px-6 py-4 flex-1 max-w-xl mx-auto flex flex-col gap-3">
              <div class="flex justify-between items-center text-[10px] font-medium uppercase tracking-widest sub-text">
-                <span>Timeline</span>
+                <label for="timeline-slider">Timeline</label>
                 <span id="timeline-label" class="font-mono">0ms</span>
              </div>
-             <input id="timeline-slider" type="range" min="0" max="1000" step="1" value="0" class="w-full h-1 bg-slate-700 rounded-full appearance-none" />
+             <input id="timeline-slider" type="range" min="0" max="1000" step="1" value="0" class="w-full h-1 bg-slate-700 rounded-full appearance-none" aria-label="Playback timeline" />
 
              <div class="flex justify-between items-center mt-1">
                 <div class="flex items-center gap-3">
-                   <button id="step-back-btn" class="w-7 h-7 rounded-full bg-slate-800 flex items-center justify-center text-xs hover:bg-slate-700">◁</button>
+                   <button id="step-back-btn" aria-label="Step back 25 milliseconds" title="Step back 25 milliseconds" class="w-7 h-7 rounded-full bg-slate-800 flex items-center justify-center text-xs hover:bg-slate-700">◁</button>
                    <button id="play-pause-btn" class="px-4 py-1.5 rounded-full bg-slate-200 text-black font-semibold text-[10px] uppercase tracking-wider hover:bg-white min-w-[70px]">Pause</button>
-                   <button id="step-forward-btn" class="w-7 h-7 rounded-full bg-slate-800 flex items-center justify-center text-xs hover:bg-slate-700">▷</button>
+                   <button id="step-forward-btn" aria-label="Step forward 25 milliseconds" title="Step forward 25 milliseconds" class="w-7 h-7 rounded-full bg-slate-800 flex items-center justify-center text-xs hover:bg-slate-700">▷</button>
                    
                    <span id="timeline-frame-label" class="text-[10px] font-mono text-slate-400 tabular-nums whitespace-nowrap pl-1">0 / 1000 · 0 ms</span>
-                   <button id="replay-btn" class="w-7 h-7 rounded-full border border-slate-700 flex items-center justify-center text-xs ml-2 hover:bg-slate-800">↻</button>
+                   <button id="replay-btn" aria-label="Replay current simulation" title="Replay simulation" class="w-7 h-7 rounded-full border border-slate-700 flex items-center justify-center text-xs ml-2 hover:bg-slate-800">↻</button>
                 </div>
 
                 <div class="flex items-center gap-3">
-                   <span class="text-[10px] uppercase sub-text">Speed</span>
-                   <input id="speed-slider" type="range" min="0.1" max="2" step="0.05" value="0.30" class="w-20 h-1 bg-slate-700 rounded-full appearance-none" />
+                   <label for="speed-slider" class="text-[10px] uppercase sub-text">Speed</label>
+                   <input id="speed-slider" type="range" min="0.1" max="2" step="0.05" value="0.30" class="w-20 h-1 bg-slate-700 rounded-full appearance-none" aria-label="Playback speed" />
                    <span id="speed-label" class="text-[10px] font-mono w-8 text-right">0.30x</span>
                 </div>
              </div>
