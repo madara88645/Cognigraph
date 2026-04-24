@@ -1,55 +1,66 @@
-import pytest
 import json
 import os
-from unittest.mock import patch
-from fastapi.testclient import TestClient
+from unittest.mock import MagicMock, patch
 
-from unittest.mock import MagicMock
+import pytest
+from fastapi.testclient import TestClient
 
 from backend.main import (
     _classification_system_instruction,
+    _extract_chat_message_text,
     _load_dotenv_file,
+    _normalize_byok_model_slug,
     _openrouter_http_referer,
     _parse_model_json,
     _resolve_openrouter_api_key,
     _select_openrouter_model,
     _strip_markdown_fences,
     app,
+    run_snn,
 )
+from backend.neuromodulation import resolve_snn_modulation
 
 client = TestClient(app)
 
+
 def test_strip_markdown_fences_with_fences():
-    raw = "```json\n{\"key\": \"value\"}\n```"
+    raw = '```json\n{"key": "value"}\n```'
     assert _strip_markdown_fences(raw) == '{"key": "value"}'
 
+
 def test_strip_markdown_fences_without_fences():
-    raw = "{\"key\": \"value\"}"
+    raw = '{"key": "value"}'
     assert _strip_markdown_fences(raw) == '{"key": "value"}'
+
 
 def test_strip_markdown_fences_empty_string():
     assert _strip_markdown_fences("") == ""
 
+
 def test_strip_markdown_fences_whitespace():
-    raw = "   \n```json\n{\"key\": \"value\"}\n```\n   "
+    raw = '   \n```json\n{"key": "value"}\n```\n   '
     assert _strip_markdown_fences(raw) == '{"key": "value"}'
 
+
 def test_strip_markdown_fences_incomplete_less_than_3_lines():
-    raw = "```json\n{\"key\": \"value\"}"
+    raw = '```json\n{"key": "value"}'
     # According to _strip_markdown_fences logic:
     # if len(lines) >= 3 is False, it just returns text.strip()
-    assert _strip_markdown_fences(raw) == "```json\n{\"key\": \"value\"}"
+    assert _strip_markdown_fences(raw) == '```json\n{"key": "value"}'
+
 
 def test_strip_markdown_fences_missing_closing_fence():
-    raw = "```json\n{\"key\": \"value\"}\nother"
+    raw = '```json\n{"key": "value"}\nother'
     # Lines: ['```json', '{"key": "value"}', 'other']
     # len >= 3 is True. lines = lines[1:] -> ['{"key": "value"}', 'other']
     # lines[-1] != '```' so it joins them.
     assert _strip_markdown_fences(raw) == '{"key": "value"}\nother'
 
+
 def test_strip_markdown_fences_empty_fences():
     raw = "```\n\n```"
     assert _strip_markdown_fences(raw) == ""
+
 
 def test_parse_model_json_valid_dict():
     # Test valid JSON string without markdown
@@ -58,17 +69,20 @@ def test_parse_model_json_valid_dict():
     assert isinstance(result, dict)
     assert result == {"key": "value", "number": 42}
 
+
 def test_parse_model_json_with_markdown_fences():
     # Test valid JSON string wrapped in markdown fences
     raw = '```json\n{"key": "value"}\n```'
     result = _parse_model_json(raw)
     assert result == {"key": "value"}
 
+
 def test_parse_model_json_invalid_json():
     # Test invalid JSON syntax
     raw = '{"key": "value", '  # Missing closing brace
     with pytest.raises(json.JSONDecodeError):
         _parse_model_json(raw)
+
 
 def test_parse_model_json_not_a_dict():
     # Test valid JSON but not a dictionary (e.g., a list)
@@ -81,10 +95,62 @@ def test_parse_model_json_not_a_dict():
     with pytest.raises(ValueError, match="Model output is not a JSON object."):
         _parse_model_json(raw)
 
+
+def test_extract_chat_message_text_none_or_not_dict():
+    assert _extract_chat_message_text(None) == ""
+    assert _extract_chat_message_text("not a dict") == ""
+    assert _extract_chat_message_text(123) == ""
+    assert _extract_chat_message_text(["list"]) == ""
+
+
+def test_extract_chat_message_text_no_content():
+    assert _extract_chat_message_text({}) == ""
+    assert _extract_chat_message_text({"other_key": "value"}) == ""
+    assert _extract_chat_message_text({"content": None}) == ""
+
+
+def test_extract_chat_message_text_string_content():
+    assert _extract_chat_message_text({"content": "hello world"}) == "hello world"
+    assert _extract_chat_message_text({"content": "  hello world  "}) == "hello world"
+
+
+def test_extract_chat_message_text_list_of_strings():
+    assert _extract_chat_message_text({"content": ["hello", " ", "world"]}) == "hello world"
+
+
+def test_extract_chat_message_text_list_of_dicts():
+    content = [
+        {"type": "text", "text": "hello "},
+        {"content": "world"},
+        {"type": "image_url", "image_url": "http://example.com/image.jpg"},  # Ignored
+    ]
+    assert _extract_chat_message_text({"content": content}) == "hello world"
+
+
+def test_extract_chat_message_text_list_mixed_and_unusual():
+    content = [
+        "hello ",
+        123,  # Ignored (not str or dict)
+        {"type": "text", "text": "world "},
+        {"type": "text", "text": 456},  # Ignored (text is not str)
+        {"content": "!"},
+        {"content": 789},  # Ignored (content is not str)
+        ["nested list"],  # Ignored (not str or dict)
+    ]
+    assert _extract_chat_message_text({"content": content}) == "hello world !"
+
+
+def test_extract_chat_message_text_unusual_types():
+    assert _extract_chat_message_text({"content": 12345}) == "12345"
+    assert _extract_chat_message_text({"content": True}) == "True"
+    assert _extract_chat_message_text({"content": 3.14}) == "3.14"
+
+
 def test_serve_index_success():
     response = client.get("/")
     assert response.status_code == 200
     assert "text/html" in response.headers.get("content-type", "")
+
 
 def test_serve_index_not_found():
     with patch("backend.main.FRONTEND_INDEX") as mock_index:
@@ -111,9 +177,11 @@ def test_resolve_openrouter_api_key_reads_environment():
 
 
 def test_resolve_openrouter_api_key_missing_raises():
-    with patch.dict(os.environ, {}, clear=True):
-        with pytest.raises(RuntimeError, match="OPENROUTER_API_KEY is not set"):
-            _resolve_openrouter_api_key("")
+    with (
+        patch.dict(os.environ, {}, clear=True),
+        pytest.raises(RuntimeError, match="OPENROUTER_API_KEY is not set"),
+    ):
+        _resolve_openrouter_api_key("")
 
 
 def test_select_openrouter_model_uses_demo_without_byok():
@@ -169,6 +237,51 @@ def test_select_openrouter_model_byok_invalid_slug_falls_back_to_env():
         assert _select_openrouter_model("sk", "../../etc/passwd") == "expensive-model"
 
 
+def test_normalize_byok_model_slug_valid():
+    assert _normalize_byok_model_slug("openai/gpt-4o") == "openai/gpt-4o"
+    assert (
+        _normalize_byok_model_slug("meta-llama/llama-3.1-8b-instruct")
+        == "meta-llama/llama-3.1-8b-instruct"
+    )
+    assert (
+        _normalize_byok_model_slug("anthropic/claude-3.5-sonnet:beta")
+        == "anthropic/claude-3.5-sonnet:beta"
+    )
+    assert _normalize_byok_model_slug("my_custom_model_123") == "my_custom_model_123"
+
+
+def test_normalize_byok_model_slug_whitespace_stripped():
+    assert _normalize_byok_model_slug("   openai/gpt-4o  ") == "openai/gpt-4o"
+    assert _normalize_byok_model_slug("\n\t  meta-llama/llama-3 \r\n") == "meta-llama/llama-3"
+
+
+def test_normalize_byok_model_slug_empty_and_none():
+    assert _normalize_byok_model_slug("") == ""
+    assert _normalize_byok_model_slug(None) == ""  # type: ignore
+    assert _normalize_byok_model_slug("   ") == ""
+    assert _normalize_byok_model_slug("\n\t\r") == ""
+
+
+def test_normalize_byok_model_slug_too_long():
+    assert _normalize_byok_model_slug("a" * 128) == "a" * 128
+    assert _normalize_byok_model_slug("a" * 129) == ""
+
+
+def test_normalize_byok_model_slug_directory_traversal():
+    assert _normalize_byok_model_slug("../etc/passwd") == ""
+    assert _normalize_byok_model_slug("some/model/../path") == ""
+    assert _normalize_byok_model_slug("..") == ""
+
+
+def test_normalize_byok_model_slug_invalid_characters():
+    assert _normalize_byok_model_slug("model space") == ""
+    assert _normalize_byok_model_slug("model<script>") == ""
+    assert _normalize_byok_model_slug("model;drop") == ""
+    assert _normalize_byok_model_slug("evil\nmodel") == ""
+    assert _normalize_byok_model_slug("model\\with\\slash") == ""
+    assert _normalize_byok_model_slug('model"quote') == ""
+
+
 def test_classification_system_instruction_demo_includes_persona():
     text = _classification_system_instruction("")
     assert "senior cognitive neuroscientist" in text
@@ -189,13 +302,14 @@ def test_load_dotenv_file_not_exists(mock_env_file):
         _load_dotenv_file()
     mock_env_file.read_text.assert_not_called()
 
+
 @patch("backend.main.ENV_FILE")
 def test_load_dotenv_file_valid_lines(mock_env_file):
     mock_env_file.exists.return_value = True
     mock_env_file.read_text.return_value = (
         "TEST_VAR1=value1\n"
         "  TEST_VAR2  =  value2  \n"
-        "TEST_VAR3=\"value3\"\n"
+        'TEST_VAR3="value3"\n'
         "TEST_VAR4='value4'"
     )
     with patch.dict(os.environ, {}, clear=True):
@@ -205,20 +319,18 @@ def test_load_dotenv_file_valid_lines(mock_env_file):
         assert os.environ.get("TEST_VAR3") == "value3"
         assert os.environ.get("TEST_VAR4") == "value4"
 
+
 @patch("backend.main.ENV_FILE")
 def test_load_dotenv_file_ignored_lines(mock_env_file):
     mock_env_file.exists.return_value = True
     mock_env_file.read_text.return_value = (
-        "\n"
-        "   \n"
-        "# This is a comment\n"
-        "INVALID_LINE_NO_EQUALS\n"
-        "TEST_VAR5=value5"
+        "\n" "   \n" "# This is a comment\n" "INVALID_LINE_NO_EQUALS\n" "TEST_VAR5=value5"
     )
     with patch.dict(os.environ, {}, clear=True):
         _load_dotenv_file()
         assert os.environ.get("TEST_VAR5") == "value5"
         assert len(os.environ) == 1
+
 
 @patch("backend.main.ENV_FILE")
 def test_load_dotenv_file_existing_vars_not_overwritten(mock_env_file):
@@ -259,7 +371,11 @@ def test_openrouter_http_referer_with_host_header():
 @patch.dict(os.environ, {}, clear=True)
 def test_openrouter_http_referer_with_x_forwarded_host_header():
     mock_request = MagicMock()
-    mock_request.headers = {"x-forwarded-host": "example.com", "host": "wrong.com", "x-forwarded-proto": "http"}
+    mock_request.headers = {
+        "x-forwarded-host": "example.com",
+        "host": "wrong.com",
+        "x-forwarded-proto": "http",
+    }
     assert _openrouter_http_referer(mock_request) == "http://example.com"
 
 
@@ -276,3 +392,32 @@ def test_openrouter_http_referer_vercel_env():
 @patch.dict(os.environ, {"VERCEL_URL": "http://vercel.app/"}, clear=True)
 def test_openrouter_http_referer_vercel_env_with_http():
     assert _openrouter_http_referer(None) == "http://vercel.app"
+
+
+def test_run_snn_invalid_lobe():
+    """Verify that calling run_snn with an invalid lobe raises a ValueError."""
+    params = resolve_snn_modulation("adrenaline", 1.0)
+    with pytest.raises(ValueError, match="Unknown lobe: invalid_lobe"):
+        run_snn("invalid_lobe", params)  # type: ignore
+
+
+def test_normalize_byok_model_slug_valid_edge_cases():
+    # Single character model IDs
+    assert _normalize_byok_model_slug("a") == "a"
+    assert _normalize_byok_model_slug("Z") == "Z"
+    assert _normalize_byok_model_slug("1") == "1"
+
+    # Standalone special characters (except .. which is caught)
+    assert _normalize_byok_model_slug("-") == "-"
+    assert _normalize_byok_model_slug("_") == "_"
+    assert _normalize_byok_model_slug(":") == ":"
+    assert _normalize_byok_model_slug("/") == "/"
+    assert _normalize_byok_model_slug(".") == "."
+
+    # Complex valid combinations of special characters
+    assert _normalize_byok_model_slug("a/b-c_d:e.f") == "a/b-c_d:e.f"
+    assert (
+        _normalize_byok_model_slug("model-name_v1.0:latest/suffix")
+        == "model-name_v1.0:latest/suffix"
+    )
+    assert _normalize_byok_model_slug("._:-/") == "._:-/"

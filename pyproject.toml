@@ -1,0 +1,36 @@
+[project]
+name = "cognigraph"
+version = "0.1.0"
+description = "Educational FastAPI + Brian2 + Three.js demo"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "brian2",
+    "numpy<2.3",
+    "httpx",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"backend/main.py" = ["SIM112", "SIM108"]
+"test_main_async.py" = ["SIM112"]
+"scripts/*.py" = ["E741"]
+"tests/test_neuromodulation.py" = ["E741"]
+
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+strict_optional = true
+warn_unused_ignores = true

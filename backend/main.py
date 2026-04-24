@@ -3,12 +3,9 @@ import json
 import logging
 import os
 import re
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
-from urllib import error as urlerror
-from urllib import request as urlrequest
-
 from contextlib import asynccontextmanager
+from pathlib import Path
+from typing import Any, cast
 
 import httpx
 from fastapi import FastAPI, Header, HTTPException, Request
@@ -18,6 +15,7 @@ from pydantic import BaseModel, Field
 
 from backend.neuromodulation import (
     LOBE_NAMES,
+    ClassificationResult,
     LobeName,
     NeuromodulatorName,
     ResolvedSnnParams,
@@ -69,7 +67,7 @@ OPENROUTER_HTTP_TIMEOUT_SEC = float(os.getenv("OPENROUTER_HTTP_TIMEOUT_SEC", "90
 http_client: httpx.AsyncClient = None  # type: ignore
 
 
-def _openrouter_http_referer(http_request: Optional[Request]) -> str:
+def _openrouter_http_referer(http_request: Request | None) -> str:
     """OpenRouter uses Referer for attribution; localhost breaks production keys/site rules."""
     explicit = (os.getenv("OPENROUTER_HTTP_REFERER") or "").strip()
     if explicit:
@@ -99,8 +97,8 @@ class SimulateRequest(BaseModel):
 
 
 class LobeSpikes(BaseModel):
-    indices: List[int]
-    times_ms: List[float]
+    indices: list[int]
+    times_ms: list[float]
 
 
 class SnnModulationEcho(BaseModel):
@@ -137,7 +135,7 @@ class SimulateResponse(BaseModel):
     neuromodulator_rationale: str = ""
     explanation: str
     duration_ms: int
-    spikes: Dict[LobeName, LobeSpikes]
+    spikes: dict[LobeName, LobeSpikes]
     snn_modulation: SnnModulationEcho
     vfx_profile: VfxProfileEcho
 
@@ -154,7 +152,7 @@ def _strip_markdown_fences(raw: str) -> str:
     return text
 
 
-def _parse_model_json(raw_text: str) -> Dict[str, Any]:
+def _parse_model_json(raw_text: str) -> dict[str, Any]:
     cleaned = _strip_markdown_fences(raw_text)
     parsed = json.loads(cleaned)
     if not isinstance(parsed, dict):
@@ -172,7 +170,7 @@ def _extract_chat_message_text(message: Any) -> str:
     if isinstance(content, str):
         return content.strip()
     if isinstance(content, list):
-        parts: List[str] = []
+        parts: list[str] = []
         for part in content:
             if isinstance(part, str):
                 parts.append(part)
@@ -278,8 +276,8 @@ async def classify_scenario(
     prompt: str,
     api_key_override: str = "",
     model_override: str = "",
-    http_request: Optional[Request] = None,
-) -> Dict[str, Any]:
+    http_request: Request | None = None,
+) -> ClassificationResult:
     api_key = _resolve_openrouter_api_key(api_key_override)
     model_name = _select_openrouter_model(api_key_override, model_override)
 
@@ -345,7 +343,7 @@ def run_snn(
     resolved: ResolvedSnnParams,
     duration_ms: int = 1000,
     neurons_per_lobe: int = 100,
-) -> Dict[str, Dict[str, List[float]]]:
+) -> dict[LobeName, LobeSpikes]:
     import brian2 as b2
 
     if active_lobe not in LOBE_NAMES:
@@ -371,10 +369,10 @@ def run_snn(
     epsp = resolved.epsp
     v_init = f"{resolved.v_center} + {resolved.v_spread} * rand()"
 
-    monitors: Dict[str, b2.SpikeMonitor] = {}
-    groups: List[b2.NeuronGroup] = []
-    poisson_inputs: List[b2.PoissonGroup] = []
-    synapses: List[b2.Synapses] = []
+    monitors: dict[str, b2.SpikeMonitor] = {}
+    groups: list[b2.NeuronGroup] = []
+    poisson_inputs: list[b2.PoissonGroup] = []
+    synapses: list[b2.Synapses] = []
 
     on_pre = f"v += {epsp}"
 
@@ -402,9 +400,7 @@ def run_snn(
             rate_hz = rate_map.get(lobe, resolved.background_rate_hz)
         else:
             rate_hz = (
-                resolved.active_rate_hz
-                if lobe == active_lobe
-                else resolved.background_rate_hz
+                resolved.active_rate_hz if lobe == active_lobe else resolved.background_rate_hz
             )
         poisson = b2.PoissonGroup(
             neurons_per_lobe,
@@ -425,11 +421,12 @@ def run_snn(
     network.add(list(monitors.values()))
     network.run(duration_ms * b2.ms)
 
-    spikes: Dict[str, Dict[str, List[float]]] = {}
-    for lobe, monitor in monitors.items():
+    spikes: dict[LobeName, LobeSpikes] = {}
+    for lobe in LOBE_NAMES:
+        monitor = monitors[lobe]
         indices = [int(i) for i in monitor.i[:]]
         times_ms = [float(t / b2.ms) for t in monitor.t[:]]
-        spikes[lobe] = {"indices": indices, "times_ms": times_ms}
+        spikes[cast(LobeName, lobe)] = LobeSpikes(indices=indices, times_ms=times_ms)
 
     return spikes
 
@@ -446,7 +443,7 @@ def serve_index() -> FileResponse:
 
 
 @app.get("/healthz")
-def healthz() -> Dict[str, str]:
+def healthz() -> dict[str, str]:
     return {"status": "ok"}
 
 
@@ -488,22 +485,18 @@ async def simulate(
     nm_intensity = llm_result["neuromodulator_intensity"]
     nm_rationale = llm_result["neuromodulator_rationale"]
 
-    resolved = resolve_snn_modulation(
-        dominant_nm, nm_intensity, active_lobe=active_lobe
-    )
+    resolved = resolve_snn_modulation(dominant_nm, nm_intensity, active_lobe=active_lobe)
     vfx_raw = build_vfx_profile(dominant_nm, nm_intensity)
 
     try:
-        spikes = await asyncio.to_thread(
-            run_snn, active_lobe=active_lobe, resolved=resolved
-        )
+        spikes = await asyncio.to_thread(run_snn, active_lobe=active_lobe, resolved=resolved)
     except Exception as exc:
         raise HTTPException(
             status_code=500,
             detail=f"SNN simulation failed: {exc}",
         ) from exc
 
-    spike_counts = {lobe: len(spikes[lobe]["times_ms"]) for lobe in LOBE_NAMES}
+    spike_counts = {lobe: len(spikes[cast(LobeName, lobe)].times_ms) for lobe in LOBE_NAMES}
     logger.info(
         "simulation_complete active_lobe=%s neuromod=%s intensity=%s spike_counts=%s",
         active_lobe,
@@ -513,13 +506,13 @@ async def simulate(
     )
 
     return SimulateResponse(
-        active_lobe=active_lobe,  # type: ignore[arg-type]
-        dominant_neuromodulator=dominant_nm,  # type: ignore[arg-type]
+        active_lobe=active_lobe,
+        dominant_neuromodulator=dominant_nm,
         neuromodulator_intensity=nm_intensity,
         neuromodulator_rationale=nm_rationale,
         explanation=explanation,
         duration_ms=1000,
-        spikes=spikes,  # type: ignore[arg-type]
+        spikes=spikes,
         snn_modulation=SnnModulationEcho(**snn_params_to_dict(resolved)),
         vfx_profile=VfxProfileEcho(**vfx_raw),
     )
@@ -527,6 +520,7 @@ async def simulate(
 
 if __name__ == "__main__":
     import sys
+
     import uvicorn
 
     project_root = str(Path(__file__).resolve().parent.parent)

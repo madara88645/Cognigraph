@@ -5,12 +5,14 @@ from backend.main import _extract_chat_message_text, run_snn
 from backend.neuromodulation import (
     CORTISOL_U_CRIT,
     NEUROMOD_GLOW_HEX,
+    LobeName,
+    ResolvedSnnParams,
     _lerp_toward_neutral,
+    _vfx_cortisol_piecewise,
     build_vfx_profile,
     resolve_cortisol_piecewise,
     resolve_snn_modulation,
     snn_params_to_dict,
-    ResolvedSnnParams,
     validate_classification_payload,
 )
 
@@ -33,7 +35,10 @@ def test_extract_chat_message_text_list_parts() -> None:
     text = _extract_chat_message_text(
         {
             "content": [
-                {"type": "text", "text": '{"active_lobe":"frontal","dominant_neuromodulator":"baseline",'},
+                {
+                    "type": "text",
+                    "text": '{"active_lobe":"frontal","dominant_neuromodulator":"baseline",',
+                },
                 {"type": "text", "text": '"explanation":"x"}'},
             ],
         }
@@ -109,9 +114,18 @@ def test_validate_clamps_intensity() -> None:
 @pytest.mark.parametrize(
     "payload,match",
     [
-        ({"active_lobe": "invalid", "dominant_neuromodulator": "baseline", "explanation": "x"}, "active_lobe"),
-        ({"active_lobe": "frontal", "dominant_neuromodulator": "glutamate", "explanation": "x"}, "dominant_neuromodulator"),
-        ({"active_lobe": "frontal", "dominant_neuromodulator": "baseline", "explanation": ""}, "explanation"),
+        (
+            {"active_lobe": "invalid", "dominant_neuromodulator": "baseline", "explanation": "x"},
+            "active_lobe",
+        ),
+        (
+            {"active_lobe": "frontal", "dominant_neuromodulator": "glutamate", "explanation": "x"},
+            "dominant_neuromodulator",
+        ),
+        (
+            {"active_lobe": "frontal", "dominant_neuromodulator": "baseline", "explanation": ""},
+            "explanation",
+        ),
     ],
 )
 def test_validate_rejects_bad_payload(payload: dict, match: str) -> None:
@@ -212,8 +226,8 @@ def test_run_snn_cortisol_toxic_inactive_spikes_exceed_optimal() -> None:
     sp_opt = run_snn("frontal", opt, duration_ms=200, neurons_per_lobe=40)
     np.random.seed(7)
     sp_tox = run_snn("frontal", tox, duration_ms=200, neurons_per_lobe=40)
-    inactive = "parietal"
-    assert len(sp_tox[inactive]["times_ms"]) > len(sp_opt[inactive]["times_ms"])
+    inactive: LobeName = "parietal"
+    assert len(sp_tox[inactive].times_ms) > len(sp_opt[inactive].times_ms)
 
 
 def test_run_snn_gaba_total_spikes_below_adrenaline() -> None:
@@ -222,13 +236,13 @@ def test_run_snn_gaba_total_spikes_below_adrenaline() -> None:
     r_gaba = resolve_snn_modulation("gaba", 1.0)
     np.random.seed(42)
     sp_gaba = run_snn("frontal", r_gaba, duration_ms=150, neurons_per_lobe=30)
-    total_gaba = sum(len(sp_gaba[l]["times_ms"]) for l in sp_gaba)
+    total_gaba = sum(len(sp_gaba[l].times_ms) for l in sp_gaba)
 
     np.random.seed(42)
     r_ad = resolve_snn_modulation("adrenaline", 1.0)
     np.random.seed(42)
     sp_ad = run_snn("frontal", r_ad, duration_ms=150, neurons_per_lobe=30)
-    total_ad = sum(len(sp_ad[l]["times_ms"]) for l in sp_ad)
+    total_ad = sum(len(sp_ad[l].times_ms) for l in sp_ad)
 
     assert total_gaba < total_ad
 
@@ -259,3 +273,38 @@ def test_snn_params_to_dict_formatting() -> None:
 
     # Assert lobe_rates_hz is not included in the dictionary
     assert "lobe_rates_hz" not in d
+
+
+def test_vfx_cortisol_piecewise_boundaries() -> None:
+
+    # Boundary: Absolute minimum (u=0.0)
+    v_min = _vfx_cortisol_piecewise(0.0)
+    assert v_min["glow_hex"] == "#FFF8F0"
+    assert v_min["bloom_mult"] == 1.0
+    assert v_min["desaturate"] == 0.04
+
+    # Boundary: Critical transition (u=0.5)
+    v_crit = _vfx_cortisol_piecewise(CORTISOL_U_CRIT)
+    assert v_crit["glow_hex"] == "#FFBF00"  # t=1.0 > 0.35
+    assert v_crit["bloom_mult"] == pytest.approx(1.22)  # 1.0 + 0.22*1.0
+    assert v_crit["desaturate"] == pytest.approx(0.0)  # 0.04 * (1.0 - 1.0)
+
+    # Boundary: Absolute maximum (u=1.0)
+    v_max = _vfx_cortisol_piecewise(1.0)
+    assert v_max["glow_hex"] == "#9A8F7A"
+    assert v_max["bloom_mult"] == pytest.approx(0.62)  # 1.0 - 0.38*1.0
+    assert v_max["desaturate"] == pytest.approx(0.8)  # 0.38 + 0.42*1.0
+
+
+def test_vfx_cortisol_piecewise_color_threshold() -> None:
+
+    # t = u / 0.5. Color flips when t > 0.35.
+    # So the flip is at u = 0.5 * 0.35 = 0.175.
+
+    # Just below the threshold (e.g. u=0.17 -> t=0.34 <= 0.35)
+    v_below = _vfx_cortisol_piecewise(0.17)
+    assert v_below["glow_hex"] == "#FFF8F0"
+
+    # Just above the threshold (e.g. u=0.18 -> t=0.36 > 0.35)
+    v_above = _vfx_cortisol_piecewise(0.18)
+    assert v_above["glow_hex"] == "#FFBF00"
