@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from backend.main import (
     _classification_system_instruction,
+    _extract_chat_message_text,
     _load_dotenv_file,
     _normalize_byok_model_slug,
     _parse_model_json,
@@ -92,6 +93,56 @@ def test_parse_model_json_not_a_dict():
     raw = '"just a string"'
     with pytest.raises(ValueError, match="Model output is not a JSON object."):
         _parse_model_json(raw)
+
+
+def test_extract_chat_message_text_none_or_not_dict():
+    assert _extract_chat_message_text(None) == ""
+    assert _extract_chat_message_text("not a dict") == ""
+    assert _extract_chat_message_text(123) == ""
+    assert _extract_chat_message_text(["list"]) == ""
+
+
+def test_extract_chat_message_text_no_content():
+    assert _extract_chat_message_text({}) == ""
+    assert _extract_chat_message_text({"other_key": "value"}) == ""
+    assert _extract_chat_message_text({"content": None}) == ""
+
+
+def test_extract_chat_message_text_string_content():
+    assert _extract_chat_message_text({"content": "hello world"}) == "hello world"
+    assert _extract_chat_message_text({"content": "  hello world  "}) == "hello world"
+
+
+def test_extract_chat_message_text_list_of_strings():
+    assert _extract_chat_message_text({"content": ["hello", " ", "world"]}) == "hello world"
+
+
+def test_extract_chat_message_text_list_of_dicts():
+    content = [
+        {"type": "text", "text": "hello "},
+        {"content": "world"},
+        {"type": "image_url", "image_url": "http://example.com/image.jpg"},  # Ignored
+    ]
+    assert _extract_chat_message_text({"content": content}) == "hello world"
+
+
+def test_extract_chat_message_text_list_mixed_and_unusual():
+    content = [
+        "hello ",
+        123,  # Ignored (not str or dict)
+        {"type": "text", "text": "world "},
+        {"type": "text", "text": 456},  # Ignored (text is not str)
+        {"content": "!"},
+        {"content": 789},  # Ignored (content is not str)
+        ["nested list"],  # Ignored (not str or dict)
+    ]
+    assert _extract_chat_message_text({"content": content}) == "hello world !"
+
+
+def test_extract_chat_message_text_unusual_types():
+    assert _extract_chat_message_text({"content": 12345}) == "12345"
+    assert _extract_chat_message_text({"content": True}) == "True"
+    assert _extract_chat_message_text({"content": 3.14}) == "3.14"
 
 
 def test_serve_index_success():
