@@ -101,6 +101,8 @@ const apiKeyStatus = document.getElementById("api-key-status");
 const copyDemoLinkButton = document.getElementById("copy-demo-link-btn");
 const openDemoLink = document.getElementById("open-demo-link");
 const analysisPanelEl = document.querySelector(".analysis-panel");
+const simulateFeedback = document.getElementById("simulate-feedback");
+const hpaHelpButton = document.getElementById("hpa-help-btn");
 
 
 /* ═══════════════════════════════════════════════
@@ -208,6 +210,7 @@ const playback = {
 initLegendPanel();
 updateSpeedLabel();
 updateTimelineUi();
+updateControlAccessibilityState();
 hookUiEvents();
 if (openDemoLink) {
   openDemoLink.href = PRIMARY_LIVE_DEMO_URL;
@@ -222,7 +225,14 @@ initSceneAsync();
 /* ═══════════════════════════════════════════════
    HELPERS
    ═══════════════════════════════════════════════ */
-function setStatus(text) { statusChip.textContent = text; }
+function setStatus(text) {
+  statusChip.textContent = text;
+}
+
+function setActionHint(text) {
+  if (!simulateFeedback) return;
+  simulateFeedback.textContent = text;
+}
 
 function log(message, level = "info") {
   const ts = new Date().toLocaleTimeString();
@@ -300,6 +310,7 @@ function updateTimelineUi() {
   timelineSlider.max = String(playback.durationMs);
   timelineSlider.value = String(Math.floor(playback.simMs));
   timelineLabel.textContent = `${Math.floor(playback.simMs)} / ${playback.durationMs} ms`;
+  timelineSlider.setAttribute("aria-valuetext", `${Math.floor(playback.simMs)} milliseconds`);
   if (timelineFrameLabel) {
     timelineFrameLabel.textContent = formatTimelineFrames(playback);
   }
@@ -307,6 +318,13 @@ function updateTimelineUi() {
 
 function updateSpeedLabel() {
   speedLabel.textContent = `${playback.speed.toFixed(2)}x`;
+  speedSlider.setAttribute("aria-valuetext", `${playback.speed.toFixed(2)} times speed`);
+}
+
+function updateControlAccessibilityState() {
+  rotateButton.setAttribute("aria-pressed", autoRotate ? "true" : "false");
+  settingsToggleButton.setAttribute("aria-expanded", settingsPanel.classList.contains("hidden") ? "false" : "true");
+  settingsPanel.setAttribute("aria-hidden", settingsPanel.classList.contains("hidden") ? "true" : "false");
 }
 
 /* ═══════════════════════════════════════════════
@@ -958,19 +976,27 @@ function updatePlayback(now) {
 async function handleSimulateClick() {
   if (simulateButton.disabled) return;
   if (!brain.ready) {
+    setStatus("Brain model is still loading.");
+    setActionHint("Please wait a few seconds, then try Analyze again.");
+    showToast("Brain model is still loading. Please try again in a moment.", "warning");
     log("Brain model is not loaded yet.", "error");
     return;
   }
   const prompt = promptInput.value.trim();
   if (!prompt) {
+    setStatus("Scenario required.");
+    setActionHint("Add a short scenario first (1-2 sentences), then click Analyze.");
+    showToast("Please enter a scenario before analyzing.", "warning");
     log("Please enter a scenario first.", "warn");
     return;
   }
   simulateButton.disabled = true;
+  simulateButton.setAttribute("aria-busy", "true");
   simulateButton.classList.add("cg-analyze-loading");
   const prevLabel = simulateButton.textContent;
   simulateButton.textContent = "Analyzing…";
   setStatus("Analyzing… (usually under a minute when warm)");
+  setActionHint("Running simulation now. You can replay and scrub the timeline after results arrive.");
   log(`Submitting: "${prompt}"`);
   try {
     const payload = await callSimulation(prompt);
@@ -980,14 +1006,19 @@ async function handleSimulateClick() {
     log(`Active lobe: ${payload.active_lobe}`);
     log(`Neuromodulator: ${payload.dominant_neuromodulator} (${Math.round(payload.neuromodulator_intensity * 100)}%)`);
     log(`Explanation: ${payload.explanation}`);
+    setStatus(`Analysis complete · active region: ${payload.active_lobe}`);
+    setActionHint("Results are ready. Use timeline and speed controls to inspect the sequence.");
+    showToast("Analysis complete. Timeline controls are now active.", "success");
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     log(msg, "error");
     const short =
       msg.length > 120 ? `${msg.slice(0, 117)}…` : msg;
     setStatus(`Failed — ${short}`);
+    setActionHint("Review the message and try Analyze again. You can also check API Settings.");
   } finally {
     simulateButton.disabled = false;
+    simulateButton.removeAttribute("aria-busy");
     simulateButton.classList.remove("cg-analyze-loading");
     simulateButton.textContent = prevLabel;
   }
@@ -1030,12 +1061,18 @@ function hookUiEvents() {
   rotateButton.addEventListener("click", () => {
     autoRotate = !autoRotate;
     rotateButton.textContent = `Auto-Rotate: ${autoRotate ? "ON" : "OFF"}`;
+    rotateButton.setAttribute("aria-pressed", autoRotate ? "true" : "false");
+    setStatus(autoRotate ? "Auto-rotate enabled." : "Auto-rotate disabled.");
   });
   settingsToggleButton.addEventListener("click", () => {
     settingsPanel.classList.toggle("hidden");
     settingsToggleButton.textContent = settingsPanel.classList.contains("hidden")
       ? "Show"
       : "Hide";
+    updateControlAccessibilityState();
+    setActionHint(settingsPanel.classList.contains("hidden")
+      ? "API Settings hidden. Analyze uses shared demo setup unless your key is already saved."
+      : "API Settings expanded. You can save your key and optional model in this browser.");
     syncAnalysisRecessedState();
   });
   saveApiKeyButton.addEventListener("click", () => {
@@ -1052,10 +1089,19 @@ function hookUiEvents() {
     refreshApiSettingsStatus(apiKeyStatus);
     if (keyFromField) {
       log("API key saved in this browser.", "info");
+      setStatus("API key saved.");
+      setActionHint("Your saved key will be used for the next Analyze request.");
+      showToast("API settings saved in this browser.", "success");
     } else if (getSavedApiKey()) {
       log("Model preference saved.", "info");
+      setStatus("Model preference saved.");
+      setActionHint("Analyze will use your saved key with this model when provided.");
+      showToast("Model preference saved.", "info");
     } else {
       log("Paste an API key to save, or use Clear to reset saved settings.", "warn");
+      setStatus("No key to save.");
+      setActionHint("Paste an OpenRouter key first, then click Save settings.");
+      showToast("Paste an API key first, then save settings.", "warning");
     }
   });
   clearApiKeyButton.addEventListener("click", () => {
@@ -1065,6 +1111,9 @@ function hookUiEvents() {
     if (openrouterModelInput) openrouterModelInput.value = "";
     refreshApiSettingsStatus(apiKeyStatus);
     log("Saved API key and model cleared from this browser.");
+    setStatus("Saved API settings cleared.");
+    setActionHint("You are back to shared demo setup unless you save a personal key again.");
+    showToast("Saved API settings cleared.", "info");
   });
   if (copyDemoLinkButton) {
     copyDemoLinkButton.addEventListener("click", async () => {
@@ -1073,9 +1122,17 @@ function hookUiEvents() {
         await navigator.clipboard.writeText(url);
         log(`Copied app link: ${url}`);
         setStatus("App link copied to clipboard");
+        setActionHint("Share the link or continue with a new analysis.");
+        showToast("App link copied.", "success");
       } catch {
         log("Could not copy to clipboard. Copy manually: " + url, "warn");
+        showToast("Could not copy automatically. Please copy the URL manually.", "warning");
       }
+    });
+  }
+  if (hpaHelpButton) {
+    hpaHelpButton.addEventListener("click", () => {
+      showToast("HPA axis active means stress-related cortisol signaling is elevated in this scenario.", "info");
     });
   }
   simulateButton.addEventListener("click", handleSimulateClick);

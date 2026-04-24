@@ -17,30 +17,27 @@ function ensureContainer() {
 export function showToast(message, level = "info") {
   const el = document.createElement("div");
   el.className = `cg-toast cg-toast--${level}`;
-  el.setAttribute("role", "status");
+  const isError = level === "error";
+  el.setAttribute("role", isError ? "alert" : "status");
+  el.setAttribute("aria-live", isError ? "assertive" : "polite");
 
   const text = document.createElement("span");
   text.className = "cg-toast__text";
   text.textContent = message;
   el.appendChild(text);
 
-  const dismissMs = level === "error" ? 8000 : 5000;
-
-  if (level === "error") {
-    const close = document.createElement("button");
-    close.type = "button";
-    close.className = "cg-toast__close";
-    close.setAttribute("aria-label", "Dismiss");
-    close.textContent = "×";
-    el.appendChild(close);
-    let timer = window.setTimeout(() => removeToast(el), dismissMs);
-    close.addEventListener("click", () => {
-      window.clearTimeout(timer);
-      removeToast(el);
-    });
-  } else {
-    window.setTimeout(() => removeToast(el), dismissMs);
-  }
+  const dismissMs = isError ? 8000 : 5000;
+  const close = document.createElement("button");
+  close.type = "button";
+  close.className = "cg-toast__close";
+  close.setAttribute("aria-label", "Dismiss notification");
+  close.textContent = "×";
+  el.appendChild(close);
+  let timer = window.setTimeout(() => removeToast(el), dismissMs);
+  close.addEventListener("click", () => {
+    window.clearTimeout(timer);
+    removeToast(el);
+  });
 
   ensureContainer().appendChild(el);
 }
