@@ -296,6 +296,7 @@ def test_run_snn_invalid_lobe():
     with pytest.raises(ValueError, match="Unknown lobe: invalid_lobe"):
         run_snn("invalid_lobe", params)  # type: ignore
 
+
 def test_normalize_byok_model_slug_valid_edge_cases():
     # Single character model IDs
     assert _normalize_byok_model_slug("a") == "a"
@@ -311,5 +312,8 @@ def test_normalize_byok_model_slug_valid_edge_cases():
 
     # Complex valid combinations of special characters
     assert _normalize_byok_model_slug("a/b-c_d:e.f") == "a/b-c_d:e.f"
-    assert _normalize_byok_model_slug("model-name_v1.0:latest/suffix") == "model-name_v1.0:latest/suffix"
+    assert (
+        _normalize_byok_model_slug("model-name_v1.0:latest/suffix")
+        == "model-name_v1.0:latest/suffix"
+    )
     assert _normalize_byok_model_slug("._:-/") == "._:-/"
