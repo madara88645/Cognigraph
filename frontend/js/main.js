@@ -20,10 +20,19 @@ import {
   PRIMARY_LIVE_DEMO_URL,
   PRIMARY_LIVE_DEMO_ORIGIN,
 } from "./apiSettings.js";
-import { assertValidResponse, callSimulation } from "./simulation.js";
+import {
+  assertValidResponse,
+  isSimulationCanceledError,
+  startSimulationRequest,
+} from "./simulation.js";
 import { hexToThreeColor, mergeVfxProfile, neuromodPillTextClass } from "./ui.js";
 import { loadBrainGLB } from "./brain.js";
 import { formatTimelineFrames } from "./timeline.js";
+import {
+  REQUEST_PHASE,
+  resolvePhaseAfterOutcome,
+  shouldHandleRequestResult,
+} from "./requestLifecycle.js";
 
 
 const {
@@ -71,6 +80,7 @@ const {
    ═══════════════════════════════════════════════ */
 const promptInput       = document.getElementById("prompt");
 const simulateButton    = document.getElementById("simulate-btn");
+const cancelSimulateButton = document.getElementById("cancel-simulate-btn");
 const rotateButton      = document.getElementById("rotate-btn");
 const playPauseButton   = document.getElementById("play-pause-btn");
 const replayButton      = document.getElementById("replay-btn");
@@ -204,12 +214,20 @@ const playback = {
   totalCounts: null,
 };
 
+const requestState = {
+  phase: REQUEST_PHASE.IDLE,
+  nextRequestId: 0,
+  activeRequestId: 0,
+  activeHandle: null,
+};
+
 /* ═══════════════════════════════════════════════
    INIT
    ═══════════════════════════════════════════════ */
 initLegendPanel();
 updateSpeedLabel();
 updateTimelineUi();
+setRequestPhase(REQUEST_PHASE.IDLE);
 updateControlAccessibilityState();
 hookUiEvents();
 if (openDemoLink) {
@@ -232,6 +250,33 @@ function setStatus(text) {
 function setActionHint(text) {
   if (!simulateFeedback) return;
   simulateFeedback.textContent = text;
+}
+
+function setRequestPhase(nextPhase, { statusText, actionHintText } = {}) {
+  requestState.phase = nextPhase;
+  const loading = nextPhase === REQUEST_PHASE.LOADING;
+  simulateButton.disabled = loading;
+  if (loading) {
+    simulateButton.setAttribute("aria-busy", "true");
+    simulateButton.classList.add("cg-analyze-loading");
+    simulateButton.textContent = "Analyzing…";
+  } else {
+    simulateButton.removeAttribute("aria-busy");
+    simulateButton.classList.remove("cg-analyze-loading");
+    simulateButton.textContent = "Analyze";
+  }
+
+  if (cancelSimulateButton) {
+    cancelSimulateButton.classList.toggle("hidden", !loading);
+    cancelSimulateButton.disabled = !loading;
+  }
+
+  if (statusText) {
+    setStatus(statusText);
+  }
+  if (actionHintText) {
+    setActionHint(actionHintText);
+  }
 }
 
 function log(message, level = "info") {
@@ -271,6 +316,10 @@ function setLegendHighlight(lobe) {
 }
 
 function updateViewStatus() {
+  if (requestState.phase === REQUEST_PHASE.LOADING) {
+    setStatus("Analyzing your scenario...");
+    return;
+  }
   if (!brain.ready) return;
   const ms = Math.floor(playback.simMs);
   const dur = playback.durationMs;
@@ -974,7 +1023,7 @@ function updatePlayback(now) {
    ═══════════════════════════════════════════════ */
 
 async function handleSimulateClick() {
-  if (simulateButton.disabled) return;
+  if (requestState.phase === REQUEST_PHASE.LOADING) return;
   if (!brain.ready) {
     setStatus("Brain model is still loading.");
     setActionHint("Please wait a few seconds, then try Analyze again.");
@@ -990,19 +1039,23 @@ async function handleSimulateClick() {
     log("Please enter a scenario first.", "warn");
     return;
   }
-  simulateButton.disabled = true;
-  simulateButton.setAttribute("aria-busy", "true");
-  simulateButton.classList.add("cg-analyze-loading");
-  const prevLabel = simulateButton.textContent;
-  simulateButton.textContent = "Analyzing…";
-  setStatus("Analyzing… (usually under a minute when warm)");
-  setActionHint("Running simulation now. You can replay and scrub the timeline after results arrive.");
+  const requestId = requestState.nextRequestId + 1;
+  requestState.nextRequestId = requestId;
+  requestState.activeRequestId = requestId;
+  requestState.activeHandle = startSimulationRequest(prompt);
+
+  setRequestPhase(REQUEST_PHASE.LOADING, {
+    statusText: "Analyzing your scenario...",
+    actionHintText: "Running analysis now. You can cancel and retry anytime.",
+  });
   log(`Submitting: "${prompt}"`);
   try {
-    const payload = await callSimulation(prompt);
+    const payload = await requestState.activeHandle.promise;
+    if (!shouldHandleRequestResult(requestState.activeRequestId, requestId)) return;
     assertValidResponse(payload);
     lastPayload = payload;
     startPlayback(payload);
+    setRequestPhase(resolvePhaseAfterOutcome("success"));
     log(`Active lobe: ${payload.active_lobe}`);
     log(`Neuromodulator: ${payload.dominant_neuromodulator} (${Math.round(payload.neuromodulator_intensity * 100)}%)`);
     log(`Explanation: ${payload.explanation}`);
@@ -1010,17 +1063,28 @@ async function handleSimulateClick() {
     setActionHint("Results are ready. Use timeline and speed controls to inspect the sequence.");
     showToast("Analysis complete. Timeline controls are now active.", "success");
   } catch (err) {
+    if (!shouldHandleRequestResult(requestState.activeRequestId, requestId)) return;
+    if (isSimulationCanceledError(err)) {
+      setRequestPhase(resolvePhaseAfterOutcome("cancel"), {
+        statusText: "Analysis canceled.",
+        actionHintText: "Canceled safely. You can edit the scenario and try again.",
+      });
+      log("Analysis canceled by user.");
+      showToast("Analysis canceled. You can edit and try again.", "info");
+      return;
+    }
+    setRequestPhase(resolvePhaseAfterOutcome("error"));
     const msg = err instanceof Error ? err.message : String(err);
     log(msg, "error");
     const short =
       msg.length > 120 ? `${msg.slice(0, 117)}…` : msg;
     setStatus(`Failed — ${short}`);
-    setActionHint("Review the message and try Analyze again. You can also check API Settings.");
+    setActionHint("Couldn’t complete analysis. Check the message and try again.");
   } finally {
-    simulateButton.disabled = false;
-    simulateButton.removeAttribute("aria-busy");
-    simulateButton.classList.remove("cg-analyze-loading");
-    simulateButton.textContent = prevLabel;
+    if (shouldHandleRequestResult(requestState.activeRequestId, requestId)) {
+      requestState.activeHandle = null;
+      requestState.activeRequestId = 0;
+    }
   }
 }
 
@@ -1133,6 +1197,12 @@ function hookUiEvents() {
   if (hpaHelpButton) {
     hpaHelpButton.addEventListener("click", () => {
       showToast("HPA axis active means stress-related cortisol signaling is elevated in this scenario.", "info");
+    });
+  }
+  if (cancelSimulateButton) {
+    cancelSimulateButton.addEventListener("click", () => {
+      if (requestState.phase !== REQUEST_PHASE.LOADING || !requestState.activeHandle) return;
+      requestState.activeHandle.cancel();
     });
   }
   simulateButton.addEventListener("click", handleSimulateClick);

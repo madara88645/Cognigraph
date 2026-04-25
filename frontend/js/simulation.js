@@ -5,6 +5,8 @@ import {
 } from "./apiSettings.js";
 import { showToast } from "./toast.js";
 
+const SIMULATION_CANCELED_ERROR = "SIMULATION_CANCELED";
+
 export function formatFastApiDetail(detail, status) {
   if (typeof detail === "string" && detail.trim()) return detail;
   if (Array.isArray(detail)) {
@@ -49,71 +51,89 @@ export function assertValidResponse(payload) {
   }
 }
 
-export async function callSimulation(prompt) {
+export function isSimulationCanceledError(error) {
+  return error instanceof Error && error.message === SIMULATION_CANCELED_ERROR;
+}
+
+export function startSimulationRequest(prompt) {
   const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-  try {
-    const savedApiKey = getSavedApiKey();
-    const headers = { "Content-Type": "application/json" };
-    if (savedApiKey) {
-      headers["X-OpenRouter-Api-Key"] = savedApiKey;
-      const modelSlug = getSavedModel().trim();
-      if (modelSlug) {
-        headers["X-OpenRouter-Model"] = modelSlug;
-      }
-    }
-    let response;
+  const timeoutId = window.setTimeout(() => controller.abort("timeout"), REQUEST_TIMEOUT_MS);
+  const promise = (async () => {
     try {
-      response = await fetch("/simulate", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({ prompt }),
-        signal: controller.signal,
-      });
-    } catch (fetchErr) {
-      const name = fetchErr instanceof Error ? fetchErr.name : "";
-      if (name === "AbortError") {
-        showToast(
-          "Analyze timed out — server may be cold-starting (15–30 s on first run). Try again.",
-          "warning"
-        );
-        throw new Error(
-          "No response within 2 minutes. If you are on a serverless preview, try Analyze again after the first cold start, or use the Fly deployment for more predictable latency (see README)."
-        );
+      const savedApiKey = getSavedApiKey();
+      const headers = { "Content-Type": "application/json" };
+      if (savedApiKey) {
+        headers["X-OpenRouter-Api-Key"] = savedApiKey;
+        const modelSlug = getSavedModel().trim();
+        if (modelSlug) {
+          headers["X-OpenRouter-Model"] = modelSlug;
+        }
       }
-      showToast("Network error — could not reach the server.", "error");
-      throw new Error(
-        "Network error — could not reach the server. If you are running locally, ensure the API is up."
-      );
-    }
-    const body = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      const detail = formatFastApiDetail(body.detail, response.status);
-      if (response.status === 503) {
-        const lower = detail.toLowerCase();
-        if (
-          lower.includes("openrouter") ||
-          lower.includes("api_key") ||
-          lower.includes("api key") ||
-          lower.includes("not set")
-        ) {
-          showToast("No OpenRouter key configured. Add yours in API Settings.", "error");
+      let response;
+      try {
+        response = await fetch("/simulate", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ prompt }),
+          signal: controller.signal,
+        });
+      } catch (fetchErr) {
+        const name = fetchErr instanceof Error ? fetchErr.name : "";
+        if (name === "AbortError") {
+          if (controller.signal.reason === "user") {
+            throw new Error(SIMULATION_CANCELED_ERROR);
+          }
+          showToast(
+            "Analyze timed out — server may be cold-starting (15–30 s on first run). Try again.",
+            "warning"
+          );
           throw new Error(
-            "Shared demo key is not configured on the server. You can still use this page: open API Settings → Show, paste your OpenRouter key, and Save (stored in this browser only). Or ask the host to set OPENROUTER_API_KEY."
+            "No response within 2 minutes. If you are on a serverless preview, try Analyze again after the first cold start, or use the Fly deployment for more predictable latency (see README)."
           );
         }
-        showToast(detail || "Service temporarily unavailable (503).", "error");
-        throw new Error(detail || "Service temporarily unavailable (503). Try again later.");
+        showToast("Network error — could not reach the server.", "error");
+        throw new Error(
+          "Network error — could not reach the server. If you are running locally, ensure the API is up."
+        );
       }
-      if (response.status >= 500) {
-        showToast(detail || "Server error. Try again in a moment.", "error");
-        throw new Error(detail || "Server error. Try again in a moment.");
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const detail = formatFastApiDetail(body.detail, response.status);
+        if (response.status === 503) {
+          const lower = detail.toLowerCase();
+          if (
+            lower.includes("openrouter") ||
+            lower.includes("api_key") ||
+            lower.includes("api key") ||
+            lower.includes("not set")
+          ) {
+            showToast("No OpenRouter key configured. Add yours in API Settings.", "error");
+            throw new Error(
+              "Shared demo key is not configured on the server. You can still use this page: open API Settings → Show, paste your OpenRouter key, and Save (stored in this browser only). Or ask the host to set OPENROUTER_API_KEY."
+            );
+          }
+          showToast(detail || "Service temporarily unavailable (503).", "error");
+          throw new Error(detail || "Service temporarily unavailable (503). Try again later.");
+        }
+        if (response.status >= 500) {
+          showToast(detail || "Server error. Try again in a moment.", "error");
+          throw new Error(detail || "Server error. Try again in a moment.");
+        }
+        showToast(detail || "Request failed", "error");
+        throw new Error(detail);
       }
-      showToast(detail || "Request failed", "error");
-      throw new Error(detail);
+      return body;
+    } finally {
+      window.clearTimeout(timeoutId);
     }
-    return body;
-  } finally {
-    window.clearTimeout(timeoutId);
-  }
+  })();
+
+  return {
+    promise,
+    cancel: () => controller.abort("user"),
+  };
+}
+
+export async function callSimulation(prompt) {
+  return startSimulationRequest(prompt).promise;
 }
