@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import re
+import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, cast
@@ -219,6 +220,22 @@ def _select_openrouter_model(api_key_override: str, model_override: str = "") ->
     if chosen:
         return chosen
     return OPENROUTER_MODEL
+
+
+SIM_DURATION_MS_DEFAULT = 1000
+SIM_DURATION_MS_SHORT = 500
+SIM_SHORT_PROMPT_CHAR_THRESHOLD = 60
+
+
+def _adaptive_sim_duration_ms(prompt: str) -> int:
+    """Return a shorter Brian2 sim window for short prompts.
+
+    Short prompts carry less semantic content for the SNN to express; a 500 ms
+    window still produces visually meaningful spike trains in all five lobes.
+    """
+    if len(prompt) <= SIM_SHORT_PROMPT_CHAR_THRESHOLD:
+        return SIM_DURATION_MS_SHORT
+    return SIM_DURATION_MS_DEFAULT
 
 
 # Shared JSON/schema rules for lobe + neuromodulator classification (appended after role-specific intro).
@@ -458,7 +475,10 @@ async def simulate(
     if not prompt:
         raise HTTPException(status_code=400, detail="Prompt cannot be empty.")
 
+    sim_duration_ms = _adaptive_sim_duration_ms(prompt)
+    t_total = time.perf_counter()
     try:
+        t0 = time.perf_counter()
         llm_result = await classify_scenario(
             prompt,
             api_key_override=x_openrouter_api_key,
@@ -484,12 +504,19 @@ async def simulate(
     dominant_nm = llm_result["dominant_neuromodulator"]
     nm_intensity = llm_result["neuromodulator_intensity"]
     nm_rationale = llm_result["neuromodulator_rationale"]
+    llm_ms = (time.perf_counter() - t0) * 1000.0
 
+    t0 = time.perf_counter()
     resolved = resolve_snn_modulation(dominant_nm, nm_intensity, active_lobe=active_lobe)
     vfx_raw = build_vfx_profile(dominant_nm, nm_intensity)
+    vfx_ms = (time.perf_counter() - t0) * 1000.0
 
     try:
-        spikes = await asyncio.to_thread(run_snn, active_lobe=active_lobe, resolved=resolved)
+        t0 = time.perf_counter()
+        spikes = await asyncio.to_thread(
+            run_snn, active_lobe=active_lobe, resolved=resolved, duration_ms=sim_duration_ms
+        )
+        snn_ms = (time.perf_counter() - t0) * 1000.0
     except Exception as exc:
         raise HTTPException(
             status_code=500,
@@ -497,12 +524,19 @@ async def simulate(
         ) from exc
 
     spike_counts = {lobe: len(spikes[cast(LobeName, lobe)].times_ms) for lobe in LOBE_NAMES}
+    total_ms = (time.perf_counter() - t_total) * 1000.0
     logger.info(
-        "simulation_complete active_lobe=%s neuromod=%s intensity=%s spike_counts=%s",
+        "simulation_complete active_lobe=%s neuromod=%s intensity=%s spike_counts=%s"
+        " sim_duration_ms=%d llm_ms=%.1f vfx_ms=%.1f snn_ms=%.1f total_ms=%.1f",
         active_lobe,
         dominant_nm,
         nm_intensity,
         spike_counts,
+        sim_duration_ms,
+        llm_ms,
+        vfx_ms,
+        snn_ms,
+        total_ms,
     )
 
     return SimulateResponse(
@@ -511,7 +545,7 @@ async def simulate(
         neuromodulator_intensity=nm_intensity,
         neuromodulator_rationale=nm_rationale,
         explanation=explanation,
-        duration_ms=1000,
+        duration_ms=sim_duration_ms,
         spikes=spikes,
         snn_modulation=SnnModulationEcho(**snn_params_to_dict(resolved)),
         vfx_profile=VfxProfileEcho(**vfx_raw),
