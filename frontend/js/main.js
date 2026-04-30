@@ -188,6 +188,7 @@ const brain = {
     noisePhase: Math.random() * Math.PI * 2,  // unique random phase per lobe
     prevSpikeRate: 0,    // previous frame spike rate for burst detection
     burstFlash: 0,       // current burst flash intensity (decays per frame)
+    zeroApplied: true,   // avoid redundant full-vertex zero rewrites
   }])),
 };
 
@@ -581,6 +582,7 @@ function resetAllLobeColors() {
     brain.lobeGlow[lobe].target = 0;
     brain.lobeGlow[lobe].prevSpikeRate = 0;
     brain.lobeGlow[lobe].burstFlash = 0;
+    brain.lobeGlow[lobe].zeroApplied = true;
   }
 }
 
@@ -732,13 +734,23 @@ function updateDynamicGlow(now) {
       if (pointerLobe === lobe) {
         fg = Math.max(fg, 0.055) * HOVER_PLAYBACK_BOOST;
       }
+      if (isActive && playback.active) {
+        // Keep active lobe perceptible during sparse windows.
+        fg = Math.max(fg, 0.022);
+      }
       let burst = g.burstFlash;
       if (isActive && brain.firePulse > 0) {
         burst += brain.firePulse * FIRE_PULSE_TO_BURST;
       }
       setLobeGlow(lobe, fg, waveTime + li * 0.8, burst);
+      g.zeroApplied = false;
     } else if (g.current < 0.001 && g.target < 0.001) {
-      setLobeGlow(lobe, 0, waveTime, 0);
+      if (!g.zeroApplied) {
+        setLobeGlow(lobe, 0, waveTime, 0);
+        g.zeroApplied = true;
+      }
+    } else {
+      g.zeroApplied = false;
     }
   }
 
