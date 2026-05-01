@@ -66,21 +66,21 @@
                 <p class="text-[10px] uppercase tracking-widest text-amber-200 font-semibold">API Settings</p>
                 <button id="toggle-settings-btn" aria-expanded="false" aria-controls="settings-panel" class="text-[10px] uppercase font-semibold text-amber-100 border border-amber-200/40 rounded-full px-2 py-1 hover:text-white hover:border-amber-100">Show</button>
               </div>
-              <details class="mt-2 text-[10px] leading-relaxed text-amber-100/85 pointer-events-auto">
-                <summary class="cursor-pointer select-none hover:text-amber-50 outline-none font-medium">Demo Info</summary>
-                <p class="mt-1.5 border-l border-amber-200/30 pl-2">
-                  <strong class="text-amber-50">This page is the demo.</strong> With the host's shared setup, click <strong class="text-amber-50">Analyze</strong> right away — shared demo model (typically Qwen 3.5 Flash). Optional: save your OpenRouter key and, if you like, a <strong class="text-amber-50">model id</strong> in the same panel — no other page, no redirect. Your requests then use your account; leave model blank to use the host's BYOK default.
-                </p>
-              </details>
-              <details class="mt-2 text-[10px] leading-relaxed text-amber-100/85 pointer-events-auto">
-                <summary class="cursor-pointer select-none hover:text-amber-50 outline-none font-medium">What is OpenRouter?</summary>
-                <p class="mt-1.5 border-l border-amber-200/30 pl-2">
-                  <a href="https://openrouter.ai/" target="_blank" rel="noopener noreferrer" class="text-amber-50 underline decoration-amber-200/50 underline-offset-2">OpenRouter</a>
-                  (opens in a new tab) is one API that routes to many models. CogniGraph calls it once per scenario to classify your text, then runs the brain simulation on this server.
-                  You only need an OpenRouter account if you choose to add your own key. If this deployment has no server key (for example some self-hosted installs), add a key here or configure <code class="text-amber-50/95">OPENROUTER_API_KEY</code> on the server.
-                </p>
-              </details>
               <div id="settings-panel" class="hidden mt-2 space-y-2" aria-hidden="true">
+                <details class="text-[10px] leading-relaxed text-amber-100/85 pointer-events-auto">
+                  <summary class="cursor-pointer select-none hover:text-amber-50 outline-none font-medium">Demo Info</summary>
+                  <p class="mt-1.5 border-l border-amber-200/30 pl-2">
+                    <strong class="text-amber-50">This page is the demo.</strong> With the host's shared setup, click <strong class="text-amber-50">Analyze</strong> right away — shared demo model (typically Qwen 3.5 Flash). Optional: save your OpenRouter key and, if you like, a <strong class="text-amber-50">model id</strong> in the same panel — no other page, no redirect. Your requests then use your account; leave model blank to use the host's BYOK default.
+                  </p>
+                </details>
+                <details class="text-[10px] leading-relaxed text-amber-100/85 pointer-events-auto">
+                  <summary class="cursor-pointer select-none hover:text-amber-50 outline-none font-medium">What is OpenRouter?</summary>
+                  <p class="mt-1.5 border-l border-amber-200/30 pl-2">
+                    <a href="https://openrouter.ai/" target="_blank" rel="noopener noreferrer" class="text-amber-50 underline decoration-amber-200/50 underline-offset-2">OpenRouter</a>
+                    (opens in a new tab) is one API that routes to many models. CogniGraph calls it once per scenario to classify your text, then runs the brain simulation on this server.
+                    You only need an OpenRouter account if you choose to add your own key. If this deployment has no server key (for example some self-hosted installs), add a key here or configure <code class="text-amber-50/95">OPENROUTER_API_KEY</code> on the server.
+                  </p>
+                </details>
                 <label for="api-key-input" class="text-[10px] uppercase tracking-wide text-amber-100/80 font-medium">OpenRouter API key</label>
                 <input
                   id="api-key-input"
