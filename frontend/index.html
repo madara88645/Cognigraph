@@ -66,9 +66,12 @@
                 <p class="text-[10px] uppercase tracking-widest text-amber-200 font-semibold">API Settings</p>
                 <button id="toggle-settings-btn" aria-expanded="false" aria-controls="settings-panel" class="text-[10px] uppercase font-semibold text-amber-100 border border-amber-200/40 rounded-full px-2 py-1 hover:text-white hover:border-amber-100">Show</button>
               </div>
-              <p class="mt-1 text-[11px] leading-relaxed text-amber-100/90">
-                <strong class="text-amber-50">This page is the demo.</strong> With the host's shared setup, click <strong class="text-amber-50">Analyze</strong> right away — shared demo model (typically Qwen 3.5 Flash). Optional: save your OpenRouter key and, if you like, a <strong class="text-amber-50">model id</strong> in the same panel — no other page, no redirect. Your requests then use your account; leave model blank to use the host's BYOK default.
-              </p>
+              <details class="mt-2 text-[10px] leading-relaxed text-amber-100/85 pointer-events-auto">
+                <summary class="cursor-pointer select-none hover:text-amber-50 outline-none font-medium">Demo Info</summary>
+                <p class="mt-1.5 border-l border-amber-200/30 pl-2">
+                  <strong class="text-amber-50">This page is the demo.</strong> With the host's shared setup, click <strong class="text-amber-50">Analyze</strong> right away — shared demo model (typically Qwen 3.5 Flash). Optional: save your OpenRouter key and, if you like, a <strong class="text-amber-50">model id</strong> in the same panel — no other page, no redirect. Your requests then use your account; leave model blank to use the host's BYOK default.
+                </p>
+              </details>
               <details class="mt-2 text-[10px] leading-relaxed text-amber-100/85 pointer-events-auto">
                 <summary class="cursor-pointer select-none hover:text-amber-50 outline-none font-medium">What is OpenRouter?</summary>
                 <p class="mt-1.5 border-l border-amber-200/30 pl-2">
