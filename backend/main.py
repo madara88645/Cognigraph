@@ -42,6 +42,7 @@ DEFAULT_OPENROUTER_MODEL = "x-ai/grok-4.1-fast"
 DEFAULT_OPENROUTER_DEMO_MODEL = "qwen/qwen3.5-flash-02-23"
 
 ERR_UNEXPECTED_LLM_FAILURE = "Unexpected LLM classification failure."
+MAX_EXCEPTION_MESSAGE_LENGTH = 2000
 
 
 def _load_dotenv_file() -> None:
@@ -492,7 +493,11 @@ async def simulate(
         if "OPENROUTER_API_KEY is not set" in message:
             raise HTTPException(status_code=503, detail=message) from exc
         logger.exception("Failed to classify scenario with OpenRouter.")
-        safe = message if len(message) <= 2000 else f"{message[:2000]}…"
+        safe = (
+            message
+            if len(message) <= MAX_EXCEPTION_MESSAGE_LENGTH
+            else f"{message[:MAX_EXCEPTION_MESSAGE_LENGTH]}…"
+        )
         raise HTTPException(status_code=502, detail=safe) from exc
     except Exception as exc:
         logger.exception(ERR_UNEXPECTED_LLM_FAILURE)
