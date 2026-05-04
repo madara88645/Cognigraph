@@ -161,6 +161,7 @@ let brainGroup = null;
 let lastPayload = null;
 let currentBloomStrength = BLOOM_BASE_STRENGTH;
 let idlePhase = 0;
+let rafHandle = null;
 
 const raycaster = new THREE.Raycaster();
 const pointerNdc = new THREE.Vector2();
@@ -237,7 +238,7 @@ if (openDemoLink) {
   }
 }
 onResize();
-render();
+startRenderLoop();
 initSceneAsync();
 
 /* ═══════════════════════════════════════════════
@@ -897,6 +898,8 @@ function updateNeuromodPanel(payload) {
   const hex = brain.vfxProfile.glow_hex;
   neuromodPill.textContent = label;
   neuromodPill.style.color = hex;
+  neuromodPill.classList.remove("text-slate-900", "text-white");
+  neuromodPill.classList.add(neuromodPillTextClass(hex));
   neuromodIntensityLabel.textContent = `${Math.round(brain.neuromodulatorIntensity * 100)}%`;
   const rat = payload.neuromodulator_rationale;
   if (rat && String(rat).trim()) {
@@ -1240,6 +1243,15 @@ function hookUiEvents() {
     setPlaybackTime(Number(timelineSlider.value));
   });
   window.addEventListener("resize", onResize);
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      stopRenderLoop();
+      return;
+    }
+    playback.lastWallNow = performance.now();
+    startRenderLoop();
+  });
+  window.addEventListener("beforeunload", stopRenderLoop);
 }
 
 if (openrouterModelInput) {
@@ -1286,5 +1298,17 @@ function render(now = performance.now()) {
   controls.update();
   updatePlayback(now);
   composer.render();
-  requestAnimationFrame(render);
+  rafHandle = requestAnimationFrame(render);
+}
+
+function startRenderLoop() {
+  if (rafHandle != null) return;
+  playback.lastWallNow = performance.now();
+  rafHandle = requestAnimationFrame(render);
+}
+
+function stopRenderLoop() {
+  if (rafHandle == null) return;
+  cancelAnimationFrame(rafHandle);
+  rafHandle = null;
 }
