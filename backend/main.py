@@ -40,6 +40,8 @@ DEFAULT_OPENROUTER_MODEL = "x-ai/grok-4.1-fast"
 # Used when the request has no X-OpenRouter-Api-Key (server env key only). Default is Qwen 3.5 Flash on OpenRouter (faster/cheaper than GPT-OSS for short JSON classification).
 DEFAULT_OPENROUTER_DEMO_MODEL = "qwen/qwen3.5-flash-02-23"
 
+ERR_UNEXPECTED_LLM_FAILURE = "Unexpected LLM classification failure."
+
 
 def _load_dotenv_file() -> None:
     if not ENV_FILE.exists():
@@ -473,10 +475,10 @@ async def simulate(
         safe = message if len(message) <= 2000 else f"{message[:2000]}…"
         raise HTTPException(status_code=502, detail=safe) from exc
     except Exception as exc:
-        logger.exception("Unexpected LLM classification failure.")
+        logger.exception(ERR_UNEXPECTED_LLM_FAILURE)
         raise HTTPException(
             status_code=502,
-            detail="Unexpected LLM classification failure.",
+            detail=ERR_UNEXPECTED_LLM_FAILURE,
         ) from exc
 
     active_lobe = llm_result["active_lobe"]
