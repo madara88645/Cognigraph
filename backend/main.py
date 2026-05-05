@@ -324,11 +324,9 @@ async def classify_scenario(
             async with httpx.AsyncClient(timeout=OPENROUTER_HTTP_TIMEOUT_SEC) as temp_client:
                 response = await temp_client.post(OPENROUTER_URL, json=payload, headers=headers)
                 response.raise_for_status()
-                raw = response.text
         else:
             response = await http_client.post(OPENROUTER_URL, json=payload, headers=headers)
             response.raise_for_status()
-            raw = response.text
     except httpx.HTTPStatusError as exc:
         error_body = exc.response.text
         raise RuntimeError(
