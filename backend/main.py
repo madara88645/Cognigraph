@@ -1,5 +1,5 @@
 import asyncio
-import json
+import json  # Retained: used by _parse_model_json
 import logging
 import os
 import re
@@ -338,7 +338,7 @@ async def classify_scenario(
         raise RuntimeError(f"OpenRouter request failed: {exc}") from exc
 
     try:
-        parsed_response = json.loads(raw)
+        parsed_response = response.json()
         choice0 = parsed_response.get("choices", [{}])[0]
         msg = choice0.get("message", {})
         response_text = _extract_chat_message_text(msg)
