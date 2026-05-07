@@ -4,3 +4,4 @@ brian2
 numpy<2.3
 pytest>=8.0
 httpx
+cachetools>=5.3
