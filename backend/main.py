@@ -1,5 +1,5 @@
 import asyncio
-import json
+import json  # Retained: used by _parse_model_json
 import logging
 import os
 import re
@@ -324,11 +324,9 @@ async def classify_scenario(
             async with httpx.AsyncClient(timeout=OPENROUTER_HTTP_TIMEOUT_SEC) as temp_client:
                 response = await temp_client.post(OPENROUTER_URL, json=payload, headers=headers)
                 response.raise_for_status()
-                raw = response.text
         else:
             response = await http_client.post(OPENROUTER_URL, json=payload, headers=headers)
             response.raise_for_status()
-            raw = response.text
     except httpx.HTTPStatusError as exc:
         error_body = exc.response.text
         raise RuntimeError(
@@ -338,7 +336,7 @@ async def classify_scenario(
         raise RuntimeError(f"OpenRouter request failed: {exc}") from exc
 
     try:
-        parsed_response = json.loads(raw)
+        parsed_response = response.json()
         choice0 = parsed_response.get("choices", [{}])[0]
         msg = choice0.get("message", {})
         response_text = _extract_chat_message_text(msg)
