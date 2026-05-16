@@ -3,9 +3,18 @@ import {
   getSavedApiKey,
   getSavedModel,
 } from "./apiSettings.js";
-import { showToast } from "./toast.js";
+import { mapErrorToUserMessage } from "./errorMessages.js";
 
 const SIMULATION_CANCELED_ERROR = "SIMULATION_CANCELED";
+
+function failWithMapped(kind, { status, detail, fallbackMessage } = {}) {
+  const userMessage = mapErrorToUserMessage({ kind, status, detail });
+  const err = new Error(fallbackMessage || userMessage.toastText);
+  err.userMessage = userMessage;
+  err.kind = kind;
+  if (typeof status === "number") err.status = status;
+  return err;
+}
 
 export function formatFastApiDetail(detail, status) {
   if (typeof detail === "string" && detail.trim()) return detail;
@@ -83,44 +92,18 @@ export function startSimulationRequest(prompt) {
           if (controller.signal.reason === "user") {
             throw new Error(SIMULATION_CANCELED_ERROR);
           }
-          showToast(
-            "Analyze timed out — server may be cold-starting (15–30 s on first run). Try again.",
-            "warning"
-          );
-          throw new Error(
-            "No response within 2 minutes. If you are on a serverless preview, try Analyze again after the first cold start, or use the Fly deployment for more predictable latency (see README)."
-          );
+          throw failWithMapped("abort-timeout");
         }
-        showToast("Network error — could not reach the server.", "error");
-        throw new Error(
-          "Network error — could not reach the server. If you are running locally, ensure the API is up."
-        );
+        throw failWithMapped("network");
       }
       const body = await response.json().catch(() => ({}));
       if (!response.ok) {
         const detail = formatFastApiDetail(body.detail, response.status);
-        if (response.status === 503) {
-          const lower = detail.toLowerCase();
-          if (
-            lower.includes("openrouter") ||
-            lower.includes("api_key") ||
-            lower.includes("api key") ||
-            lower.includes("not set")
-          ) {
-            showToast("No OpenRouter key configured. Add yours in API Settings.", "error");
-            throw new Error(
-              "Shared demo key is not configured on the server. You can still use this page: open API Settings → Show, paste your OpenRouter key, and Save (stored in this browser only). Or ask the host to set OPENROUTER_API_KEY."
-            );
-          }
-          showToast(detail || "Service temporarily unavailable (503).", "error");
-          throw new Error(detail || "Service temporarily unavailable (503). Try again later.");
-        }
-        if (response.status >= 500) {
-          showToast(detail || "Server error. Try again in a moment.", "error");
-          throw new Error(detail || "Server error. Try again in a moment.");
-        }
-        showToast(detail || "Request failed", "error");
-        throw new Error(detail);
+        throw failWithMapped("http", {
+          status: response.status,
+          detail,
+          fallbackMessage: detail,
+        });
       }
       return body;
     } finally {

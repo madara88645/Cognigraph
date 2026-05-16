@@ -32,7 +32,10 @@ import {
   REQUEST_PHASE,
   resolvePhaseAfterOutcome,
   shouldHandleRequestResult,
+  derivePhaseUiState,
 } from "./requestLifecycle.js";
+import { createColdStartTimer } from "./coldStartIndicator.js";
+import { mapErrorToUserMessage } from "./errorMessages.js";
 
 
 const {
@@ -255,21 +258,20 @@ function setActionHint(text) {
 
 function setRequestPhase(nextPhase, { statusText, actionHintText } = {}) {
   requestState.phase = nextPhase;
-  const loading = nextPhase === REQUEST_PHASE.LOADING;
-  simulateButton.disabled = loading;
-  if (loading) {
-    simulateButton.setAttribute("aria-busy", "true");
-    simulateButton.classList.add("cg-analyze-loading");
-    simulateButton.textContent = "Analyzing…";
+  const ui = derivePhaseUiState(nextPhase);
+
+  simulateButton.disabled = ui.analyzeDisabled;
+  simulateButton.textContent = ui.analyzeText;
+  if (ui.analyzeAriaBusy) {
+    simulateButton.setAttribute("aria-busy", ui.analyzeAriaBusy);
   } else {
     simulateButton.removeAttribute("aria-busy");
-    simulateButton.classList.remove("cg-analyze-loading");
-    simulateButton.textContent = "Analyze";
   }
+  simulateButton.classList.toggle("cg-analyze-loading", ui.analyzeLoadingClass);
 
   if (cancelSimulateButton) {
-    cancelSimulateButton.classList.toggle("hidden", !loading);
-    cancelSimulateButton.disabled = !loading;
+    cancelSimulateButton.classList.toggle("hidden", ui.cancelHidden);
+    cancelSimulateButton.disabled = ui.cancelDisabled;
   }
 
   if (statusText) {
@@ -1051,6 +1053,20 @@ async function handleSimulateClick() {
     statusText: "Analyzing your scenario...",
     actionHintText: "Running analysis now. You can cancel and retry anytime.",
   });
+
+  const coldStartTimer = createColdStartTimer({
+    onSlow: () => {
+      if (requestState.activeRequestId !== requestId) return;
+      setActionHint("Taking longer than usual — waking up the server (15–30s on first run)…");
+      showToast("Server is waking up — please hold on.", "info");
+    },
+    onVerySlow: () => {
+      if (requestState.activeRequestId !== requestId) return;
+      setActionHint("Still waking up — your request will resume automatically once the server is ready.");
+    },
+  });
+  coldStartTimer.start();
+
   log(`Submitting: "${prompt}"`);
   try {
     const payload = await requestState.activeHandle.promise;
@@ -1068,22 +1084,27 @@ async function handleSimulateClick() {
   } catch (err) {
     if (!shouldHandleRequestResult(requestState.activeRequestId, requestId)) return;
     if (isSimulationCanceledError(err)) {
+      const cancelMsg = mapErrorToUserMessage({ kind: "abort-user" });
       setRequestPhase(resolvePhaseAfterOutcome("cancel"), {
-        statusText: "Analysis canceled.",
-        actionHintText: "Canceled safely. You can edit the scenario and try again.",
+        statusText: cancelMsg.statusText,
+        actionHintText: cancelMsg.actionHintText,
       });
       log("Analysis canceled by user.");
-      showToast("Analysis canceled. You can edit and try again.", "info");
+      showToast(cancelMsg.toastText, cancelMsg.toastSeverity);
       return;
     }
-    setRequestPhase(resolvePhaseAfterOutcome("error"));
-    const msg = err instanceof Error ? err.message : String(err);
-    log(msg, "error");
-    const short =
-      msg.length > 120 ? `${msg.slice(0, 117)}…` : msg;
-    setStatus(`Failed — ${short}`);
-    setActionHint("Couldn’t complete analysis. Check the message and try again.");
+    const mapped = (err && err.userMessage) || mapErrorToUserMessage({
+      kind: "unknown",
+      detail: err instanceof Error ? err.message : String(err),
+    });
+    setRequestPhase(resolvePhaseAfterOutcome("error"), {
+      statusText: mapped.statusText,
+      actionHintText: mapped.actionHintText,
+    });
+    log(err instanceof Error ? err.message : String(err), "error");
+    showToast(mapped.toastText, mapped.toastSeverity);
   } finally {
+    coldStartTimer.clear();
     if (shouldHandleRequestResult(requestState.activeRequestId, requestId)) {
       requestState.activeHandle = null;
       requestState.activeRequestId = 0;
