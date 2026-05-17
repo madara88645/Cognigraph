@@ -3,12 +3,14 @@ import json  # Retained: used by _parse_model_json
 import logging
 import os
 import re
+import threading
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, cast
 
 import httpx
+from cachetools import TTLCache
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -69,6 +71,13 @@ OPENROUTER_HTTP_TIMEOUT_SEC = float(os.getenv("OPENROUTER_HTTP_TIMEOUT_SEC", "90
 
 # Global HTTPX Client
 http_client: httpx.AsyncClient = None  # type: ignore
+
+_CLASSIFICATION_CACHE_MAXSIZE = 256
+_CLASSIFICATION_CACHE_TTL_SEC = 600
+_classification_cache: TTLCache[str, ClassificationResult] = TTLCache(
+    maxsize=_CLASSIFICATION_CACHE_MAXSIZE, ttl=_CLASSIFICATION_CACHE_TTL_SEC
+)
+_classification_cache_lock = threading.Lock()
 
 
 def _openrouter_http_referer(http_request: Request | None) -> str:
@@ -223,6 +232,11 @@ def _select_openrouter_model(api_key_override: str, model_override: str = "") ->
     if chosen:
         return chosen
     return OPENROUTER_MODEL
+
+
+def _classification_cache_key(prompt: str, model_name: str, is_demo: bool) -> str:
+    normalized = " ".join(prompt.strip().casefold().split())
+    return f"{model_name}:{is_demo}:{normalized}"
 
 
 SIM_DURATION_MS_DEFAULT = 1000
@@ -478,39 +492,54 @@ async def simulate(
 
     sim_duration_ms = _adaptive_sim_duration_ms(prompt)
     t_total = time.perf_counter()
-    try:
-        t0 = time.perf_counter()
-        llm_result = await classify_scenario(
-            prompt,
-            api_key_override=x_openrouter_api_key,
-            model_override=x_openrouter_model,
-            http_request=http_request,
+    t0 = time.perf_counter()
+    is_demo = not bool(x_openrouter_api_key.strip())
+    model_name = _select_openrouter_model(x_openrouter_api_key, x_openrouter_model)
+    cache_key = _classification_cache_key(prompt, model_name, is_demo)
+    with _classification_cache_lock:
+        cached_result = _classification_cache.get(cache_key)
+    if cached_result is not None:
+        llm_result = cached_result
+        logger.info(
+            "classification_cache_hit prompt_len=%d model=%s",
+            len(prompt),
+            model_name,
         )
-    except RuntimeError as exc:
-        message = str(exc)
-        if "OPENROUTER_API_KEY is not set" in message:
-            raise HTTPException(status_code=503, detail=message) from exc
-        logger.exception("Failed to classify scenario with OpenRouter.")
-        safe = (
-            message
-            if len(message) <= MAX_EXCEPTION_MESSAGE_LENGTH
-            else f"{message[:MAX_EXCEPTION_MESSAGE_LENGTH]}…"
-        )
-        raise HTTPException(status_code=502, detail=safe) from exc
-    except Exception as exc:
-        logger.exception(ERR_UNEXPECTED_LLM_FAILURE)
-        raise HTTPException(
-            status_code=502,
-            detail=ERR_UNEXPECTED_LLM_FAILURE,
-        ) from exc
+    else:
+        try:
+            llm_result = await classify_scenario(
+                prompt,
+                api_key_override=x_openrouter_api_key,
+                model_override=x_openrouter_model,
+                http_request=http_request,
+            )
+        except RuntimeError as exc:
+            message = str(exc)
+            if "OPENROUTER_API_KEY is not set" in message:
+                raise HTTPException(status_code=503, detail=message) from exc
+            logger.exception("Failed to classify scenario with OpenRouter.")
+            safe = (
+                message
+                if len(message) <= MAX_EXCEPTION_MESSAGE_LENGTH
+                else f"{message[:MAX_EXCEPTION_MESSAGE_LENGTH]}…"
+            )
+            raise HTTPException(status_code=502, detail=safe) from exc
+        except Exception as exc:
+            logger.exception(ERR_UNEXPECTED_LLM_FAILURE)
+            raise HTTPException(
+                status_code=502,
+                detail=ERR_UNEXPECTED_LLM_FAILURE,
+            ) from exc
+        with _classification_cache_lock:
+            _classification_cache[cache_key] = llm_result
+
+    llm_ms = (time.perf_counter() - t0) * 1000.0
 
     active_lobe = llm_result["active_lobe"]
     explanation = llm_result["explanation"]
     dominant_nm = llm_result["dominant_neuromodulator"]
     nm_intensity = llm_result["neuromodulator_intensity"]
     nm_rationale = llm_result["neuromodulator_rationale"]
-    llm_ms = (time.perf_counter() - t0) * 1000.0
-
     t0 = time.perf_counter()
     resolved = resolve_snn_modulation(dominant_nm, nm_intensity, active_lobe=active_lobe)
     vfx_raw = build_vfx_profile(dominant_nm, nm_intensity)
