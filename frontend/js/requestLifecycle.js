@@ -28,3 +28,20 @@ export function resolvePhaseAfterOutcome(outcome) {
   if (outcome === "success") return REQUEST_PHASE.READY;
   return REQUEST_PHASE.ERROR;
 }
+
+/**
+ * Pure derivation of UI control state for a given request phase.
+ * Consumed by `setRequestPhase` (DOM applicator) and unit tests alike.
+ * @param {"idle"|"loading"|"ready"|"error"} phase
+ */
+export function derivePhaseUiState(phase) {
+  const loading = phase === REQUEST_PHASE.LOADING;
+  return {
+    analyzeDisabled: loading,
+    analyzeText: loading ? "Analyzing…" : "Analyze",
+    analyzeAriaBusy: loading ? "true" : null,
+    analyzeLoadingClass: loading,
+    cancelHidden: !loading,
+    cancelDisabled: !loading,
+  };
+}
