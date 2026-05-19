@@ -622,9 +622,7 @@ async def simulate(
     try:
         t0 = time.perf_counter()
         # Brian2 uses Unix signals; must run on the main interpreter thread (not asyncio.to_thread).
-        spikes = run_snn(
-            active_lobe=active_lobe, resolved=resolved, duration_ms=sim_duration_ms
-        )
+        spikes = run_snn(active_lobe=active_lobe, resolved=resolved, duration_ms=sim_duration_ms)
         snn_ms = (time.perf_counter() - t0) * 1000.0
     except Exception as exc:
         raise HTTPException(
