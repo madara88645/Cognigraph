@@ -165,12 +165,60 @@ def _strip_markdown_fences(raw: str) -> str:
     return text
 
 
+def _extract_json_object(text: str) -> str:
+    """Return the first balanced `{...}` substring, respecting quoted strings."""
+    start = text.find("{")
+    if start < 0:
+        return ""
+    depth = 0
+    in_string = False
+    escape = False
+    quote_char = ""
+    for i in range(start, len(text)):
+        ch = text[i]
+        if in_string:
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == quote_char:
+                in_string = False
+            continue
+        if ch in ('"', "'"):
+            in_string = True
+            quote_char = ch
+            continue
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                return text[start : i + 1]
+    return ""
+
+
 def _parse_model_json(raw_text: str) -> dict[str, Any]:
     cleaned = _strip_markdown_fences(raw_text)
-    parsed = json.loads(cleaned)
-    if not isinstance(parsed, dict):
-        raise ValueError("Model output is not a JSON object.")
-    return parsed
+
+    def _loads_dict(candidate: str) -> dict[str, Any]:
+        parsed = json.loads(candidate)
+        if not isinstance(parsed, dict):
+            raise ValueError("Model output is not a JSON object.")
+        return parsed
+
+    try:
+        return _loads_dict(cleaned)
+    except json.JSONDecodeError:
+        extracted = _extract_json_object(cleaned)
+        if extracted and extracted != cleaned:
+            return _loads_dict(extracted)
+        raise
+
+
+_CLASSIFICATION_RETRY_NUDGE = (
+    "Your previous reply could not be parsed. Respond with ONLY the JSON object "
+    "described above—no markdown fences, no prose before or after."
+)
 
 
 def _extract_chat_message_text(message: Any) -> str:
@@ -306,6 +354,42 @@ def _classification_system_instruction(api_key_override: str) -> str:
     return _NEUROSCIENTIST_DEMO_PERSONA + _CLASSIFICATION_TASK
 
 
+def _openrouter_response_text(response: httpx.Response) -> str:
+    parsed_response = response.json()
+    choice0 = parsed_response.get("choices", [{}])[0]
+    msg = choice0.get("message", {})
+    response_text = _extract_chat_message_text(msg)
+    if not response_text and isinstance(choice0, dict):
+        response_text = _extract_chat_message_text(
+            {"content": choice0.get("text") or choice0.get("content")}
+        )
+    return response_text
+
+
+async def _post_openrouter_chat(payload: dict[str, Any], headers: dict[str, str]) -> httpx.Response:
+    try:
+        if http_client is None:
+            async with httpx.AsyncClient(timeout=OPENROUTER_HTTP_TIMEOUT_SEC) as temp_client:
+                response = await temp_client.post(OPENROUTER_URL, json=payload, headers=headers)
+                response.raise_for_status()
+                return response
+        response = await http_client.post(OPENROUTER_URL, json=payload, headers=headers)
+        response.raise_for_status()
+        return response
+    except httpx.HTTPStatusError as exc:
+        error_body = exc.response.text
+        raise RuntimeError(
+            f"OpenRouter request failed with status {exc.response.status_code}: {error_body}"
+        ) from exc
+    except Exception as exc:  # pragma: no cover - network/service dependency
+        raise RuntimeError(f"OpenRouter request failed: {exc}") from exc
+
+
+def _parse_and_validate_classification(response_text: str) -> ClassificationResult:
+    parsed = _parse_model_json(response_text)
+    return validate_classification_payload(parsed)
+
+
 async def classify_scenario(
     prompt: str,
     api_key_override: str = "",
@@ -316,14 +400,7 @@ async def classify_scenario(
     model_name = _select_openrouter_model(api_key_override, model_override)
 
     instruction = _classification_system_instruction(api_key_override)
-    payload = {
-        "model": model_name,
-        "messages": [
-            {"role": "system", "content": instruction},
-            {"role": "user", "content": f"Scenario: {prompt}"},
-        ],
-        "temperature": 0.2,
-    }
+    user_message = {"role": "user", "content": f"Scenario: {prompt}"}
     referer = _openrouter_http_referer(http_request)
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -332,42 +409,40 @@ async def classify_scenario(
         "X-Title": "CogniGraph",
     }
 
-    try:
-        if http_client is None:
-            # Fallback for when run outside of the FastAPI app lifecycle (e.g., direct test calls)
-            async with httpx.AsyncClient(timeout=OPENROUTER_HTTP_TIMEOUT_SEC) as temp_client:
-                response = await temp_client.post(OPENROUTER_URL, json=payload, headers=headers)
-                response.raise_for_status()
-        else:
-            response = await http_client.post(OPENROUTER_URL, json=payload, headers=headers)
-            response.raise_for_status()
-    except httpx.HTTPStatusError as exc:
-        error_body = exc.response.text
-        raise RuntimeError(
-            f"OpenRouter request failed with status {exc.response.status_code}: {error_body}"
-        ) from exc
-    except Exception as exc:  # pragma: no cover - network/service dependency
-        raise RuntimeError(f"OpenRouter request failed: {exc}") from exc
+    last_parse_exc: Exception | None = None
+    for attempt in range(2):
+        system_content = instruction
+        if attempt == 1:
+            logger.info("classification_retry=1")
+            system_content = instruction + "\n\n" + _CLASSIFICATION_RETRY_NUDGE
+        payload = {
+            "model": model_name,
+            "messages": [
+                {"role": "system", "content": system_content},
+                user_message,
+            ],
+            "temperature": 0.2,
+        }
+        response = await _post_openrouter_chat(payload, headers)
+        try:
+            response_text = _openrouter_response_text(response)
+        except Exception as exc:
+            raise RuntimeError(f"OpenRouter returned malformed response: {exc}") from exc
+        if not response_text:
+            raise RuntimeError("OpenRouter returned an empty response.")
 
-    try:
-        parsed_response = response.json()
-        choice0 = parsed_response.get("choices", [{}])[0]
-        msg = choice0.get("message", {})
-        response_text = _extract_chat_message_text(msg)
-        if not response_text and isinstance(choice0, dict):
-            response_text = _extract_chat_message_text(
-                {"content": choice0.get("text") or choice0.get("content")}
-            )
-    except Exception as exc:
-        raise RuntimeError(f"OpenRouter returned malformed response: {exc}") from exc
-    if not response_text:
-        raise RuntimeError("OpenRouter returned an empty response.")
+        try:
+            return _parse_and_validate_classification(response_text)
+        except Exception as exc:
+            last_parse_exc = exc
+            if attempt == 0:
+                continue
+            break
 
-    try:
-        parsed = _parse_model_json(response_text)
-        return validate_classification_payload(parsed)
-    except Exception as exc:
-        raise RuntimeError(f"OpenRouter returned invalid JSON payload: {exc}") from exc
+    assert last_parse_exc is not None
+    raise RuntimeError(
+        f"OpenRouter returned invalid JSON payload: {last_parse_exc}"
+    ) from last_parse_exc
 
 
 def run_snn(

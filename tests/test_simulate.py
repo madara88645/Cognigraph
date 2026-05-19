@@ -105,3 +105,31 @@ def test_demo_byok_persona_isolated(mock_classify, _mock_run_snn):
     assert demo_resp.status_code == 200
     assert byok_resp.status_code == 200
     assert mock_classify.call_count == 2
+
+
+@patch("backend.main.run_snn", return_value=_CANNED_SPIKES)
+@patch("backend.main.classify_scenario", new_callable=AsyncMock)
+def test_simulate_502_when_classification_fails(mock_classify, _mock_run_snn):
+    mock_classify.side_effect = RuntimeError(
+        "OpenRouter returned invalid JSON payload: Expecting value"
+    )
+    with TestClient(app) as client:
+        response = client.post("/simulate", json={"prompt": "focus"})
+    assert response.status_code == 502
+    assert "invalid JSON" in response.json()["detail"]
+    mock_classify.assert_awaited_once()
+
+
+@patch("backend.main.run_snn", return_value=_CANNED_SPIKES)
+@patch("backend.main.classify_scenario", new_callable=AsyncMock)
+def test_simulate_200_when_classification_succeeds_after_internal_retry(
+    mock_classify, mock_run_snn
+):
+    """Route succeeds when classify_scenario returns (including after its internal retry)."""
+    mock_classify.return_value = _CANNED_CLASSIFICATION
+    with TestClient(app) as client:
+        response = client.post("/simulate", json={"prompt": "morning cortisol"})
+    assert response.status_code == 200
+    assert response.json()["dominant_neuromodulator"] == "dopamine"
+    mock_classify.assert_awaited_once()
+    mock_run_snn.assert_called_once()
