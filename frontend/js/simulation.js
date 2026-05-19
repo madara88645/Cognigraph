@@ -99,6 +99,21 @@ export function startSimulationRequest(prompt) {
       const body = await response.json().catch(() => ({}));
       if (!response.ok) {
         const detail = formatFastApiDetail(body.detail, response.status);
+        // #region agent log
+        fetch("http://127.0.0.1:7421/ingest/5a9e27c0-a503-441d-9193-3c7fd6a81543", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "1520c1" },
+          body: JSON.stringify({
+            sessionId: "1520c1",
+            runId: "pre-fix",
+            hypothesisId: "C",
+            location: "frontend/js/simulation.js:simulate",
+            message: "simulate_http_error",
+            data: { status: response.status, detailPrefix: String(detail).slice(0, 240) },
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {});
+        // #endregion
         throw failWithMapped("http", {
           status: response.status,
           detail,

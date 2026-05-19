@@ -74,6 +74,22 @@ export function mapErrorToUserMessage({ kind, status, detail = "" } = {}) {
       };
     }
     if (status === 502) {
+      const lower = (detail || "").toLowerCase();
+      const isModelUnavailable =
+        lower.includes("deprecated") ||
+        lower.includes("not found") ||
+        /status 404/.test(lower) ||
+        lower.includes("invalid model");
+      if (isModelUnavailable) {
+        return {
+          statusText: "The configured AI model is unavailable.",
+          actionHintText:
+            "The server model may need updating, or try a different model in API Settings if you use your own key.",
+          toastText:
+            "The AI model configured on the server is unavailable (deprecated or not found). Try again later or change the model in Settings.",
+          toastSeverity: "error",
+        };
+      }
       return {
         statusText: "The AI model returned an unexpected response.",
         actionHintText: "Try rephrasing your prompt — shorter or more specific often works.",
