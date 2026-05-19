@@ -225,14 +225,14 @@ summary:focus-visible {
   #timeline-frame-label {
     font-size: 0.75rem !important;
   }
-  /* Mini API-setting pill buttons: ensure adequate hit targets. */
+  /* Mini API-setting pill buttons: ensure adequate hit targets (≥44px). */
   #toggle-settings-btn,
   #save-api-key-btn,
   #clear-api-key-btn,
   #rotate-btn,
   #copy-demo-link-btn {
-    min-height: 36px;
-    padding: 0.4rem 0.85rem;
+    min-height: var(--cg-touch-target);
+    padding: 0.55rem 1rem;
   }
 }
 
@@ -442,7 +442,7 @@ summary:focus-visible {
     flex: 1 1 auto;
     overflow-y: auto;
     overscroll-behavior: contain;
-    padding: 1rem 1rem calc(1rem + var(--cg-mobile-actionbar-h));
+    padding: 1rem 1rem calc(1rem + var(--cg-mobile-actionbar-h) + env(safe-area-inset-bottom, 0px));
     -webkit-overflow-scrolling: touch;
   }
 

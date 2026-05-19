@@ -203,7 +203,7 @@
          Panels are DOM-moved into drawer slots by mobile.js — not cloned —
          so all existing JS references (#simulate-btn, #status-chip, etc.) keep working.
          ════════════════════════════════════════════════════════════ -->
-    <header class="cg-mobile-topbar" role="banner" aria-hidden="true">
+    <header class="cg-mobile-topbar" role="banner">
       <button id="cg-hamburger-btn" type="button" aria-label="Menüyü aç" aria-expanded="false" aria-controls="cg-hamburger-menu">
         <span></span><span></span><span></span>
       </button>
@@ -213,7 +213,7 @@
       </div>
     </header>
 
-    <nav class="cg-mobile-actionbar" aria-label="Birincil eylemler" aria-hidden="true">
+    <nav class="cg-mobile-actionbar" aria-label="Birincil eylemler">
       <button type="button" data-drawer-target="input" aria-label="Senaryo girişi">
         <span class="cg-action-icon" aria-hidden="true">✎</span>
         <span class="cg-action-label">Senaryo</span>
