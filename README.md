@@ -58,7 +58,7 @@ pip install -r requirements.txt
 1. Copy `.env.example` to `.env` in the project root.
 2. Set `OPENROUTER_API_KEY` from [OpenRouter](https://openrouter.ai/).
 3. Optionally set **`OPENROUTER_DEMO_MODEL`** (default: `qwen/qwen3.5-flash-02-23`) — used for **anonymous / no-browser-key** traffic on public demos, with a stronger educator-style system prompt. Alternatives: `openai/gpt-oss-120b`, or `openai/gpt-oss-120b:free` for a no-cost tier (rate limits apply). See [models](https://openrouter.ai/models).
-4. Optionally set **`OPENROUTER_MODEL`** (default: `x-ai/grok-4.1-fast`) — used only when a visitor saves their **own** key in the UI (`X-OpenRouter-Api-Key`); they pay OpenRouter, not you.
+4. Optionally set **`OPENROUTER_MODEL`** (default: `x-ai/grok-4.3`) — used only when a visitor saves their **own** key in the UI (`X-OpenRouter-Api-Key`); they pay OpenRouter, not you.
 
 Never commit `.env`; it is listed in `.gitignore`.
 
