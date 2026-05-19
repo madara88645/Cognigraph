@@ -108,24 +108,27 @@ function syncMobileStatus() {
   }).observe(src, { childList: true, characterData: true, subtree: true });
 }
 
+const PLAY_SVG  = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.55.83l10-6.5a1 1 0 0 0 0-1.66l-10-6.5A1 1 0 0 0 8 5.5z"/></svg>';
+const PAUSE_SVG = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6"  y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>';
+
 function syncMobilePlay() {
   const src = q("#play-pause-btn");
   const dstLabel = q("[data-mobile-play-label]");
   const dstBtn = q("#cg-mobile-play");
-  const dstIcon = dstBtn && dstBtn.querySelector(".cg-action-icon");
+  const dstIcon = q("[data-mobile-play-icon]");
   if (!src || !dstLabel || !dstBtn) return;
 
   const tr = (txt) => {
     const t = (txt || "").trim().toLowerCase();
-    if (t === "pause")  return { label: "Duraklat", icon: "⏸" };
-    if (t === "resume") return { label: "Devam",    icon: "▶" };
-    if (t === "play")   return { label: "Oynat",    icon: "▶" };
-    return { label: txt || "Oynat", icon: "▶" };
+    if (t === "pause")  return { label: "Pause",  svg: PAUSE_SVG };
+    if (t === "resume") return { label: "Resume", svg: PLAY_SVG  };
+    if (t === "play")   return { label: "Play",   svg: PLAY_SVG  };
+    return { label: (txt || "Play").trim(), svg: PLAY_SVG };
   };
   const apply = () => {
-    const { label, icon } = tr(src.textContent);
+    const { label, svg } = tr(src.textContent);
     dstLabel.textContent = label;
-    if (dstIcon) dstIcon.textContent = icon;
+    if (dstIcon) dstIcon.innerHTML = svg;
     dstBtn.disabled = src.disabled;
     dstBtn.style.opacity = src.disabled ? "0.45" : "";
   };

@@ -204,7 +204,7 @@
          so all existing JS references (#simulate-btn, #status-chip, etc.) keep working.
          ════════════════════════════════════════════════════════════ -->
     <header class="cg-mobile-topbar" role="banner">
-      <button id="cg-hamburger-btn" type="button" aria-label="Menüyü aç" aria-expanded="false" aria-controls="cg-hamburger-menu">
+      <button id="cg-hamburger-btn" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="cg-hamburger-menu">
         <span></span><span></span><span></span>
       </button>
       <div class="cg-mobile-brand-block">
@@ -213,22 +213,30 @@
       </div>
     </header>
 
-    <nav class="cg-mobile-actionbar" aria-label="Birincil eylemler">
-      <button type="button" data-drawer-target="input" aria-label="Senaryo girişi">
-        <span class="cg-action-icon" aria-hidden="true">✎</span>
-        <span class="cg-action-label">Senaryo</span>
+    <nav class="cg-mobile-actionbar" aria-label="Primary actions">
+      <button type="button" data-drawer-target="input" aria-label="Scenario input">
+        <span class="cg-action-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5-10.5a1.5 1.5 0 0 0 0-2.1l-1.9-1.9a1.5 1.5 0 0 0-2.1 0L4 16v4z"/></svg>
+        </span>
+        <span class="cg-action-label">Scenario</span>
       </button>
-      <button type="button" data-drawer-target="analysis" aria-label="Analiz">
-        <span class="cg-action-icon" aria-hidden="true">◎</span>
-        <span class="cg-action-label">Analiz</span>
+      <button type="button" data-drawer-target="analysis" aria-label="Analysis">
+        <span class="cg-action-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg>
+        </span>
+        <span class="cg-action-label">Analysis</span>
       </button>
-      <button type="button" data-drawer-target="log" aria-label="Olay günlüğü">
-        <span class="cg-action-icon" aria-hidden="true">≡</span>
+      <button type="button" data-drawer-target="log" aria-label="Event log">
+        <span class="cg-action-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 7h14M5 12h14M5 17h10"/></svg>
+        </span>
         <span class="cg-action-label">Log</span>
       </button>
-      <button type="button" id="cg-mobile-play" aria-label="Oynat veya duraklat">
-        <span class="cg-action-icon" aria-hidden="true">▶</span>
-        <span class="cg-action-label" data-mobile-play-label>Oynat</span>
+      <button type="button" id="cg-mobile-play" aria-label="Play or pause">
+        <span class="cg-action-icon" aria-hidden="true" data-mobile-play-icon>
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.55.83l10-6.5a1 1 0 0 0 0-1.66l-10-6.5A1 1 0 0 0 8 5.5z"/></svg>
+        </span>
+        <span class="cg-action-label" data-mobile-play-label>Play</span>
       </button>
     </nav>
 
@@ -237,8 +245,8 @@
     <aside class="cg-drawer" data-drawer="input" aria-hidden="true" aria-labelledby="cg-drawer-input-title">
       <div class="cg-drawer-handle" aria-hidden="true"></div>
       <header class="cg-drawer-header">
-        <h2 id="cg-drawer-input-title">Senaryo Girişi</h2>
-        <button type="button" class="cg-drawer-close" data-drawer-close aria-label="Kapat">×</button>
+        <h2 id="cg-drawer-input-title">Scenario Input</h2>
+        <button type="button" class="cg-drawer-close" data-drawer-close aria-label="Close">×</button>
       </header>
       <div class="cg-drawer-body" data-drawer-slot="input"></div>
     </aside>
@@ -246,8 +254,8 @@
     <aside class="cg-drawer" data-drawer="analysis" aria-hidden="true" aria-labelledby="cg-drawer-analysis-title">
       <div class="cg-drawer-handle" aria-hidden="true"></div>
       <header class="cg-drawer-header">
-        <h2 id="cg-drawer-analysis-title">Analiz</h2>
-        <button type="button" class="cg-drawer-close" data-drawer-close aria-label="Kapat">×</button>
+        <h2 id="cg-drawer-analysis-title">Analysis</h2>
+        <button type="button" class="cg-drawer-close" data-drawer-close aria-label="Close">×</button>
       </header>
       <div class="cg-drawer-body" data-drawer-slot="analysis"></div>
     </aside>
@@ -255,18 +263,18 @@
     <aside class="cg-drawer" data-drawer="log" aria-hidden="true" aria-labelledby="cg-drawer-log-title">
       <div class="cg-drawer-handle" aria-hidden="true"></div>
       <header class="cg-drawer-header">
-        <h2 id="cg-drawer-log-title">Olay Günlüğü</h2>
-        <button type="button" class="cg-drawer-close" data-drawer-close aria-label="Kapat">×</button>
+        <h2 id="cg-drawer-log-title">Event Log</h2>
+        <button type="button" class="cg-drawer-close" data-drawer-close aria-label="Close">×</button>
       </header>
       <div class="cg-drawer-body" data-drawer-slot="log"></div>
     </aside>
 
-    <aside id="cg-hamburger-menu" class="cg-hamburger-menu" aria-hidden="true" aria-label="Genel menü">
-      <button type="button" class="cg-menu-item" data-action="open-input">Senaryo gir</button>
-      <button type="button" class="cg-menu-item" data-action="open-api-settings">API Ayarları</button>
-      <button type="button" class="cg-menu-item" data-action="show-help">Nasıl çalışır?</button>
-      <button type="button" class="cg-menu-item" data-action="copy-link">App linkini kopyala</button>
-      <a class="cg-menu-item" href="https://cognigraph-tau.vercel.app" target="_blank" rel="noopener noreferrer">Canlı demoyu aç ↗</a>
+    <aside id="cg-hamburger-menu" class="cg-hamburger-menu" aria-hidden="true" aria-label="Main menu">
+      <button type="button" class="cg-menu-item" data-action="open-input">Enter scenario</button>
+      <button type="button" class="cg-menu-item" data-action="open-api-settings">API settings</button>
+      <button type="button" class="cg-menu-item" data-action="show-help">How it works</button>
+      <button type="button" class="cg-menu-item" data-action="copy-link">Copy app link</button>
+      <a class="cg-menu-item" href="https://cognigraph-tau.vercel.app" target="_blank" rel="noopener noreferrer">Open live demo ↗</a>
     </aside>
 
     <script type="importmap">
