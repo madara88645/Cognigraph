@@ -1,0 +1,15 @@
+.git
+.venv
+venv
+__pycache__
+.pytest_cache
+.mypy_cache
+.ruff_cache
+tests
+docs
+.jules
+*.md
+!README.md
+fly.toml
+Dockerfile
+scripts

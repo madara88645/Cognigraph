@@ -1,0 +1,7 @@
+# Production deps for Vercel Python (src/index.py). Keep LF line endings.
+fastapi
+uvicorn
+brian2
+numpy<2.3
+httpx
+cachetools>=5.3

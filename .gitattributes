@@ -1,0 +1,3 @@
+requirements.txt text eol=lf
+requirements.vercel.txt text eol=lf
+src/requirements.txt text eol=lf
