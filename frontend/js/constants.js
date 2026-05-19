@@ -21,6 +21,13 @@ export const NEUROMOD_LABELS = {
   cortisol: "Cortisol",
   baseline: "Baseline",
 };
+
+/** Matches backend CORTISOL_U_CRIT — intensity selects simulation regime, not concentration. */
+export const CORTISOL_OPTIMAL_MAX = 0.5;
+export const CORTISOL_REGIME_LABEL_OPTIMAL = "Optimal";
+export const CORTISOL_REGIME_LABEL_TOXIC = "Chronic load";
+export const HPA_HINT_OPTIMAL = "HPA: acute (optimal).";
+export const HPA_HINT_TOXIC = "HPA: chronic load.";
 export const DEFAULT_VFX = {
   glow_hex: "#E0FFFF",
   bloom_mult: 1.0,

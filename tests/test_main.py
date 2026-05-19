@@ -1,6 +1,7 @@
+import asyncio
 import json
 import os
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -8,6 +9,7 @@ from fastapi.testclient import TestClient
 from backend.main import (
     _classification_system_instruction,
     _extract_chat_message_text,
+    _extract_json_object,
     _load_dotenv_file,
     _normalize_byok_model_slug,
     _openrouter_http_referer,
@@ -16,6 +18,7 @@ from backend.main import (
     _select_openrouter_model,
     _strip_markdown_fences,
     app,
+    classify_scenario,
     run_snn,
 )
 from backend.neuromodulation import resolve_snn_modulation
@@ -94,6 +97,85 @@ def test_parse_model_json_not_a_dict():
     raw = '"just a string"'
     with pytest.raises(ValueError, match="Model output is not a JSON object."):
         _parse_model_json(raw)
+
+
+def test_extract_json_object_finds_balanced_object():
+    raw = 'Here is the result: {"active_lobe": "frontal", "n": 1} thanks.'
+    assert _extract_json_object(raw) == '{"active_lobe": "frontal", "n": 1}'
+
+
+def test_extract_json_object_respects_braces_in_strings():
+    raw = '{"explanation": "use {braces} carefully", "n": 1}'
+    assert _extract_json_object(raw) == raw
+
+
+def test_extract_json_object_returns_empty_when_missing():
+    assert _extract_json_object("no json here") == ""
+
+
+def test_parse_model_json_prose_before_and_after():
+    inner = (
+        '{"active_lobe":"frontal","dominant_neuromodulator":"dopamine",'
+        '"neuromodulator_intensity":0.5,"explanation":"x","neuromodulator_rationale":""}'
+    )
+    raw = f"Sure! Here is the classification:\n{inner}\nHope that helps."
+    result = _parse_model_json(raw)
+    assert result["active_lobe"] == "frontal"
+    assert result["dominant_neuromodulator"] == "dopamine"
+
+
+def test_parse_model_json_trailing_comma_inside_prose_block():
+    inner = (
+        '{"active_lobe":"temporal","dominant_neuromodulator":"baseline",'
+        '"neuromodulator_intensity":0.2,"explanation":"x","neuromodulator_rationale":""}'
+    )
+    raw = f"```json\n{inner}\n```\nNote: done."
+    result = _parse_model_json(raw)
+    assert result["active_lobe"] == "temporal"
+
+
+_VALID_CLASSIFICATION_JSON = (
+    '{"active_lobe":"frontal","dominant_neuromodulator":"dopamine",'
+    '"neuromodulator_intensity":0.7,"explanation":"Test.","neuromodulator_rationale":""}'
+)
+
+
+def _openrouter_mock_response(content: str) -> MagicMock:
+    mock = MagicMock()
+    mock.json.return_value = {"choices": [{"message": {"content": content}}]}
+    return mock
+
+
+@patch.dict(os.environ, {"OPENROUTER_API_KEY": "sk-test"}, clear=False)
+@patch("backend.main._post_openrouter_chat", new_callable=AsyncMock)
+def test_classify_scenario_retries_on_invalid_json(mock_post):
+    mock_post.side_effect = [
+        _openrouter_mock_response("not json at all"),
+        _openrouter_mock_response(_VALID_CLASSIFICATION_JSON),
+    ]
+    result = asyncio.run(classify_scenario("focus task"))
+    assert result["active_lobe"] == "frontal"
+    assert mock_post.call_count == 2
+    retry_payload = mock_post.call_args_list[1].args[0]
+    assert "could not be parsed" in retry_payload["messages"][0]["content"]
+
+
+@patch.dict(os.environ, {"OPENROUTER_API_KEY": "sk-test"}, clear=False)
+@patch("backend.main._post_openrouter_chat", new_callable=AsyncMock)
+def test_classify_scenario_fails_after_retry_exhausted(mock_post):
+    mock_post.return_value = _openrouter_mock_response("still not json")
+    with pytest.raises(RuntimeError, match="invalid JSON payload"):
+        asyncio.run(classify_scenario("focus task"))
+    assert mock_post.call_count == 2
+
+
+@patch.dict(os.environ, {"OPENROUTER_API_KEY": "sk-test"}, clear=False)
+@patch("backend.main._post_openrouter_chat", new_callable=AsyncMock)
+def test_classify_scenario_no_retry_on_http_error(mock_post):
+    mock_post.side_effect = RuntimeError("OpenRouter request failed with status 429: rate limit")
+    with pytest.raises(RuntimeError, match="429"):
+        asyncio.run(classify_scenario("focus task"))
+    assert mock_post.call_count == 1
 
 
 def test_extract_chat_message_text_none_or_not_dict():

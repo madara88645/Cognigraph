@@ -25,7 +25,14 @@ import {
   isSimulationCanceledError,
   startSimulationRequest,
 } from "./simulation.js";
-import { hexToThreeColor, mergeVfxProfile, neuromodPillTextClass } from "./ui.js";
+import {
+  formatNeuromodIntensityLabel,
+  hexToThreeColor,
+  hpaContextHintText,
+  hpaHelpToastMessage,
+  mergeVfxProfile,
+  neuromodPillTextClass,
+} from "./ui.js";
 import { loadBrainGLB } from "./brain.js";
 import { formatTimelineFrames } from "./timeline.js";
 import {
@@ -76,6 +83,7 @@ const {
   FOCUS_POS_PULL,
   FIRE_PULSE_DECAY,
   FIRE_PULSE_TO_BURST,
+  CORTISOL_OPTIMAL_MAX,
 } = C;
 
 /* ═══════════════════════════════════════════════
@@ -172,11 +180,11 @@ let pointerLobe = null;
 let pickedLobe = null;
 
 function isCortisolOptimalVfx() {
-  return brain.dominantNeuromod === "cortisol" && brain.neuromodulatorIntensity <= 0.5;
+  return brain.dominantNeuromod === "cortisol" && brain.neuromodulatorIntensity <= CORTISOL_OPTIMAL_MAX;
 }
 
 function isCortisolToxicVfx() {
-  return brain.dominantNeuromod === "cortisol" && brain.neuromodulatorIntensity > 0.5;
+  return brain.dominantNeuromod === "cortisol" && brain.neuromodulatorIntensity > CORTISOL_OPTIMAL_MAX;
 }
 
 const brain = {
@@ -857,10 +865,10 @@ function setPlaybackTime(targetMs) {
 }
 
 function tweenEaseInForNeuromod(mod) {
-  if (mod === "cortisol" && brain.neuromodulatorIntensity > 0.5 && TWEEN.Easing.Cubic) {
+  if (mod === "cortisol" && brain.neuromodulatorIntensity > CORTISOL_OPTIMAL_MAX && TWEEN.Easing.Cubic) {
     return TWEEN.Easing.Cubic.InOut;
   }
-  if (mod === "cortisol" && brain.neuromodulatorIntensity <= 0.5) {
+  if (mod === "cortisol" && brain.neuromodulatorIntensity <= CORTISOL_OPTIMAL_MAX) {
     return TWEEN.Easing.Quadratic.Out;
   }
   if (mod === "serotonin" && TWEEN.Easing.Sinusoidal) {
@@ -870,10 +878,10 @@ function tweenEaseInForNeuromod(mod) {
 }
 
 function tweenEaseOutForNeuromod(mod) {
-  if (mod === "cortisol" && brain.neuromodulatorIntensity > 0.5 && TWEEN.Easing.Cubic) {
+  if (mod === "cortisol" && brain.neuromodulatorIntensity > CORTISOL_OPTIMAL_MAX && TWEEN.Easing.Cubic) {
     return TWEEN.Easing.Cubic.InOut;
   }
-  if (mod === "cortisol" && brain.neuromodulatorIntensity <= 0.5) {
+  if (mod === "cortisol" && brain.neuromodulatorIntensity <= CORTISOL_OPTIMAL_MAX) {
     return TWEEN.Easing.Quadratic.In;
   }
   if (mod === "serotonin" && TWEEN.Easing.Sinusoidal) {
@@ -902,7 +910,10 @@ function updateNeuromodPanel(payload) {
   neuromodPill.style.color = hex;
   neuromodPill.classList.remove("text-slate-900", "text-white");
   neuromodPill.classList.add(neuromodPillTextClass(hex));
-  neuromodIntensityLabel.textContent = `${Math.round(brain.neuromodulatorIntensity * 100)}%`;
+  neuromodIntensityLabel.textContent = formatNeuromodIntensityLabel(
+    mod,
+    brain.neuromodulatorIntensity
+  );
   const rat = payload.neuromodulator_rationale;
   if (rat && String(rat).trim()) {
     neuromodRationaleEl.textContent = String(rat).trim();
@@ -912,6 +923,7 @@ function updateNeuromodPanel(payload) {
     neuromodRationaleEl.classList.add("hidden");
   }
   if (mod === "cortisol") {
+    hpaContextHint.textContent = hpaContextHintText(mod, brain.neuromodulatorIntensity);
     hpaContextHint.classList.remove("hidden");
   } else {
     hpaContextHint.classList.add("hidden");
@@ -1220,7 +1232,10 @@ function hookUiEvents() {
   }
   if (hpaHelpButton) {
     hpaHelpButton.addEventListener("click", () => {
-      showToast("HPA axis active means stress-related cortisol signaling is elevated in this scenario.", "info");
+      showToast(
+        hpaHelpToastMessage(brain.dominantNeuromod, brain.neuromodulatorIntensity),
+        "info"
+      );
     });
   }
   if (cancelSimulateButton) {

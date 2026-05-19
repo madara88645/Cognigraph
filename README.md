@@ -6,7 +6,7 @@
 
 **CogniGraph** (repository folder: `Cognigraph`) is a small educational demo: you describe a real-world scenario, an LLM classifies brain lobe and neuromodulator tone, a [Brian2](https://brian2.readthedocs.io/) spiking neural network (SNN) is simulated, and a web UI visualizes activity on a 3D brain model. The UI is served from `/` as static HTML plus ES modules under `frontend/js/` (no bundler); optional OpenRouter keys are entered only in the in-page **API Settings** panel (no separate auth route or redirect).
 
-**This is not medical software.** Outputs are for visualization and learning only, not diagnosis or treatment. The UI includes context for modeled stress-hormone axes (for example HPA / cortisol) as simulation metaphors, not clinical measurements.
+**This is not medical software.** Outputs are for visualization and learning only, not diagnosis or treatment. The UI includes context for modeled stress-hormone axes (for example HPA / cortisol) as simulation metaphors, not clinical measurements. For **cortisol**, `neuromodulator_intensity` selects an acute optimal vs chronic-load **simulation regime** (threshold at 0.5), not a hormone concentration.
 
 ## Screenshots
 

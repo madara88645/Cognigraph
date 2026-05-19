@@ -1,5 +1,12 @@
 import * as THREE from "three";
-import { DEFAULT_VFX } from "./constants.js";
+import {
+  CORTISOL_OPTIMAL_MAX,
+  CORTISOL_REGIME_LABEL_OPTIMAL,
+  CORTISOL_REGIME_LABEL_TOXIC,
+  DEFAULT_VFX,
+  HPA_HINT_OPTIMAL,
+  HPA_HINT_TOXIC,
+} from "./constants.js";
 
 export function hexToThreeColor(hex) {
   const h = String(hex || "").replace("#", "").trim();
@@ -24,4 +31,46 @@ export function neuromodPillTextClass(hex) {
   const h = (hex || "").toUpperCase();
   if (h === "#E0FFFF" || h === "#FFD700" || h === "#FFBF00" || h === "#FFF8F0") return "text-slate-900";
   return "text-white";
+}
+
+export function isCortisolOptimalIntensity(intensity) {
+  return intensity <= CORTISOL_OPTIMAL_MAX;
+}
+
+export function cortisolRegimeLabel(intensity) {
+  return isCortisolOptimalIntensity(intensity)
+    ? CORTISOL_REGIME_LABEL_OPTIMAL
+    : CORTISOL_REGIME_LABEL_TOXIC;
+}
+
+export function formatNeuromodIntensityLabel(mod, intensity) {
+  const pct = Math.round(Math.max(0, Math.min(1, intensity)) * 100);
+  if (mod === "cortisol") {
+    return `${pct}% · ${cortisolRegimeLabel(intensity)}`;
+  }
+  return `${pct}%`;
+}
+
+export function hpaContextHintText(mod, intensity) {
+  if (mod !== "cortisol") return "";
+  return isCortisolOptimalIntensity(intensity) ? HPA_HINT_OPTIMAL : HPA_HINT_TOXIC;
+}
+
+export function hpaHelpToastMessage(mod, intensity) {
+  if (mod === "cortisol") {
+    if (isCortisolOptimalIntensity(intensity)) {
+      return (
+        "Cortisol intensity ≤50% maps to optimal acute arousal in this demo " +
+        "(e.g. waking, short manageable challenge)—a Yerkes–Dodson metaphor, not a lab cortisol value."
+      );
+    }
+    return (
+      "Cortisol intensity >50% maps to chronic/toxic load in this demo: " +
+      "the simulation floods non-active lobes with noise. Not clinical cortisol concentration."
+    );
+  }
+  return (
+    "When cortisol is the dominant modulator, intensity ≤50% selects optimal acute arousal; " +
+    ">50% selects chronic load. This is a classroom visualization, not medical measurement."
+  );
 }
