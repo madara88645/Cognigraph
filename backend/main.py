@@ -39,38 +39,12 @@ FRONTEND_DIR = PROJECT_ROOT / "frontend"
 FRONTEND_INDEX = FRONTEND_DIR / "index.html"
 ENV_FILE = PROJECT_ROOT / ".env"
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-DEFAULT_OPENROUTER_MODEL = "x-ai/grok-4.3"
+DEFAULT_OPENROUTER_MODEL = "deepseek/deepseek-v4-flash"
 # Used when the request has no X-OpenRouter-Api-Key (server env key only). Default is Qwen 3.5 Flash on OpenRouter (faster/cheaper than GPT-OSS for short JSON classification).
 DEFAULT_OPENROUTER_DEMO_MODEL = "qwen/qwen3.5-flash-02-23"
 
 ERR_UNEXPECTED_LLM_FAILURE = "Unexpected LLM classification failure."
 MAX_EXCEPTION_MESSAGE_LENGTH = 2000
-_AGENT_DEBUG_LOG = PROJECT_ROOT / "debug-1520c1.log"
-
-
-def _agent_debug_log(
-    hypothesis_id: str,
-    location: str,
-    message: str,
-    data: dict[str, Any] | None = None,
-    run_id: str = "pre-fix",
-) -> None:
-    # #region agent log
-    try:
-        entry = {
-            "sessionId": "1520c1",
-            "runId": run_id,
-            "hypothesisId": hypothesis_id,
-            "location": location,
-            "message": message,
-            "data": data or {},
-            "timestamp": int(time.time() * 1000),
-        }
-        with _AGENT_DEBUG_LOG.open("a", encoding="utf-8") as f:
-            f.write(json.dumps(entry) + "\n")
-    except Exception:
-        pass
-    # #endregion
 
 
 def _load_dotenv_file() -> None:
@@ -404,18 +378,6 @@ async def _post_openrouter_chat(payload: dict[str, Any], headers: dict[str, str]
         return response
     except httpx.HTTPStatusError as exc:
         error_body = exc.response.text
-        # #region agent log
-        _agent_debug_log(
-            "C",
-            "backend/main.py:_post_openrouter_chat",
-            "openrouter_http_error",
-            {
-                "status": exc.response.status_code,
-                "bodyPrefix": (error_body or "")[:240],
-                "model": payload.get("model"),
-            },
-        )
-        # #endregion
         raise RuntimeError(
             f"OpenRouter request failed with status {exc.response.status_code}: {error_body}"
         ) from exc
@@ -436,18 +398,6 @@ async def classify_scenario(
 ) -> ClassificationResult:
     api_key = _resolve_openrouter_api_key(api_key_override)
     model_name = _select_openrouter_model(api_key_override, model_override)
-    # #region agent log
-    _agent_debug_log(
-        "E",
-        "backend/main.py:classify_scenario",
-        "classification_start",
-        {
-            "model": model_name,
-            "isDemo": not bool(api_key_override.strip()),
-            "promptLen": len(prompt),
-        },
-    )
-    # #endregion
 
     instruction = _classification_system_instruction(api_key_override)
     user_message = {"role": "user", "content": f"Scenario: {prompt}"}
@@ -485,19 +435,6 @@ async def classify_scenario(
             return _parse_and_validate_classification(response_text)
         except Exception as exc:
             last_parse_exc = exc
-            # #region agent log
-            _agent_debug_log(
-                "A",
-                "backend/main.py:classify_scenario",
-                "parse_or_validate_failed",
-                {
-                    "attempt": attempt,
-                    "excType": type(exc).__name__,
-                    "excMsg": str(exc)[:240],
-                    "responsePrefix": response_text[:240],
-                },
-            )
-            # #endregion
             if attempt == 0:
                 continue
             break
@@ -653,14 +590,6 @@ async def simulate(
             )
         except RuntimeError as exc:
             message = str(exc)
-            # #region agent log
-            _agent_debug_log(
-                "C",
-                "backend/main.py:simulate",
-                "classification_runtime_error",
-                {"messagePrefix": message[:400], "model": model_name, "isDemo": is_demo},
-            )
-            # #endregion
             if "OPENROUTER_API_KEY is not set" in message:
                 raise HTTPException(status_code=503, detail=message) from exc
             logger.exception("Failed to classify scenario with OpenRouter.")
@@ -698,25 +627,7 @@ async def simulate(
             active_lobe=active_lobe, resolved=resolved, duration_ms=sim_duration_ms
         )
         snn_ms = (time.perf_counter() - t0) * 1000.0
-        # #region agent log
-        _agent_debug_log(
-            "B",
-            "backend/main.py:simulate",
-            "snn_complete",
-            {"snnMs": round(snn_ms, 1), "activeLobe": active_lobe},
-            run_id="post-fix",
-        )
-        # #endregion
     except Exception as exc:
-        # #region agent log
-        _agent_debug_log(
-            "B",
-            "backend/main.py:simulate",
-            "snn_failed",
-            {"excType": type(exc).__name__, "excMsg": str(exc)[:240]},
-            run_id="post-fix",
-        )
-        # #endregion
         raise HTTPException(
             status_code=500,
             detail=f"SNN simulation failed: {exc}",

@@ -58,7 +58,7 @@ pip install -r requirements.txt
 1. Copy `.env.example` to `.env` in the project root.
 2. Set `OPENROUTER_API_KEY` from [OpenRouter](https://openrouter.ai/).
 3. Optionally set **`OPENROUTER_DEMO_MODEL`** (default: `qwen/qwen3.5-flash-02-23`) — used for **anonymous / no-browser-key** traffic on public demos, with a stronger educator-style system prompt. Alternatives: `openai/gpt-oss-120b`, or `openai/gpt-oss-120b:free` for a no-cost tier (rate limits apply). See [models](https://openrouter.ai/models).
-4. Optionally set **`OPENROUTER_MODEL`** (default: `x-ai/grok-4.3`) — used only when a visitor saves their **own** key in the UI (`X-OpenRouter-Api-Key`); they pay OpenRouter, not you.
+4. Optionally set **`OPENROUTER_MODEL`** (default: `deepseek/deepseek-v4-flash`) — used only when a visitor saves their **own** key in the UI (`X-OpenRouter-Api-Key`); they pay OpenRouter, not you.
 
 Never commit `.env`; it is listed in `.gitignore`.
 
@@ -109,7 +109,7 @@ Optional request headers (same origin as the UI; not required for the shared dem
 | Header | When | Description |
 |--------|------|-------------|
 | `X-OpenRouter-Api-Key` | BYOK | Visitor's OpenRouter key; billing on their account. |
-| `X-OpenRouter-Model` | BYOK | OpenRouter model slug (e.g. `openai/gpt-4o`). Ignored without `X-OpenRouter-Api-Key`. Invalid values fall back to `OPENROUTER_MODEL`. |
+| `X-OpenRouter-Model` | BYOK | OpenRouter model slug (e.g. `deepseek/deepseek-v4-flash`). Ignored without `X-OpenRouter-Api-Key`. Invalid values fall back to `OPENROUTER_MODEL`. |
 
 **Response** (simplified): `active_lobe`, `dominant_neuromodulator`, `neuromodulator_intensity`, `neuromodulator_rationale`, `explanation`, `duration_ms`, `spikes` (per-lobe spike indices and times), `snn_modulation`, `vfx_profile`.
 
@@ -176,7 +176,7 @@ Vercel is configured as a **UI mirror** — it serves the static frontend and pr
 4. Optional model overrides:
    ```bash
    fly secrets set OPENROUTER_DEMO_MODEL=qwen/qwen3.5-flash-02-23
-   fly secrets set OPENROUTER_MODEL=x-ai/grok-4.1-fast
+   fly secrets set OPENROUTER_MODEL=deepseek/deepseek-v4-flash
    ```
    Use **`OPENROUTER_DEMO_MODEL`** for the shared demo; **`OPENROUTER_MODEL`** only applies to BYOK requests.
 5. Redeploy after secret/config changes:
@@ -208,7 +208,7 @@ Expected behavior:
 
 - Vercel is now a UI mirror that **proxies `/simulate` and `/healthz` to Fly** via external rewrites in `vercel.json`; Fly is the single `/simulate` backend. No LLM env vars live on Vercel anymore.
 - `fly.toml` sets `min_machines_running = 1` (and disables `auto_stop_machines`) so Brian2 stays warm and the first request after idle is not a 15–30s cold-start.
-- Shared demo traffic uses **`OPENROUTER_DEMO_MODEL`** (default Qwen 3.5 Flash + educator prompt); BYOK traffic uses **`OPENROUTER_MODEL`**.
+- Shared demo traffic uses **`OPENROUTER_DEMO_MODEL`** (default Qwen 3.5 Flash + educator prompt); BYOK traffic uses **`OPENROUTER_MODEL`** (default DeepSeek V4 Flash).
 - Security hardening in LLM error handling to avoid exposing sensitive upstream details to API clients.
 - Faster request handling by reusing `httpx.AsyncClient` through FastAPI lifespan.
 - SNN runtime optimization by removing repeated dictionary creation inside the `run_snn` loop.
