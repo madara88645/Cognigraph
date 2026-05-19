@@ -198,6 +198,77 @@
       </section>
     </main>
 
+    <!-- ════════════════════════════════════════════════════════════
+         Mobile-only UI (≤768px). Hidden on desktop via CSS.
+         Panels are DOM-moved into drawer slots by mobile.js — not cloned —
+         so all existing JS references (#simulate-btn, #status-chip, etc.) keep working.
+         ════════════════════════════════════════════════════════════ -->
+    <header class="cg-mobile-topbar" role="banner" aria-hidden="true">
+      <button id="cg-hamburger-btn" type="button" aria-label="Menüyü aç" aria-expanded="false" aria-controls="cg-hamburger-menu">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="cg-mobile-brand-block">
+        <span class="cg-mobile-brand">CogniGraph</span>
+        <span id="cg-mobile-status" class="cg-mobile-status" aria-live="polite">Initializing...</span>
+      </div>
+    </header>
+
+    <nav class="cg-mobile-actionbar" aria-label="Birincil eylemler" aria-hidden="true">
+      <button type="button" data-drawer-target="input" aria-label="Senaryo girişi">
+        <span class="cg-action-icon" aria-hidden="true">✎</span>
+        <span class="cg-action-label">Senaryo</span>
+      </button>
+      <button type="button" data-drawer-target="analysis" aria-label="Analiz">
+        <span class="cg-action-icon" aria-hidden="true">◎</span>
+        <span class="cg-action-label">Analiz</span>
+      </button>
+      <button type="button" data-drawer-target="log" aria-label="Olay günlüğü">
+        <span class="cg-action-icon" aria-hidden="true">≡</span>
+        <span class="cg-action-label">Log</span>
+      </button>
+      <button type="button" id="cg-mobile-play" aria-label="Oynat veya duraklat">
+        <span class="cg-action-icon" aria-hidden="true">▶</span>
+        <span class="cg-action-label" data-mobile-play-label>Oynat</span>
+      </button>
+    </nav>
+
+    <div class="cg-drawer-backdrop" data-drawer-backdrop hidden></div>
+
+    <aside class="cg-drawer" data-drawer="input" aria-hidden="true" aria-labelledby="cg-drawer-input-title">
+      <div class="cg-drawer-handle" aria-hidden="true"></div>
+      <header class="cg-drawer-header">
+        <h2 id="cg-drawer-input-title">Senaryo Girişi</h2>
+        <button type="button" class="cg-drawer-close" data-drawer-close aria-label="Kapat">×</button>
+      </header>
+      <div class="cg-drawer-body" data-drawer-slot="input"></div>
+    </aside>
+
+    <aside class="cg-drawer" data-drawer="analysis" aria-hidden="true" aria-labelledby="cg-drawer-analysis-title">
+      <div class="cg-drawer-handle" aria-hidden="true"></div>
+      <header class="cg-drawer-header">
+        <h2 id="cg-drawer-analysis-title">Analiz</h2>
+        <button type="button" class="cg-drawer-close" data-drawer-close aria-label="Kapat">×</button>
+      </header>
+      <div class="cg-drawer-body" data-drawer-slot="analysis"></div>
+    </aside>
+
+    <aside class="cg-drawer" data-drawer="log" aria-hidden="true" aria-labelledby="cg-drawer-log-title">
+      <div class="cg-drawer-handle" aria-hidden="true"></div>
+      <header class="cg-drawer-header">
+        <h2 id="cg-drawer-log-title">Olay Günlüğü</h2>
+        <button type="button" class="cg-drawer-close" data-drawer-close aria-label="Kapat">×</button>
+      </header>
+      <div class="cg-drawer-body" data-drawer-slot="log"></div>
+    </aside>
+
+    <aside id="cg-hamburger-menu" class="cg-hamburger-menu" aria-hidden="true" aria-label="Genel menü">
+      <button type="button" class="cg-menu-item" data-action="open-input">Senaryo gir</button>
+      <button type="button" class="cg-menu-item" data-action="open-api-settings">API Ayarları</button>
+      <button type="button" class="cg-menu-item" data-action="show-help">Nasıl çalışır?</button>
+      <button type="button" class="cg-menu-item" data-action="copy-link">App linkini kopyala</button>
+      <a class="cg-menu-item" href="https://cognigraph-tau.vercel.app" target="_blank" rel="noopener noreferrer">Canlı demoyu aç ↗</a>
+    </aside>
+
     <script type="importmap">
       {
         "imports": {

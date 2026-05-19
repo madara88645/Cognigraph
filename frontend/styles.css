@@ -13,6 +13,18 @@
   --cg-space-2: 0.5rem;
   --cg-space-3: 0.75rem;
   --cg-space-4: 1rem;
+  --cg-touch-target: 44px;
+  --cg-mobile-topbar-h: 56px;
+  --cg-mobile-actionbar-h: 64px;
+}
+
+/* Mobile-only chrome — hidden by default; ≤768px block re-enables. */
+.cg-mobile-topbar,
+.cg-mobile-actionbar,
+.cg-drawer,
+.cg-drawer-backdrop,
+.cg-hamburger-menu {
+  display: none;
 }
 
 body {
@@ -143,12 +155,15 @@ summary:focus-visible {
   #prompt {
     min-height: 4.5rem !important;
     height: auto !important;
+    font-size: 0.9375rem !important;
   }
   #simulate-btn {
     position: sticky;
     bottom: 0;
     z-index: 6;
     box-shadow: 0 -8px 24px rgba(8, 9, 12, 0.85);
+    min-height: var(--cg-touch-target);
+    font-size: 0.8125rem !important;
   }
   .cognigraph-middle-col {
     position: relative !important;
@@ -180,6 +195,337 @@ summary:focus-visible {
     width: 100% !important;
     height: auto;
     min-height: 6rem;
+  }
+  /* Touch-friendly controls: bump the 28px round buttons to 44px. */
+  #step-back-btn,
+  #step-forward-btn,
+  #replay-btn,
+  #hpa-help-btn {
+    min-width: var(--cg-touch-target);
+    min-height: var(--cg-touch-target);
+    width: var(--cg-touch-target);
+    height: var(--cg-touch-target);
+    font-size: 1rem;
+  }
+  #play-pause-btn {
+    min-height: var(--cg-touch-target);
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+    font-size: 0.75rem;
+  }
+  /* Readable mobile typography — lift the 10–11px utility classes. */
+  .cognigraph-shell .text-\[10px\],
+  .cognigraph-shell .text-\[11px\] {
+    font-size: 0.8125rem !important;
+    line-height: 1.5 !important;
+  }
+  .cognigraph-shell .text-xs {
+    font-size: 0.8125rem !important;
+  }
+  #timeline-frame-label {
+    font-size: 0.75rem !important;
+  }
+  /* Mini API-setting pill buttons: ensure adequate hit targets. */
+  #toggle-settings-btn,
+  #save-api-key-btn,
+  #clear-api-key-btn,
+  #rotate-btn,
+  #copy-demo-link-btn {
+    min-height: 36px;
+    padding: 0.4rem 0.85rem;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════
+   Mobile layout (≤768px)
+   Full-screen 3D canvas + slim top bar + sticky bottom action bar
+   + bottom-sheet drawers that JS moves the panels into.
+   ════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  /* Desktop overlay shell stays out of the way; canvas already fills the viewport. */
+  .cognigraph-shell {
+    display: none !important;
+  }
+
+  /* ─── Top bar ─────────────────────────────────────────── */
+  .cg-mobile-topbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: calc(var(--cg-mobile-topbar-h) + env(safe-area-inset-top, 0px));
+    padding: env(safe-area-inset-top, 0px) 0.85rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: linear-gradient(to bottom, rgba(8, 9, 12, 0.9) 0%, rgba(8, 9, 12, 0.55) 70%, rgba(8, 9, 12, 0) 100%);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    z-index: 30;
+  }
+  #cg-hamburger-btn {
+    width: var(--cg-touch-target);
+    height: var(--cg-touch-target);
+    border-radius: 12px;
+    background: rgba(20, 24, 32, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+    padding: 0;
+    cursor: pointer;
+  }
+  #cg-hamburger-btn span {
+    display: block;
+    width: 18px;
+    height: 2px;
+    background: var(--cg-text-primary);
+    border-radius: 2px;
+    transition: transform 0.22s ease, opacity 0.22s ease;
+  }
+  #cg-hamburger-btn[aria-expanded="true"] span:nth-child(1) {
+    transform: translateY(7px) rotate(45deg);
+  }
+  #cg-hamburger-btn[aria-expanded="true"] span:nth-child(2) {
+    opacity: 0;
+  }
+  #cg-hamburger-btn[aria-expanded="true"] span:nth-child(3) {
+    transform: translateY(-7px) rotate(-45deg);
+  }
+  .cg-mobile-brand-block {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+    min-width: 0;
+    flex: 1;
+  }
+  .cg-mobile-brand {
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--cg-text-primary);
+  }
+  .cg-mobile-status {
+    font-size: 0.6875rem;
+    color: var(--cg-text-subtle);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ─── Bottom action bar ─────────────────────────────── */
+  .cg-mobile-actionbar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: calc(var(--cg-mobile-actionbar-h) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    background: linear-gradient(to top, rgba(8, 9, 12, 0.92) 0%, rgba(8, 9, 12, 0.65) 70%, rgba(8, 9, 12, 0) 100%);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    z-index: 30;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  .cg-mobile-actionbar button {
+    background: transparent;
+    border: none;
+    color: var(--cg-text-muted);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    cursor: pointer;
+    padding: 0.35rem 0;
+    min-height: var(--cg-touch-target);
+    font-family: inherit;
+  }
+  .cg-mobile-actionbar button:active {
+    transform: none;
+    color: var(--cg-text-primary);
+  }
+  .cg-mobile-actionbar .cg-action-icon {
+    font-size: 1.15rem;
+    line-height: 1;
+  }
+  .cg-mobile-actionbar .cg-action-label {
+    font-size: 0.625rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  #cg-mobile-play {
+    color: #fef9c3;
+  }
+
+  /* ─── Backdrop ──────────────────────────────────────── */
+  .cg-drawer-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 40;
+    opacity: 0;
+    transition: opacity 0.24s ease;
+    pointer-events: none;
+  }
+  .cg-drawer-backdrop[data-open] {
+    display: block;
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* ─── Bottom-sheet drawers ──────────────────────────── */
+  .cg-drawer {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    max-height: 82vh;
+    background: rgba(15, 18, 26, 0.97);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: none;
+    border-radius: 24px 24px 0 0;
+    box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    z-index: 50;
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .cg-drawer[aria-hidden="false"] {
+    transform: translateY(0);
+  }
+  .cg-drawer-handle {
+    width: 40px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.28);
+    border-radius: 999px;
+    margin: 10px auto 6px;
+    flex-shrink: 0;
+  }
+  .cg-drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.25rem 1.25rem 0.85rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    flex-shrink: 0;
+  }
+  .cg-drawer-header h2 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--cg-text-primary);
+    margin: 0;
+  }
+  .cg-drawer-close {
+    width: var(--cg-touch-target);
+    height: var(--cg-touch-target);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--cg-text-muted);
+    font-size: 1.4rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .cg-drawer-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 1rem 1rem calc(1rem + var(--cg-mobile-actionbar-h));
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* When panels are inside drawer slots, strip their floating chrome. */
+  .cg-drawer-body .glass-panel {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-radius: 0;
+    padding: 0;
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible;
+    position: static !important;
+    transform: none !important;
+    top: auto !important;
+    right: auto !important;
+    left: auto !important;
+    margin: 0;
+  }
+  .cg-drawer-body #log-panel {
+    max-height: 50vh;
+    font-size: 0.8125rem;
+  }
+  .cg-drawer-body .analysis-panel {
+    min-width: 0 !important;
+  }
+
+  /* ─── Hamburger menu (top sheet) ────────────────────── */
+  .cg-hamburger-menu {
+    position: fixed;
+    top: calc(var(--cg-mobile-topbar-h) + env(safe-area-inset-top, 0px));
+    left: 0.85rem;
+    right: 0.85rem;
+    background: rgba(15, 18, 26, 0.97);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 18px;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    z-index: 45;
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+  .cg-hamburger-menu[aria-hidden="false"] {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+  }
+  .cg-menu-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: none;
+    border-radius: 12px;
+    padding: 0.75rem 0.9rem;
+    color: var(--cg-text-primary);
+    font-family: inherit;
+    font-size: 0.875rem;
+    cursor: pointer;
+    text-decoration: none;
+    min-height: var(--cg-touch-target);
+  }
+  .cg-menu-item:hover,
+  .cg-menu-item:focus-visible {
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  /* Keep toast above drawers/backdrop on small screens. */
+  .cg-toast-stack {
+    bottom: calc(var(--cg-mobile-actionbar-h) + 0.75rem + env(safe-area-inset-bottom, 0px));
+    z-index: 90;
   }
 }
 

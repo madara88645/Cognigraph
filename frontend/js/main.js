@@ -11,6 +11,7 @@ const TWEEN = window.TWEEN;
 
 import * as C from "./constants.js";
 import { showToast } from "./toast.js";
+import "./mobile.js";
 import {
   getSavedApiKey,
   getSavedModel,
