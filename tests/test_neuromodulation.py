@@ -111,6 +111,18 @@ def test_validate_clamps_intensity() -> None:
     assert out["neuromodulator_intensity"] == pytest.approx(1.0)
 
 
+def test_validate_intensity_invalid_type() -> None:
+    with pytest.raises(ValueError, match="neuromodulator_intensity must be a number."):
+        validate_classification_payload(
+            {
+                "active_lobe": "frontal",
+                "dominant_neuromodulator": "baseline",
+                "neuromodulator_intensity": "invalid",
+                "explanation": "x",
+            }
+        )
+
+
 @pytest.mark.parametrize(
     "payload,match",
     [
