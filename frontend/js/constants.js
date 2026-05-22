@@ -65,7 +65,9 @@ export const GLOW_SMOOTHING = 0.08;
 export const GLOW_NOISE_AMP = 0.06;
 export const GLOW_PULSE_SPEED = 0.003;
 export const BG_LOBE_GLOW_SCALE = 0.5;
-export const MAX_SPIKES_PER_WINDOW = 100;
+// Floor for the auto-calibrated spike-glow normalizer (see computeSpikeNorm).
+// Prevents low-activity runs from dividing by a tiny peak and over-amplifying noise.
+export const MIN_SPIKE_NORM = 40;
 
 export const VERTEX_PHASE_SPREAD = 1.2;
 export const VERTEX_WAVE_SPEED = 0.002;
