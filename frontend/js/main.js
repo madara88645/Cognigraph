@@ -63,7 +63,7 @@ const {
   GLOW_NOISE_AMP,
   GLOW_PULSE_SPEED,
   BG_LOBE_GLOW_SCALE,
-  MAX_SPIKES_PER_WINDOW,
+  MIN_SPIKE_NORM,
   VERTEX_PHASE_SPREAD,
   VERTEX_WAVE_SPEED,
   VERTEX_VARIATION_AMP,
@@ -743,7 +743,8 @@ function updateDynamicGlow(now) {
       currentMs
     );
 
-    let rawIntensity = Math.min(1.0, spikeCount / MAX_SPIKES_PER_WINDOW);
+    const norm = playback.spikeNorm || MIN_SPIKE_NORM;
+    let rawIntensity = Math.min(1.0, spikeCount / norm);
     rawIntensity = Math.pow(rawIntensity, 0.82);
 
     const rateJump = rawIntensity - g.prevSpikeRate;
@@ -838,6 +839,31 @@ function sanitizeSpikeBuckets(spikes) {
     buckets[lobe] = map;
   }
   return { buckets, totals };
+}
+
+/**
+ * Per-run glow normalizer: the peak spikes-in-window observed across all lobes
+ * over the full timeline. A single global value preserves active-vs-background
+ * contrast; the floor prevents low-activity runs from over-amplifying noise.
+ * Window matches countSpikesInWindow's inclusive [ms - SPIKE_WINDOW_MS, ms] range.
+ */
+function computeSpikeNorm(buckets, durationMs) {
+  let globalPeak = 0;
+  for (const lobe of LOBES) {
+    const map = buckets[lobe];
+    let windowSum = 0;
+    for (let end = 0; end <= durationMs; end++) {
+      const entered = map.get(end);
+      if (entered) windowSum += entered.length;
+      const dropIdx = end - SPIKE_WINDOW_MS - 1;
+      if (dropIdx >= 0) {
+        const left = map.get(dropIdx);
+        if (left) windowSum -= left.length;
+      }
+      if (windowSum > globalPeak) globalPeak = windowSum;
+    }
+  }
+  return Math.max(globalPeak, MIN_SPIKE_NORM);
 }
 
 function processSpikesUntil(targetMs) {
@@ -978,6 +1004,7 @@ function startPlayback(payload) {
   playback.lastProcessedMs = -1;
   playback.lastWallNow = performance.now();
   playback.buckets = buckets;
+  playback.spikeNorm = computeSpikeNorm(buckets, playback.durationMs);
   playback.totalCounts = totals;
   playback.playedCounts = Object.fromEntries(LOBES.map((l) => [l, 0]));
 
