@@ -1,5 +1,7 @@
+import asyncio
 from unittest.mock import AsyncMock, patch
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
@@ -20,11 +22,11 @@ _CANNED_SPIKES = {lobe: LobeSpikes(indices=[], times_ms=[]) for lobe in LOBE_NAM
 
 @pytest.fixture(autouse=True)
 def clear_classification_cache():
-    with main._classification_cache_lock:
-        main._classification_cache.clear()
+    main._classification_cache.clear()
+    main._classification_inflight.clear()
     yield
-    with main._classification_cache_lock:
-        main._classification_cache.clear()
+    main._classification_cache.clear()
+    main._classification_inflight.clear()
 
 
 @patch("backend.main.run_snn", return_value=_CANNED_SPIKES)
@@ -133,3 +135,61 @@ def test_simulate_200_when_classification_succeeds_after_internal_retry(
     assert response.json()["dominant_neuromodulator"] == "dopamine"
     mock_classify.assert_awaited_once()
     mock_run_snn.assert_called_once()
+
+
+def test_simulate_deduplicates_inflight_classifications():
+    """Concurrent /simulate calls with the same prompt share one LLM call."""
+
+    call_count = 0
+
+    async def slow_classify(prompt, **_kwargs):
+        nonlocal call_count
+        call_count += 1
+        await asyncio.sleep(0.1)
+        return _CANNED_CLASSIFICATION
+
+    async def run() -> tuple[httpx.Response, httpx.Response]:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as ac:
+            return await asyncio.gather(
+                ac.post("/simulate", json={"prompt": "thundering herd"}),
+                ac.post("/simulate", json={"prompt": "thundering herd"}),
+            )
+
+    with (
+        patch("backend.main.run_snn", return_value=_CANNED_SPIKES),
+        patch("backend.main.classify_scenario", side_effect=slow_classify),
+    ):
+        r1, r2 = asyncio.run(run())
+
+    assert r1.status_code == 200
+    assert r2.status_code == 200
+    # The whole point: one LLM call serves both concurrent requests.
+    assert call_count == 1
+
+
+def test_simulate_inflight_failure_does_not_poison_cache():
+    """When the leader's classify fails, the next request retries (cache stays empty)."""
+
+    attempts = 0
+
+    async def flaky_classify(prompt, **_kwargs):
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise RuntimeError("OpenRouter request failed with status 502: bad gateway")
+        return _CANNED_CLASSIFICATION
+
+    with (
+        patch("backend.main.run_snn", return_value=_CANNED_SPIKES),
+        patch("backend.main.classify_scenario", side_effect=flaky_classify),
+        TestClient(app) as client,
+    ):
+        first = client.post("/simulate", json={"prompt": "transient"})
+        second = client.post("/simulate", json={"prompt": "transient"})
+
+    assert first.status_code == 502
+    assert second.status_code == 200
+    assert attempts == 2
+    # Inflight registry must be clean so the second request can become leader.
+    assert not main._classification_inflight

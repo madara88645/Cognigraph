@@ -1,8 +1,9 @@
+import asyncio
 import json  # Retained: used by _parse_model_json
 import logging
 import os
+import random
 import re
-import threading
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -68,6 +69,12 @@ OPENROUTER_DEMO_MODEL = os.getenv("OPENROUTER_DEMO_MODEL", DEFAULT_OPENROUTER_DE
 # Single LLM call should finish well under this on a healthy provider; override if needed.
 OPENROUTER_HTTP_TIMEOUT_SEC = float(os.getenv("OPENROUTER_HTTP_TIMEOUT_SEC", "90"))
 
+# Retry policy for transient OpenRouter failures (timeouts and 429/502/503/504).
+# Default: 3 attempts total, with full-jitter backoff of base * 2**(attempt-1) seconds.
+OPENROUTER_RETRY_MAX_ATTEMPTS = max(1, int(os.getenv("OPENROUTER_RETRY_MAX_ATTEMPTS", "3")))
+OPENROUTER_RETRY_BACKOFF_SEC = max(0.0, float(os.getenv("OPENROUTER_RETRY_BACKOFF_SEC", "0.5")))
+_OPENROUTER_RETRYABLE_STATUS = frozenset({429, 502, 503, 504})
+
 # Global HTTPX Client
 http_client: httpx.AsyncClient = None  # type: ignore
 
@@ -76,7 +83,11 @@ _CLASSIFICATION_CACHE_TTL_SEC = 600
 _classification_cache: TTLCache[str, ClassificationResult] = TTLCache(
     maxsize=_CLASSIFICATION_CACHE_MAXSIZE, ttl=_CLASSIFICATION_CACHE_TTL_SEC
 )
-_classification_cache_lock = threading.Lock()
+# Async primitives. Uvicorn runs /simulate on a single event loop per worker, so a
+# threading.Lock is overkill; asyncio.Lock is the right primitive AND gives us a
+# place to register in-flight futures for thundering-herd deduplication.
+_classification_cache_lock = asyncio.Lock()
+_classification_inflight: dict[str, asyncio.Future[ClassificationResult]] = {}
 
 
 def _openrouter_http_referer(http_request: Request | None) -> str:
@@ -365,23 +376,63 @@ def _openrouter_response_text(response: httpx.Response) -> str:
     return response_text
 
 
+async def _do_openrouter_post(payload: dict[str, Any], headers: dict[str, str]) -> httpx.Response:
+    if http_client is None:
+        async with httpx.AsyncClient(timeout=OPENROUTER_HTTP_TIMEOUT_SEC) as temp_client:
+            response = await temp_client.post(OPENROUTER_URL, json=payload, headers=headers)
+            response.raise_for_status()
+            return response
+    response = await http_client.post(OPENROUTER_URL, json=payload, headers=headers)
+    response.raise_for_status()
+    return response
+
+
 async def _post_openrouter_chat(payload: dict[str, Any], headers: dict[str, str]) -> httpx.Response:
-    try:
-        if http_client is None:
-            async with httpx.AsyncClient(timeout=OPENROUTER_HTTP_TIMEOUT_SEC) as temp_client:
-                response = await temp_client.post(OPENROUTER_URL, json=payload, headers=headers)
-                response.raise_for_status()
-                return response
-        response = await http_client.post(OPENROUTER_URL, json=payload, headers=headers)
-        response.raise_for_status()
-        return response
-    except httpx.HTTPStatusError as exc:
-        error_body = exc.response.text
-        raise RuntimeError(
-            f"OpenRouter request failed with status {exc.response.status_code}: {error_body}"
-        ) from exc
-    except Exception as exc:  # pragma: no cover - network/service dependency
-        raise RuntimeError(f"OpenRouter request failed: {exc}") from exc
+    """POST to OpenRouter with retry on transient failures.
+
+    Retries on httpx.TimeoutException, httpx.TransportError, and HTTPStatusError
+    with status in {429, 502, 503, 504}. All other 4xx (auth/validation) fail fast,
+    and 500 is treated as a real upstream/provider error worth surfacing immediately.
+    """
+    last_exc: Exception | None = None
+    for attempt in range(1, OPENROUTER_RETRY_MAX_ATTEMPTS + 1):
+        try:
+            return await _do_openrouter_post(payload, headers)
+        except httpx.HTTPStatusError as exc:
+            status = exc.response.status_code
+            if (
+                status not in _OPENROUTER_RETRYABLE_STATUS
+                or attempt >= OPENROUTER_RETRY_MAX_ATTEMPTS
+            ):
+                raise RuntimeError(
+                    f"OpenRouter request failed with status {status}: {exc.response.text}"
+                ) from exc
+            last_exc = exc
+            logger.info(
+                "classification_retry_attempt=%d status=%d reason=http",
+                attempt,
+                status,
+            )
+        except (httpx.TimeoutException, httpx.TransportError) as exc:
+            if attempt >= OPENROUTER_RETRY_MAX_ATTEMPTS:
+                raise RuntimeError(f"OpenRouter request failed: {exc}") from exc
+            last_exc = exc
+            logger.info(
+                "classification_retry_attempt=%d status=- reason=%s",
+                attempt,
+                type(exc).__name__,
+            )
+        except Exception as exc:  # pragma: no cover - non-retryable network/service error
+            raise RuntimeError(f"OpenRouter request failed: {exc}") from exc
+
+        # Full-jitter backoff: sleep up to base * 2**(attempt-1).
+        delay_cap = OPENROUTER_RETRY_BACKOFF_SEC * (2 ** (attempt - 1))
+        if delay_cap > 0:
+            await asyncio.sleep(random.uniform(0, delay_cap))
+
+    # Defensive: the loop above always either returns or raises.
+    assert last_exc is not None  # pragma: no cover
+    raise RuntimeError(f"OpenRouter request failed: {last_exc}") from last_exc  # pragma: no cover
 
 
 def _parse_and_validate_classification(response_text: str) -> ClassificationResult:
@@ -570,8 +621,23 @@ async def simulate(
     is_demo = not bool(x_openrouter_api_key.strip())
     model_name = _select_openrouter_model(x_openrouter_api_key, x_openrouter_model)
     cache_key = _classification_cache_key(prompt, model_name, is_demo)
-    with _classification_cache_lock:
+
+    # Cache + inflight-dedup: under a single lock, decide whether to (a) reuse a
+    # cached result, (b) await an in-flight request from a peer, or (c) become the
+    # leader that runs classify_scenario for this key. Concurrent callers with the
+    # same prompt + model + demo-lane all converge on a single LLM call.
+    leader_future: asyncio.Future[ClassificationResult] | None = None
+    waiter_future: asyncio.Future[ClassificationResult] | None = None
+    async with _classification_cache_lock:
         cached_result = _classification_cache.get(cache_key)
+        if cached_result is None:
+            existing = _classification_inflight.get(cache_key)
+            if existing is not None:
+                waiter_future = existing
+            else:
+                leader_future = asyncio.get_running_loop().create_future()
+                _classification_inflight[cache_key] = leader_future
+
     if cached_result is not None:
         llm_result = cached_result
         logger.info(
@@ -579,7 +645,31 @@ async def simulate(
             len(prompt),
             model_name,
         )
+    elif waiter_future is not None:
+        logger.info(
+            "classification_inflight_wait prompt_len=%d model=%s",
+            len(prompt),
+            model_name,
+        )
+        try:
+            llm_result = await waiter_future
+        except RuntimeError as exc:
+            message = str(exc)
+            if "OPENROUTER_API_KEY is not set" in message:
+                raise HTTPException(status_code=503, detail=message) from exc
+            safe = (
+                message
+                if len(message) <= MAX_EXCEPTION_MESSAGE_LENGTH
+                else f"{message[:MAX_EXCEPTION_MESSAGE_LENGTH]}…"
+            )
+            raise HTTPException(status_code=502, detail=safe) from exc
+        except Exception as exc:
+            raise HTTPException(
+                status_code=502,
+                detail=ERR_UNEXPECTED_LLM_FAILURE,
+            ) from exc
     else:
+        assert leader_future is not None
         try:
             llm_result = await classify_scenario(
                 prompt,
@@ -588,6 +678,10 @@ async def simulate(
                 http_request=http_request,
             )
         except RuntimeError as exc:
+            leader_future.set_exception(exc)
+            leader_future.exception()  # silence "exception never retrieved" if no peer waited
+            async with _classification_cache_lock:
+                _classification_inflight.pop(cache_key, None)
             message = str(exc)
             if "OPENROUTER_API_KEY is not set" in message:
                 raise HTTPException(status_code=503, detail=message) from exc
@@ -599,13 +693,20 @@ async def simulate(
             )
             raise HTTPException(status_code=502, detail=safe) from exc
         except Exception as exc:
+            leader_future.set_exception(exc)
+            leader_future.exception()  # silence "exception never retrieved" if no peer waited
+            async with _classification_cache_lock:
+                _classification_inflight.pop(cache_key, None)
             logger.exception(ERR_UNEXPECTED_LLM_FAILURE)
             raise HTTPException(
                 status_code=502,
                 detail=ERR_UNEXPECTED_LLM_FAILURE,
             ) from exc
-        with _classification_cache_lock:
+        async with _classification_cache_lock:
             _classification_cache[cache_key] = llm_result
+            _classification_inflight.pop(cache_key, None)
+        if not leader_future.done():
+            leader_future.set_result(llm_result)
 
     llm_ms = (time.perf_counter() - t0) * 1000.0
 
