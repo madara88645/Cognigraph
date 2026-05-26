@@ -404,8 +404,13 @@ async def _post_openrouter_chat(payload: dict[str, Any], headers: dict[str, str]
                 status not in _OPENROUTER_RETRYABLE_STATUS
                 or attempt >= OPENROUTER_RETRY_MAX_ATTEMPTS
             ):
+                # Truncate the upstream body so a giant HTML/JSON error page
+                # can't flood logs (logger.exception logs the full chain).
+                body = exc.response.text
+                if len(body) > MAX_EXCEPTION_MESSAGE_LENGTH:
+                    body = f"{body[:MAX_EXCEPTION_MESSAGE_LENGTH]}…"
                 raise RuntimeError(
-                    f"OpenRouter request failed with status {status}: {exc.response.text}"
+                    f"OpenRouter request failed with status {status}: {body}"
                 ) from exc
             last_exc = exc
             logger.info(
@@ -653,6 +658,13 @@ async def simulate(
         )
         try:
             llm_result = await waiter_future
+        except asyncio.CancelledError as exc:
+            # The leader was cancelled (e.g. client disconnect). The peer is still
+            # connected; give them a retriable error rather than dragging them down.
+            raise HTTPException(
+                status_code=503,
+                detail="Upstream classification was cancelled; please retry.",
+            ) from exc
         except RuntimeError as exc:
             message = str(exc)
             if "OPENROUTER_API_KEY is not set" in message:
@@ -670,43 +682,58 @@ async def simulate(
             ) from exc
     else:
         assert leader_future is not None
+        llm_result_local: ClassificationResult | None = None
+        classification_exc: BaseException | None = None
         try:
-            llm_result = await classify_scenario(
+            llm_result_local = await classify_scenario(
                 prompt,
                 api_key_override=x_openrouter_api_key,
                 model_override=x_openrouter_model,
                 http_request=http_request,
             )
-        except RuntimeError as exc:
-            leader_future.set_exception(exc)
-            leader_future.exception()  # silence "exception never retrieved" if no peer waited
+        except BaseException as exc:
+            # Catches asyncio.CancelledError (which inherits from BaseException
+            # in Py 3.8+) alongside normal exceptions, so the inflight registry
+            # gets cleaned up even on client disconnect / hard cancellation.
+            classification_exc = exc
+        finally:
+            # Always release the inflight slot and wake any peer waiters.
             async with _classification_cache_lock:
                 _classification_inflight.pop(cache_key, None)
-            message = str(exc)
-            if "OPENROUTER_API_KEY is not set" in message:
-                raise HTTPException(status_code=503, detail=message) from exc
-            logger.exception("Failed to classify scenario with OpenRouter.")
-            safe = (
-                message
-                if len(message) <= MAX_EXCEPTION_MESSAGE_LENGTH
-                else f"{message[:MAX_EXCEPTION_MESSAGE_LENGTH]}…"
-            )
-            raise HTTPException(status_code=502, detail=safe) from exc
-        except Exception as exc:
-            leader_future.set_exception(exc)
-            leader_future.exception()  # silence "exception never retrieved" if no peer waited
-            async with _classification_cache_lock:
-                _classification_inflight.pop(cache_key, None)
-            logger.exception(ERR_UNEXPECTED_LLM_FAILURE)
-            raise HTTPException(
-                status_code=502,
-                detail=ERR_UNEXPECTED_LLM_FAILURE,
-            ) from exc
-        async with _classification_cache_lock:
-            _classification_cache[cache_key] = llm_result
-            _classification_inflight.pop(cache_key, None)
-        if not leader_future.done():
-            leader_future.set_result(llm_result)
+                if classification_exc is None and llm_result_local is not None:
+                    _classification_cache[cache_key] = llm_result_local
+            if not leader_future.done():
+                if classification_exc is None and llm_result_local is not None:
+                    leader_future.set_result(llm_result_local)
+                elif isinstance(classification_exc, Exception):
+                    leader_future.set_exception(classification_exc)
+                    leader_future.exception()  # mark as retrieved (silence GC warning)
+                else:
+                    # CancelledError or other BaseException: cancel so peers raise.
+                    leader_future.cancel()
+
+        if classification_exc is not None:
+            if isinstance(classification_exc, RuntimeError):
+                message = str(classification_exc)
+                if "OPENROUTER_API_KEY is not set" in message:
+                    raise HTTPException(status_code=503, detail=message) from classification_exc
+                logger.exception("Failed to classify scenario with OpenRouter.")
+                safe = (
+                    message
+                    if len(message) <= MAX_EXCEPTION_MESSAGE_LENGTH
+                    else f"{message[:MAX_EXCEPTION_MESSAGE_LENGTH]}…"
+                )
+                raise HTTPException(status_code=502, detail=safe) from classification_exc
+            if isinstance(classification_exc, Exception):
+                logger.exception(ERR_UNEXPECTED_LLM_FAILURE)
+                raise HTTPException(
+                    status_code=502,
+                    detail=ERR_UNEXPECTED_LLM_FAILURE,
+                ) from classification_exc
+            # CancelledError (or other BaseException): propagate.
+            raise classification_exc
+        assert llm_result_local is not None
+        llm_result = llm_result_local
 
     llm_ms = (time.perf_counter() - t0) * 1000.0
 

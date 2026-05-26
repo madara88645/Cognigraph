@@ -168,6 +168,63 @@ def test_simulate_deduplicates_inflight_classifications():
     assert call_count == 1
 
 
+def test_simulate_leader_cancellation_releases_inflight_slot_and_wakes_peers():
+    """If the leader's classify is cancelled mid-flight (client disconnect),
+    the inflight registry must be cleared and concurrent peers must wake up
+    with a retriable 503 instead of hanging forever."""
+
+    leader_started = asyncio.Event()
+    release_classify = asyncio.Event()
+    call_log: list[str] = []
+
+    async def leader_classify(prompt, **_kwargs):
+        call_log.append("leader_started")
+        leader_started.set()
+        # Wait until the test signals; this lets the peer attach as a waiter
+        # before we trigger cancellation.
+        await release_classify.wait()
+        raise asyncio.CancelledError()
+
+    async def run() -> tuple[int, int]:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(
+            transport=transport, base_url="http://testserver", timeout=10.0
+        ) as ac:
+            leader_task = asyncio.create_task(
+                ac.post("/simulate", json={"prompt": "cancelled scenario"})
+            )
+            await leader_started.wait()
+            peer_task = asyncio.create_task(
+                ac.post("/simulate", json={"prompt": "cancelled scenario"})
+            )
+            # Give the peer a moment to attach to the inflight future.
+            await asyncio.sleep(0.05)
+            release_classify.set()
+            leader_status: int
+            try:
+                leader_response = await leader_task
+                leader_status = leader_response.status_code
+            except asyncio.CancelledError:
+                leader_status = -1  # leader bubbled cancellation, which is fine
+            peer_response = await peer_task
+            return leader_status, peer_response.status_code
+
+    with (
+        patch("backend.main.run_snn", return_value=_CANNED_SPIKES),
+        patch("backend.main.classify_scenario", side_effect=leader_classify),
+    ):
+        leader_status, peer_status = asyncio.run(run())
+
+    # The peer gets a retriable 503 (not a hang and not an opaque 500).
+    assert peer_status == 503
+    # Leader either propagated CancelledError or returned 5xx — either way is
+    # acceptable; what matters is the inflight registry is clean.
+    assert leader_status in (-1, 500, 503)
+    assert not main._classification_inflight
+    # Both calls were the leader's same single LLM attempt.
+    assert call_log == ["leader_started"]
+
+
 def test_simulate_inflight_failure_does_not_poison_cache():
     """When the leader's classify fails, the next request retries (cache stays empty)."""
 
