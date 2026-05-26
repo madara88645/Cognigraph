@@ -3,6 +3,7 @@ import json
 import os
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
@@ -169,13 +170,57 @@ def test_classify_scenario_fails_after_retry_exhausted(mock_post):
     assert mock_post.call_count == 2
 
 
+def _httpx_status_error(status: int, body: str = "") -> httpx.HTTPStatusError:
+    request = httpx.Request("POST", "https://openrouter.ai/api/v1/chat/completions")
+    response = httpx.Response(status, text=body, request=request)
+    return httpx.HTTPStatusError(f"{status} error", request=request, response=response)
+
+
 @patch.dict(os.environ, {"OPENROUTER_API_KEY": "sk-test"}, clear=False)
-@patch("backend.main._post_openrouter_chat", new_callable=AsyncMock)
-def test_classify_scenario_no_retry_on_http_error(mock_post):
-    mock_post.side_effect = RuntimeError("OpenRouter request failed with status 429: rate limit")
-    with pytest.raises(RuntimeError, match="429"):
+@patch("backend.main._do_openrouter_post", new_callable=AsyncMock)
+@patch("backend.main.OPENROUTER_RETRY_BACKOFF_SEC", 0.0)
+def test_post_openrouter_chat_retries_on_transient_http_error(mock_do_post):
+    mock_do_post.side_effect = [
+        _httpx_status_error(429, "rate limited"),
+        _openrouter_mock_response(_VALID_CLASSIFICATION_JSON),
+    ]
+    result = asyncio.run(classify_scenario("focus task"))
+    assert result["active_lobe"] == "frontal"
+    assert mock_do_post.call_count == 2
+
+
+@patch.dict(os.environ, {"OPENROUTER_API_KEY": "sk-test"}, clear=False)
+@patch("backend.main._do_openrouter_post", new_callable=AsyncMock)
+@patch("backend.main.OPENROUTER_RETRY_MAX_ATTEMPTS", 3)
+@patch("backend.main.OPENROUTER_RETRY_BACKOFF_SEC", 0.0)
+def test_post_openrouter_chat_fails_after_max_retries(mock_do_post):
+    mock_do_post.side_effect = _httpx_status_error(503, "unavailable")
+    with pytest.raises(RuntimeError, match="503"):
         asyncio.run(classify_scenario("focus task"))
-    assert mock_post.call_count == 1
+    assert mock_do_post.call_count == 3
+
+
+@patch.dict(os.environ, {"OPENROUTER_API_KEY": "sk-test"}, clear=False)
+@patch("backend.main._do_openrouter_post", new_callable=AsyncMock)
+@patch("backend.main.OPENROUTER_RETRY_BACKOFF_SEC", 0.0)
+def test_post_openrouter_chat_does_not_retry_auth_errors(mock_do_post):
+    mock_do_post.side_effect = _httpx_status_error(401, "unauthorized")
+    with pytest.raises(RuntimeError, match="401"):
+        asyncio.run(classify_scenario("focus task"))
+    assert mock_do_post.call_count == 1
+
+
+@patch.dict(os.environ, {"OPENROUTER_API_KEY": "sk-test"}, clear=False)
+@patch("backend.main._do_openrouter_post", new_callable=AsyncMock)
+@patch("backend.main.OPENROUTER_RETRY_BACKOFF_SEC", 0.0)
+def test_post_openrouter_chat_retries_on_timeout(mock_do_post):
+    mock_do_post.side_effect = [
+        httpx.TimeoutException("read timeout"),
+        _openrouter_mock_response(_VALID_CLASSIFICATION_JSON),
+    ]
+    result = asyncio.run(classify_scenario("focus task"))
+    assert result["active_lobe"] == "frontal"
+    assert mock_do_post.call_count == 2
 
 
 def test_extract_chat_message_text_none_or_not_dict():

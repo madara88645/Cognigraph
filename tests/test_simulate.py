@@ -1,5 +1,7 @@
+import asyncio
 from unittest.mock import AsyncMock, patch
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
@@ -20,11 +22,11 @@ _CANNED_SPIKES = {lobe: LobeSpikes(indices=[], times_ms=[]) for lobe in LOBE_NAM
 
 @pytest.fixture(autouse=True)
 def clear_classification_cache():
-    with main._classification_cache_lock:
-        main._classification_cache.clear()
+    main._classification_cache.clear()
+    main._classification_inflight.clear()
     yield
-    with main._classification_cache_lock:
-        main._classification_cache.clear()
+    main._classification_cache.clear()
+    main._classification_inflight.clear()
 
 
 @patch("backend.main.run_snn", return_value=_CANNED_SPIKES)
@@ -133,3 +135,118 @@ def test_simulate_200_when_classification_succeeds_after_internal_retry(
     assert response.json()["dominant_neuromodulator"] == "dopamine"
     mock_classify.assert_awaited_once()
     mock_run_snn.assert_called_once()
+
+
+def test_simulate_deduplicates_inflight_classifications():
+    """Concurrent /simulate calls with the same prompt share one LLM call."""
+
+    call_count = 0
+
+    async def slow_classify(prompt, **_kwargs):
+        nonlocal call_count
+        call_count += 1
+        await asyncio.sleep(0.1)
+        return _CANNED_CLASSIFICATION
+
+    async def run() -> tuple[httpx.Response, httpx.Response]:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as ac:
+            return await asyncio.gather(
+                ac.post("/simulate", json={"prompt": "thundering herd"}),
+                ac.post("/simulate", json={"prompt": "thundering herd"}),
+            )
+
+    with (
+        patch("backend.main.run_snn", return_value=_CANNED_SPIKES),
+        patch("backend.main.classify_scenario", side_effect=slow_classify),
+    ):
+        r1, r2 = asyncio.run(run())
+
+    assert r1.status_code == 200
+    assert r2.status_code == 200
+    # The whole point: one LLM call serves both concurrent requests.
+    assert call_count == 1
+
+
+def test_simulate_leader_cancellation_releases_inflight_slot_and_wakes_peers():
+    """If the leader's classify is cancelled mid-flight (client disconnect),
+    the inflight registry must be cleared and concurrent peers must wake up
+    with a retriable 503 instead of hanging forever."""
+
+    leader_started = asyncio.Event()
+    release_classify = asyncio.Event()
+    call_log: list[str] = []
+
+    async def leader_classify(prompt, **_kwargs):
+        call_log.append("leader_started")
+        leader_started.set()
+        # Wait until the test signals; this lets the peer attach as a waiter
+        # before we trigger cancellation.
+        await release_classify.wait()
+        raise asyncio.CancelledError()
+
+    async def run() -> tuple[int, int]:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(
+            transport=transport, base_url="http://testserver", timeout=10.0
+        ) as ac:
+            leader_task = asyncio.create_task(
+                ac.post("/simulate", json={"prompt": "cancelled scenario"})
+            )
+            await leader_started.wait()
+            peer_task = asyncio.create_task(
+                ac.post("/simulate", json={"prompt": "cancelled scenario"})
+            )
+            # Give the peer a moment to attach to the inflight future.
+            await asyncio.sleep(0.05)
+            release_classify.set()
+            leader_status: int
+            try:
+                leader_response = await leader_task
+                leader_status = leader_response.status_code
+            except asyncio.CancelledError:
+                leader_status = -1  # leader bubbled cancellation, which is fine
+            peer_response = await peer_task
+            return leader_status, peer_response.status_code
+
+    with (
+        patch("backend.main.run_snn", return_value=_CANNED_SPIKES),
+        patch("backend.main.classify_scenario", side_effect=leader_classify),
+    ):
+        leader_status, peer_status = asyncio.run(run())
+
+    # The peer gets a retriable 503 (not a hang and not an opaque 500).
+    assert peer_status == 503
+    # Leader either propagated CancelledError or returned 5xx — either way is
+    # acceptable; what matters is the inflight registry is clean.
+    assert leader_status in (-1, 500, 503)
+    assert not main._classification_inflight
+    # Both calls were the leader's same single LLM attempt.
+    assert call_log == ["leader_started"]
+
+
+def test_simulate_inflight_failure_does_not_poison_cache():
+    """When the leader's classify fails, the next request retries (cache stays empty)."""
+
+    attempts = 0
+
+    async def flaky_classify(prompt, **_kwargs):
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise RuntimeError("OpenRouter request failed with status 502: bad gateway")
+        return _CANNED_CLASSIFICATION
+
+    with (
+        patch("backend.main.run_snn", return_value=_CANNED_SPIKES),
+        patch("backend.main.classify_scenario", side_effect=flaky_classify),
+        TestClient(app) as client,
+    ):
+        first = client.post("/simulate", json={"prompt": "transient"})
+        second = client.post("/simulate", json={"prompt": "transient"})
+
+    assert first.status_code == 502
+    assert second.status_code == 200
+    assert attempts == 2
+    # Inflight registry must be clean so the second request can become leader.
+    assert not main._classification_inflight
