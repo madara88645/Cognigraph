@@ -5,6 +5,7 @@ import {
   REQUEST_PHASE,
   resolvePhaseAfterOutcome,
   shouldHandleRequestResult,
+  derivePhaseUiState,
 } from "./requestLifecycle.js";
 
 test("cancel outcome returns idle phase", () => {
@@ -22,4 +23,25 @@ test("stale request id is ignored", () => {
 
 test("matching active request id is handled", () => {
   assert.equal(shouldHandleRequestResult(3, 3), true);
+});
+
+test("loading phase shows cancel and hides retry", () => {
+  const ui = derivePhaseUiState(REQUEST_PHASE.LOADING, { retryAvailable: true });
+  assert.equal(ui.cancelHidden, false);
+  assert.equal(ui.retryHidden, true);
+  assert.equal(ui.retryDisabled, true);
+});
+
+test("retryable error shows retry while keeping analyze active", () => {
+  const ui = derivePhaseUiState(REQUEST_PHASE.ERROR, { retryAvailable: true });
+  assert.equal(ui.analyzeDisabled, false);
+  assert.equal(ui.retryHidden, false);
+  assert.equal(ui.retryDisabled, false);
+  assert.equal(ui.cancelHidden, true);
+});
+
+test("non-retryable error keeps retry hidden", () => {
+  const ui = derivePhaseUiState(REQUEST_PHASE.ERROR, { retryAvailable: false });
+  assert.equal(ui.retryHidden, true);
+  assert.equal(ui.retryDisabled, true);
 });

@@ -10,6 +10,7 @@
  *   - actionHintText  → aria-live action hint under the prompt
  *   - toastText       → toast banner
  *   - toastSeverity   → "info" | "warning" | "error"
+ *   - retryable       → whether the same prompt can be retried safely
  *
  * @param {{kind?: string, status?: number, detail?: string}} input
  */
@@ -20,36 +21,40 @@ export function mapErrorToUserMessage({ kind, status, detail = "" } = {}) {
       actionHintText: "Canceled safely. You can edit the scenario and try again.",
       toastText: "Analysis canceled. You can edit and try again.",
       toastSeverity: "info",
+      retryable: false,
     };
   }
 
   if (kind === "abort-timeout") {
     return {
       statusText: "Server took too long to respond.",
-      actionHintText: "The server may be waking up. Try Analyze again in a moment.",
-      toastText: "Connection lost or request timed out. Try again.",
+      actionHintText: "This request was stopped after waiting too long. Retry when you're ready.",
+      toastText: "The request timed out before the server responded. Retry to try again.",
       toastSeverity: "warning",
+      retryable: true,
     };
   }
 
   if (kind === "network") {
     return {
       statusText: "Couldn't reach the server.",
-      actionHintText: "Check your connection and try again.",
-      toastText: "Connection lost or request cancelled. Try again.",
+      actionHintText: "Your connection may have dropped. Check it, then retry.",
+      toastText: "Connection lost before the analysis finished. Retry to send it again.",
       toastSeverity: "error",
+      retryable: true,
     };
   }
 
   if (kind === "http") {
     if (status === 400) {
-      return {
-        statusText: "Please enter a valid scenario before analyzing.",
-        actionHintText: "Add a short scenario (1–2 sentences), then click Analyze.",
-        toastText: "Please enter a scenario before analyzing.",
-        toastSeverity: "warning",
-      };
-    }
+        return {
+          statusText: "Please enter a valid scenario before analyzing.",
+          actionHintText: "Add a short scenario (1–2 sentences), then click Analyze.",
+          toastText: "Please enter a scenario before analyzing.",
+          toastSeverity: "warning",
+          retryable: false,
+        };
+      }
     if (status === 503) {
       const lower = (detail || "").toLowerCase();
       const isKeyIssue =
@@ -64,6 +69,7 @@ export function mapErrorToUserMessage({ kind, status, detail = "" } = {}) {
             "Open API Settings and paste your OpenRouter key (stored in this browser only).",
           toastText: "Demo key not configured. Add your OpenRouter API key in Settings.",
           toastSeverity: "error",
+          retryable: false,
         };
       }
       return {
@@ -71,6 +77,7 @@ export function mapErrorToUserMessage({ kind, status, detail = "" } = {}) {
         actionHintText: "Please try again in a moment.",
         toastText: "Service temporarily unavailable. Try again shortly.",
         toastSeverity: "error",
+        retryable: false,
       };
     }
     if (status === 502) {
@@ -88,6 +95,7 @@ export function mapErrorToUserMessage({ kind, status, detail = "" } = {}) {
           toastText:
             "The AI model configured on the server is unavailable (deprecated or not found). Try again later or change the model in Settings.",
           toastSeverity: "error",
+          retryable: false,
         };
       }
       return {
@@ -95,6 +103,7 @@ export function mapErrorToUserMessage({ kind, status, detail = "" } = {}) {
         actionHintText: "Try rephrasing your prompt — shorter or more specific often works.",
         toastText: "The AI model returned an unexpected response. Try rephrasing your prompt.",
         toastSeverity: "error",
+        retryable: false,
       };
     }
     if (status === 500) {
@@ -103,6 +112,7 @@ export function mapErrorToUserMessage({ kind, status, detail = "" } = {}) {
         actionHintText: "Try a shorter or simpler prompt.",
         toastText: "The brain simulation failed. Try a shorter or simpler prompt.",
         toastSeverity: "error",
+        retryable: false,
       };
     }
   }
@@ -113,5 +123,6 @@ export function mapErrorToUserMessage({ kind, status, detail = "" } = {}) {
     actionHintText: "Check the message above and try again.",
     toastText: fallback,
     toastSeverity: "error",
+    retryable: false,
   };
 }

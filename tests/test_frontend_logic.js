@@ -14,6 +14,11 @@ import {
 } from "../frontend/js/requestLifecycle.js";
 import { createColdStartTimer } from "../frontend/js/coldStartIndicator.js";
 import { mapErrorToUserMessage } from "../frontend/js/errorMessages.js";
+import {
+  clearRetryState,
+  markRetryableFailure,
+  syncRetryStateWithPrompt,
+} from "../frontend/js/requestRetryState.js";
 
 // --- derivePhaseUiState ------------------------------------------------------
 
@@ -89,18 +94,62 @@ test("abort-user produces an info-severity 'canceled' message", () => {
   const m = mapErrorToUserMessage({ kind: "abort-user" });
   assert.equal(m.toastSeverity, "info");
   assert.match(m.toastText, /canceled/i);
+  assert.equal(m.retryable, false);
 });
 
 test("network kind references the connection and is error severity", () => {
   const m = mapErrorToUserMessage({ kind: "network" });
   assert.equal(m.toastSeverity, "error");
   assert.match(m.toastText, /connection/i);
+  assert.doesNotMatch(m.toastText, /cancelled/i);
+  assert.equal(m.retryable, true);
+});
+
+test("abort-timeout is retryable and does not promise auto-resume", () => {
+  const m = mapErrorToUserMessage({ kind: "abort-timeout" });
+  assert.equal(m.toastSeverity, "warning");
+  assert.match(m.toastText, /timed out|timed out/i);
+  assert.doesNotMatch(m.actionHintText, /resume automatically/i);
+  assert.equal(m.retryable, true);
 });
 
 test("unknown kind falls back to the detail string", () => {
   const m = mapErrorToUserMessage({ kind: "unknown", detail: "boom" });
   assert.equal(m.toastSeverity, "error");
   assert.equal(m.toastText, "boom");
+  assert.equal(m.retryable, false);
+});
+
+// --- retry state helpers ----------------------------------------------------
+
+test("retryable failure stores the submitted prompt and kind", () => {
+  const state = { lastPrompt: "", retryAvailable: false, lastFailureKind: "" };
+  markRetryableFailure(state, { prompt: "focus sprint", kind: "abort-timeout" });
+  assert.equal(state.lastPrompt, "focus sprint");
+  assert.equal(state.retryAvailable, true);
+  assert.equal(state.lastFailureKind, "abort-timeout");
+});
+
+test("editing the prompt clears stale retry state", () => {
+  const state = {
+    lastPrompt: "focus sprint",
+    retryAvailable: true,
+    lastFailureKind: "network",
+  };
+  syncRetryStateWithPrompt(state, "different idea");
+  assert.equal(state.retryAvailable, false);
+  assert.equal(state.lastFailureKind, "");
+});
+
+test("clearing retry state removes retry after success or cancel", () => {
+  const state = {
+    lastPrompt: "focus sprint",
+    retryAvailable: true,
+    lastFailureKind: "abort-timeout",
+  };
+  clearRetryState(state);
+  assert.equal(state.retryAvailable, false);
+  assert.equal(state.lastFailureKind, "");
 });
 
 // --- createColdStartTimer (with injected fake scheduler) ---------------------
