@@ -42,6 +42,11 @@ import {
   shouldHandleRequestResult,
   derivePhaseUiState,
 } from "./requestLifecycle.js";
+import {
+  clearRetryState,
+  markRetryableFailure,
+  syncRetryStateWithPrompt,
+} from "./requestRetryState.js";
 import { createColdStartTimer } from "./coldStartIndicator.js";
 import { mapErrorToUserMessage } from "./errorMessages.js";
 
@@ -93,6 +98,7 @@ const {
 const promptInput       = document.getElementById("prompt");
 const simulateButton    = document.getElementById("simulate-btn");
 const cancelSimulateButton = document.getElementById("cancel-simulate-btn");
+const retrySimulateButton = document.getElementById("retry-simulate-btn");
 const rotateButton      = document.getElementById("rotate-btn");
 const playPauseButton   = document.getElementById("play-pause-btn");
 const replayButton      = document.getElementById("replay-btn");
@@ -232,6 +238,9 @@ const requestState = {
   nextRequestId: 0,
   activeRequestId: 0,
   activeHandle: null,
+  lastPrompt: "",
+  retryAvailable: false,
+  lastFailureKind: "",
 };
 
 /* ═══════════════════════════════════════════════
@@ -267,7 +276,9 @@ function setActionHint(text) {
 
 function setRequestPhase(nextPhase, { statusText, actionHintText } = {}) {
   requestState.phase = nextPhase;
-  const ui = derivePhaseUiState(nextPhase);
+  const ui = derivePhaseUiState(nextPhase, {
+    retryAvailable: requestState.retryAvailable,
+  });
 
   simulateButton.disabled = ui.analyzeDisabled;
   simulateButton.textContent = ui.analyzeText;
@@ -282,6 +293,10 @@ function setRequestPhase(nextPhase, { statusText, actionHintText } = {}) {
     cancelSimulateButton.classList.toggle("hidden", ui.cancelHidden);
     cancelSimulateButton.disabled = ui.cancelDisabled;
   }
+  if (retrySimulateButton) {
+    retrySimulateButton.classList.toggle("hidden", ui.retryHidden);
+    retrySimulateButton.disabled = ui.retryDisabled;
+  }
 
   if (statusText) {
     setStatus(statusText);
@@ -289,6 +304,10 @@ function setRequestPhase(nextPhase, { statusText, actionHintText } = {}) {
   if (actionHintText) {
     setActionHint(actionHintText);
   }
+}
+
+function resetRetryRecovery() {
+  clearRetryState(requestState);
 }
 
 function log(message, level = "info") {
@@ -1067,7 +1086,7 @@ function updatePlayback(now) {
    API
    ═══════════════════════════════════════════════ */
 
-async function handleSimulateClick() {
+async function handleSimulateClick(promptOverride = "") {
   if (requestState.phase === REQUEST_PHASE.LOADING) return;
   if (!brain.ready) {
     setStatus("Brain model is still loading.");
@@ -1076,7 +1095,7 @@ async function handleSimulateClick() {
     log("Brain model is not loaded yet.", "error");
     return;
   }
-  const prompt = promptInput.value.trim();
+  const prompt = (promptOverride || promptInput.value || "").trim();
   if (!prompt) {
     setStatus("Scenario required.");
     setActionHint("Add a short scenario first (1-2 sentences), then click Analyze.");
@@ -1084,6 +1103,8 @@ async function handleSimulateClick() {
     log("Please enter a scenario first.", "warn");
     return;
   }
+  requestState.lastPrompt = prompt;
+  resetRetryRecovery();
   const requestId = requestState.nextRequestId + 1;
   requestState.nextRequestId = requestId;
   requestState.activeRequestId = requestId;
@@ -1102,7 +1123,7 @@ async function handleSimulateClick() {
     },
     onVerySlow: () => {
       if (requestState.activeRequestId !== requestId) return;
-      setActionHint("Still waking up — your request will resume automatically once the server is ready.");
+      setActionHint("Still waiting on the server. If this request times out, you can retry the same scenario.");
     },
   });
   coldStartTimer.start();
@@ -1114,6 +1135,7 @@ async function handleSimulateClick() {
     assertValidResponse(payload);
     lastPayload = payload;
     startPlayback(payload);
+    resetRetryRecovery();
     setRequestPhase(resolvePhaseAfterOutcome("success"));
     log(`Active lobe: ${payload.active_lobe}`);
     log(`Neuromodulator: ${payload.dominant_neuromodulator} (${Math.round(payload.neuromodulator_intensity * 100)}%)`);
@@ -1125,6 +1147,7 @@ async function handleSimulateClick() {
     if (!shouldHandleRequestResult(requestState.activeRequestId, requestId)) return;
     if (isSimulationCanceledError(err)) {
       const cancelMsg = mapErrorToUserMessage({ kind: "abort-user" });
+      resetRetryRecovery();
       setRequestPhase(resolvePhaseAfterOutcome("cancel"), {
         statusText: cancelMsg.statusText,
         actionHintText: cancelMsg.actionHintText,
@@ -1137,6 +1160,14 @@ async function handleSimulateClick() {
       kind: "unknown",
       detail: err instanceof Error ? err.message : String(err),
     });
+    if (mapped.retryable) {
+      markRetryableFailure(requestState, {
+        prompt,
+        kind: err && err.kind ? err.kind : "unknown",
+      });
+    } else {
+      resetRetryRecovery();
+    }
     setRequestPhase(resolvePhaseAfterOutcome("error"), {
       statusText: mapped.statusText,
       actionHintText: mapped.actionHintText,
@@ -1270,6 +1301,23 @@ function hookUiEvents() {
     cancelSimulateButton.addEventListener("click", () => {
       if (requestState.phase !== REQUEST_PHASE.LOADING || !requestState.activeHandle) return;
       requestState.activeHandle.cancel();
+    });
+  }
+  if (retrySimulateButton) {
+    retrySimulateButton.addEventListener("click", () => {
+      if (!requestState.retryAvailable || !requestState.lastPrompt) return;
+      if (promptInput) {
+        promptInput.value = requestState.lastPrompt;
+      }
+      handleSimulateClick(requestState.lastPrompt);
+    });
+  }
+  if (promptInput) {
+    promptInput.addEventListener("input", () => {
+      syncRetryStateWithPrompt(requestState, promptInput.value);
+      if (requestState.phase === REQUEST_PHASE.ERROR) {
+        setRequestPhase(requestState.phase);
+      }
     });
   }
   simulateButton.addEventListener("click", handleSimulateClick);

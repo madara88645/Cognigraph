@@ -33,9 +33,11 @@ export function resolvePhaseAfterOutcome(outcome) {
  * Pure derivation of UI control state for a given request phase.
  * Consumed by `setRequestPhase` (DOM applicator) and unit tests alike.
  * @param {"idle"|"loading"|"ready"|"error"} phase
+ * @param {{retryAvailable?: boolean}} [options]
  */
-export function derivePhaseUiState(phase) {
+export function derivePhaseUiState(phase, { retryAvailable = false } = {}) {
   const loading = phase === REQUEST_PHASE.LOADING;
+  const showRetry = phase === REQUEST_PHASE.ERROR && retryAvailable;
   return {
     analyzeDisabled: loading,
     analyzeText: loading ? "Analyzing…" : "Analyze",
@@ -43,5 +45,7 @@ export function derivePhaseUiState(phase) {
     analyzeLoadingClass: loading,
     cancelHidden: !loading,
     cancelDisabled: !loading,
+    retryHidden: !showRetry,
+    retryDisabled: !showRetry,
   };
 }
