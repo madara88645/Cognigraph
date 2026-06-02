@@ -136,6 +136,15 @@ const hpaHelpButton = document.getElementById("hpa-help-btn");
 /* ═══════════════════════════════════════════════
    THREE.JS SCENE
    ═══════════════════════════════════════════════ */
+const isMobileViewport = () => window.innerWidth <= 768;
+
+const getOptimalPixelRatio = () => {
+  if (isMobileViewport()) {
+    return Math.min(window.devicePixelRatio, 1.5);
+  }
+  return Math.min(window.devicePixelRatio, 2);
+};
+
 const scene = new THREE.Scene();
 scene.background = null;
 
@@ -143,7 +152,7 @@ const camera = new THREE.PerspectiveCamera(58, 1, 0.1, 200);
 camera.position.set(0, 0.5, 5.0);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setPixelRatio(getOptimalPixelRatio());
 renderer.setSize(canvasHost.clientWidth, canvasHost.clientHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.95;
@@ -151,7 +160,7 @@ canvasHost.appendChild(renderer.domElement);
 
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
-const _dpr = renderer.getPixelRatio();
+const _dpr = getOptimalPixelRatio();
 const bloomPass = new UnrealBloomPass(
   new THREE.Vector2(canvasHost.clientWidth * _dpr, canvasHost.clientHeight * _dpr),
   1.05,   // strength — toned down vs harsh neon
@@ -1378,10 +1387,15 @@ function onResize() {
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
   renderer.setSize(w, h);
-  const dpr = renderer.getPixelRatio();
-  composer.setSize(w * dpr, h * dpr);
-  bloomPass.setSize(w * dpr, h * dpr);
-  fxaaPass.material.uniforms.resolution.value.set(1 / (w * dpr), 1 / (h * dpr));
+  
+  const dpr = getOptimalPixelRatio();
+  renderer.setPixelRatio(dpr);
+  
+  if (!isMobileViewport()) {
+    composer.setSize(w * dpr, h * dpr);
+    bloomPass.setSize(w * dpr, h * dpr);
+    fxaaPass.material.uniforms.resolution.value.set(1 / (w * dpr), 1 / (h * dpr));
+  }
   syncAnalysisRecessedState();
 }
 
@@ -1409,7 +1423,13 @@ function render(now = performance.now()) {
 
   controls.update();
   updatePlayback(now);
-  composer.render();
+  
+  if (isMobileViewport()) {
+    renderer.render(scene, camera);
+  } else {
+    composer.render();
+  }
+  
   rafHandle = requestAnimationFrame(render);
 }
 
