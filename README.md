@@ -41,13 +41,13 @@ flowchart LR
 - Python 3.10+ recommended (3.x required)
 - pip
 
-Brian2 may need a C compiler on some platforms for full performance; see the [Brian2 installation docs](https://brian2.readthedocs.io/en/stable/introduction/install.html).
+CogniGraph uses Brian2 with NumPy code generation, so the normal local setup does not require an extra C compiler.
 
 ## Setup
 
 ```bash
 cd Cognigraph
-python -m venv .venv
+python3 -m venv .venv
 # Windows: .venv\Scripts\activate
 # Unix: source .venv/bin/activate
 pip install -r requirements.txt
@@ -67,7 +67,7 @@ Never commit `.env`; it is listed in `.gitignore`.
 From the repository root (with dependencies installed):
 
 ```bash
-python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+python3 -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 Then open [http://127.0.0.1:8000](http://127.0.0.1:8000).
@@ -79,7 +79,7 @@ Then open [http://127.0.0.1:8000](http://127.0.0.1:8000).
 Use this command for production-like testing (no `--reload`):
 
 ```bash
-python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
+python3 -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
 ```
 
 ## Tests
@@ -204,6 +204,8 @@ Expected behavior:
 - `/simulate` returns JSON with `active_lobe`, `dominant_neuromodulator`, `spikes`.
 - If key is missing, `/simulate` returns `503` with key configuration hint.
 
+If you share a live deployment URL, run these checks right after posting so you know the public demo is still healthy.
+
 ## Recent Changes
 
 - Vercel is now a UI mirror that **proxies `/simulate` and `/healthz` to Fly** via external rewrites in `vercel.json`; Fly is the single `/simulate` backend. No LLM env vars live on Vercel anymore.
@@ -214,18 +216,6 @@ Expected behavior:
 - SNN runtime optimization by removing repeated dictionary creation inside the `run_snn` loop.
 - `build_vfx_profile` optimization by moving static profile definitions to module scope.
 - Added test coverage for `_strip_markdown_fences`, `_load_dotenv_file`, `_lerp_toward_neutral`, `snn_params_to_dict`, payload length validation, and `GET /` (`serve_index`).
-
-## Sharing (English copy)
-
-Use this blurb when posting to LinkedIn, X, Reddit, or a blog. Replace `YOUR_REPO_URL` if you publish the source.
-
-> **CogniGraph** — Describe a scenario; an LLM picks a brain lobe and neuromodulator tone; a Brian2 spiking network runs; a 3D brain visualizes the result. Live demo: https://cognigraph-tau.vercel.app — **Not medical software**; for learning and demos only.
-
-Optional one-liner for tight character limits:
-
-> Educational brain + SNN demo (LLM → Brian2 → 3D). Not clinical. https://cognigraph-tau.vercel.app
-
-After sharing, smoke-test the live URL (`/healthz` and a sample `POST /simulate`) as described under [Deployment smoke tests](#deployment-smoke-tests). Without a configured key, `POST /simulate` should still return a clear JSON error about `OPENROUTER_API_KEY` rather than a generic failure — that confirms the route is live.
 
 ## License
 
