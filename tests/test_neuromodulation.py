@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from backend.main import _extract_chat_message_text, run_snn, _parse_and_validate_classification
+from backend.main import _extract_chat_message_text, _parse_and_validate_classification, run_snn
 from backend.neuromodulation import (
     CORTISOL_U_CRIT,
     NEUROMOD_GLOW_HEX,
@@ -129,7 +129,7 @@ def test_validate_rejects_bad_payload_and_falls_back() -> None:
         {"active_lobe": "invalid", "dominant_neuromodulator": "baseline", "explanation": "x"}
     )
     assert out1["active_lobe"] == "frontal"
-    
+
     # Invalid dominant neuromodulator -> falls back to "baseline"
     out2 = validate_classification_payload(
         {"active_lobe": "frontal", "dominant_neuromodulator": "glutamate", "explanation": "x"}
@@ -317,6 +317,7 @@ def test_vfx_cortisol_piecewise_color_threshold() -> None:
     # Just above the threshold (e.g. u=0.18 -> t=0.36 > 0.35)
     v_above = _vfx_cortisol_piecewise(0.18)
     assert v_above["glow_hex"] == "#FFBF00"
+
 
 def test_parse_and_validate_malformed_json_fallback() -> None:
     # Malformed JSON/prose response from LLM
