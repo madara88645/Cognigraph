@@ -90,7 +90,7 @@ _classification_cache_lock = asyncio.Lock()
 _classification_inflight: dict[str, asyncio.Future[ClassificationResult]] = {}
 
 
-def _openrouter_http_referer(http_request: Request | None) -> str:
+def _openrouter_http_referer() -> str:
     """OpenRouter uses Referer for attribution; localhost breaks production keys/site rules."""
     explicit = (os.getenv("OPENROUTER_HTTP_REFERER") or "").strip()
     if explicit:
@@ -99,11 +99,6 @@ def _openrouter_http_referer(http_request: Request | None) -> str:
     if vercel:
         base = vercel if vercel.startswith("http") else f"https://{vercel}"
         return base.rstrip("/")
-    if http_request is not None:
-        proto = http_request.headers.get("x-forwarded-proto", "https")
-        host = http_request.headers.get("x-forwarded-host") or http_request.headers.get("host")
-        if host:
-            return f"{proto}://{host}".rstrip("/")
     return "http://localhost:8000"
 
 
@@ -456,7 +451,7 @@ async def classify_scenario(
 
     instruction = _classification_system_instruction(api_key_override)
     user_message = {"role": "user", "content": f"Scenario: {prompt}"}
-    referer = _openrouter_http_referer(http_request)
+    referer = _openrouter_http_referer()
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
