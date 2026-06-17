@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Any, Literal, TypedDict, cast
+
+logger = logging.getLogger(__name__)
 
 LobeName = Literal["frontal", "parietal", "occipital", "temporal", "cerebellum"]
 NeuromodulatorName = Literal[
@@ -437,47 +440,86 @@ def snn_params_to_dict(p: ResolvedSnnParams) -> dict[str, float]:
 
 def validate_classification_payload(payload: dict[str, Any]) -> ClassificationResult:
     if not isinstance(payload, dict):
-        raise ValueError("Model output is not a JSON object.")
+        logger.warning("Payload is not a dictionary. Falling back to default payload.")
+        payload = {}
 
-    active_lobe = str(payload.get("active_lobe", "")).strip().lower()
-    if active_lobe not in LOBE_NAMES:
-        raise ValueError(f"Invalid active_lobe from model output: {active_lobe!r}")
+    # active_lobe fallback
+    raw_lobe = payload.get("active_lobe")
+    if raw_lobe is None:
+        logger.warning("active_lobe is missing, falling back to 'frontal'")
+        active_lobe = "frontal"
+    else:
+        active_lobe = str(raw_lobe).strip().lower()
+        if active_lobe not in LOBE_NAMES:
+            logger.warning("Invalid active_lobe '%s', falling back to 'frontal'", active_lobe)
+            active_lobe = "frontal"
 
-    explanation = str(payload.get("explanation", "")).strip()
-    if not explanation:
-        raise ValueError("Model explanation is missing.")
-    if len(explanation) > 2000:
-        raise ValueError("Explanation exceeds maximum length.")
+    # explanation fallback
+    raw_exp = payload.get("explanation")
+    if raw_exp is None:
+        logger.warning("explanation is missing, using fallback")
+        explanation = "Fallback explanation due to validation issue."
+    else:
+        explanation = str(raw_exp).strip()
+        if not explanation:
+            logger.warning("explanation is empty, using fallback")
+            explanation = "Fallback explanation due to validation issue."
+        elif len(explanation) > 2000:
+            logger.warning("explanation exceeds 2000 chars, truncating")
+            explanation = explanation[:2000]
 
-    mod = str(payload.get("dominant_neuromodulator", "")).strip().lower()
-    neuromod_aliases = {
-        "norepinephrine": "noradrenaline",
-        "epinephrine": "adrenaline",
-        "epi": "adrenaline",
-        "5-ht": "serotonin",
-        "5ht": "serotonin",
-        "ach": "acetylcholine",
-        "acetyl_choline": "acetylcholine",
-        "hydrocortisone": "cortisol",
-        "stress_hormone": "cortisol",
-        "normal": "baseline",
-        "neutral": "baseline",
-    }
-    mod = neuromod_aliases.get(mod, mod)
-    if mod not in NEUROMODULATOR_NAMES:
-        raise ValueError(f"Invalid dominant_neuromodulator: {mod!r}")
+    # dominant_neuromodulator fallback
+    raw_mod = payload.get("dominant_neuromodulator")
+    if raw_mod is None:
+        logger.warning("dominant_neuromodulator is missing, falling back to 'baseline'")
+        mod = "baseline"
+    else:
+        mod = str(raw_mod).strip().lower()
+        neuromod_aliases = {
+            "norepinephrine": "noradrenaline",
+            "epinephrine": "adrenaline",
+            "epi": "adrenaline",
+            "5-ht": "serotonin",
+            "5ht": "serotonin",
+            "ach": "acetylcholine",
+            "acetyl_choline": "acetylcholine",
+            "hydrocortisone": "cortisol",
+            "stress_hormone": "cortisol",
+            "normal": "baseline",
+            "neutral": "baseline",
+        }
+        mod = neuromod_aliases.get(mod, mod)
+        if mod not in NEUROMODULATOR_NAMES:
+            logger.warning("Invalid dominant_neuromodulator '%s', falling back to 'baseline'", mod)
+            mod = "baseline"
 
-    raw_intensity = payload.get("neuromodulator_intensity", 0.5)
-    try:
-        neuromodulator_intensity = float(raw_intensity)
-    except (TypeError, ValueError) as exc:
-        raise ValueError("neuromodulator_intensity must be a number.") from exc
-    neuromodulator_intensity = max(0.0, min(1.0, neuromodulator_intensity))
+    # neuromodulator_intensity fallback
+    raw_intensity = payload.get("neuromodulator_intensity")
+    if raw_intensity is None:
+        logger.warning("neuromodulator_intensity is missing, falling back to 0.5")
+        neuromodulator_intensity = 0.5
+    else:
+        if isinstance(raw_intensity, bool):
+            logger.warning("neuromodulator_intensity is boolean, falling back to 0.5")
+            neuromodulator_intensity = 0.5
+        else:
+            try:
+                neuromodulator_intensity = float(raw_intensity)
+                # Clip valid numeric inputs to [0.0, 1.0]
+                neuromodulator_intensity = max(0.0, min(1.0, neuromodulator_intensity))
+            except (TypeError, ValueError):
+                logger.warning("neuromodulator_intensity '%s' is not convertible to float, falling back to 0.5", raw_intensity)
+                neuromodulator_intensity = 0.5
 
-    rationale_raw = payload.get("neuromodulator_rationale", "")
-    neuromodulator_rationale = str(rationale_raw).strip() if rationale_raw is not None else ""
-    if len(neuromodulator_rationale) > 500:
-        raise ValueError("neuromodulator_rationale exceeds maximum length.")
+    # neuromodulator_rationale fallback
+    raw_rationale = payload.get("neuromodulator_rationale")
+    if raw_rationale is None:
+        neuromodulator_rationale = ""
+    else:
+        neuromodulator_rationale = str(raw_rationale).strip()
+        if len(neuromodulator_rationale) > 500:
+            logger.warning("neuromodulator_rationale exceeds 500 chars, truncating")
+            neuromodulator_rationale = neuromodulator_rationale[:500]
 
     return {
         "active_lobe": cast(LobeName, active_lobe),

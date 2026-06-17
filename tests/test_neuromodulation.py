@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from backend.main import _extract_chat_message_text, run_snn
+from backend.main import _extract_chat_message_text, run_snn, _parse_and_validate_classification
 from backend.neuromodulation import (
     CORTISOL_U_CRIT,
     NEUROMOD_GLOW_HEX,
@@ -112,61 +112,58 @@ def test_validate_clamps_intensity() -> None:
 
 
 def test_validate_intensity_invalid_type() -> None:
-    with pytest.raises(ValueError, match="neuromodulator_intensity must be a number."):
-        validate_classification_payload(
-            {
-                "active_lobe": "frontal",
-                "dominant_neuromodulator": "baseline",
-                "neuromodulator_intensity": "invalid",
-                "explanation": "x",
-            }
-        )
+    out = validate_classification_payload(
+        {
+            "active_lobe": "frontal",
+            "dominant_neuromodulator": "baseline",
+            "neuromodulator_intensity": "invalid",
+            "explanation": "x",
+        }
+    )
+    assert out["neuromodulator_intensity"] == 0.5
 
 
-@pytest.mark.parametrize(
-    "payload,match",
-    [
-        (
-            {"active_lobe": "invalid", "dominant_neuromodulator": "baseline", "explanation": "x"},
-            "active_lobe",
-        ),
-        (
-            {"active_lobe": "frontal", "dominant_neuromodulator": "glutamate", "explanation": "x"},
-            "dominant_neuromodulator",
-        ),
-        (
-            {"active_lobe": "frontal", "dominant_neuromodulator": "baseline", "explanation": ""},
-            "explanation",
-        ),
-    ],
-)
-def test_validate_rejects_bad_payload(payload: dict, match: str) -> None:
-    with pytest.raises(ValueError) as exc:
-        validate_classification_payload(payload)
-    assert match in str(exc.value).lower() or match.replace("_", " ") in str(exc.value).lower()
+def test_validate_rejects_bad_payload_and_falls_back() -> None:
+    # Invalid active lobe -> falls back to "frontal"
+    out1 = validate_classification_payload(
+        {"active_lobe": "invalid", "dominant_neuromodulator": "baseline", "explanation": "x"}
+    )
+    assert out1["active_lobe"] == "frontal"
+    
+    # Invalid dominant neuromodulator -> falls back to "baseline"
+    out2 = validate_classification_payload(
+        {"active_lobe": "frontal", "dominant_neuromodulator": "glutamate", "explanation": "x"}
+    )
+    assert out2["dominant_neuromodulator"] == "baseline"
+
+    # Missing / empty explanation -> falls back to default message
+    out3 = validate_classification_payload(
+        {"active_lobe": "frontal", "dominant_neuromodulator": "baseline", "explanation": ""}
+    )
+    assert out3["explanation"] == "Fallback explanation due to validation issue."
 
 
 def test_validate_explanation_too_long() -> None:
-    with pytest.raises(ValueError, match="exceeds maximum length"):
-        validate_classification_payload(
-            {
-                "active_lobe": "frontal",
-                "dominant_neuromodulator": "baseline",
-                "explanation": "x" * 2001,
-            }
-        )
+    out = validate_classification_payload(
+        {
+            "active_lobe": "frontal",
+            "dominant_neuromodulator": "baseline",
+            "explanation": "x" * 2001,
+        }
+    )
+    assert len(out["explanation"]) == 2000
 
 
 def test_validate_rationale_too_long() -> None:
-    with pytest.raises(ValueError, match="exceeds maximum length"):
-        validate_classification_payload(
-            {
-                "active_lobe": "frontal",
-                "dominant_neuromodulator": "baseline",
-                "explanation": "Valid explanation.",
-                "neuromodulator_rationale": "x" * 501,
-            }
-        )
+    out = validate_classification_payload(
+        {
+            "active_lobe": "frontal",
+            "dominant_neuromodulator": "baseline",
+            "explanation": "Valid explanation.",
+            "neuromodulator_rationale": "x" * 501,
+        }
+    )
+    assert len(out["neuromodulator_rationale"]) == 500
 
 
 def test_glow_hex_per_modulator() -> None:
@@ -320,3 +317,46 @@ def test_vfx_cortisol_piecewise_color_threshold() -> None:
     # Just above the threshold (e.g. u=0.18 -> t=0.36 > 0.35)
     v_above = _vfx_cortisol_piecewise(0.18)
     assert v_above["glow_hex"] == "#FFBF00"
+
+def test_parse_and_validate_malformed_json_fallback() -> None:
+    # Malformed JSON/prose response from LLM
+    raw_response = "Here is some prose before the JSON: { malformed json"
+    out = _parse_and_validate_classification(raw_response)
+    assert out["active_lobe"] == "frontal"
+    assert out["explanation"] == "Fallback explanation due to validation issue."
+    assert out["dominant_neuromodulator"] == "baseline"
+    assert out["neuromodulator_intensity"] == 0.5
+    assert out["neuromodulator_rationale"] == ""
+
+
+def test_validate_invalid_lobe_fallback() -> None:
+    payload = {
+        "active_lobe": "invalid_lobe_name",
+        "explanation": "Valid explanation.",
+        "dominant_neuromodulator": "baseline",
+        "neuromodulator_intensity": 0.8,
+    }
+    out = validate_classification_payload(payload)
+    assert out["active_lobe"] == "frontal"
+
+
+def test_validate_invalid_neuromodulator_fallback() -> None:
+    payload = {
+        "active_lobe": "frontal",
+        "explanation": "Valid explanation.",
+        "dominant_neuromodulator": "invalid_mod",
+        "neuromodulator_intensity": 0.8,
+    }
+    out = validate_classification_payload(payload)
+    assert out["dominant_neuromodulator"] == "baseline"
+
+
+def test_validate_invalid_intensity_fallback() -> None:
+    payload = {
+        "active_lobe": "frontal",
+        "explanation": "Valid explanation.",
+        "dominant_neuromodulator": "baseline",
+        "neuromodulator_intensity": "abc",
+    }
+    out = validate_classification_payload(payload)
+    assert out["neuromodulator_intensity"] == 0.5
