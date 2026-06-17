@@ -1329,6 +1329,17 @@ function hookUiEvents() {
       }
     });
   }
+  // Setup click listeners for example scenario buttons
+  document.querySelectorAll(".example-scenario-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const scenarioText = btn.getAttribute("data-scenario");
+      if (promptInput && scenarioText) {
+        promptInput.value = scenarioText;
+        promptInput.dispatchEvent(new Event("input", { bubbles: true }));
+        promptInput.focus();
+      }
+    });
+  });
   simulateButton.addEventListener("click", handleSimulateClick);
   replayButton.addEventListener("click", () => {
     if (!lastPayload) return;

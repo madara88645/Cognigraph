@@ -62,6 +62,53 @@
               aria-describedby="prompt-help"
             ></textarea>
             <p id="prompt-help" class="text-[11px] text-slate-400 leading-relaxed">Tip: 1-2 concise sentences works best. You can tune playback after results load.</p>
+            <div class="flex flex-col gap-2">
+              <span class="text-[10px] uppercase font-semibold tracking-wider text-slate-400">Try an Example:</span>
+              <div class="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  class="example-scenario-btn text-[10px] font-medium text-slate-300 bg-slate-900/40 hover:bg-slate-800/80 border border-slate-700/50 hover:border-slate-500 rounded-lg px-2.5 py-1 transition-all duration-200 text-left"
+                  data-scenario="Struggling to remember answers during a high-stakes final exam under extreme time pressure."
+                >
+                  🎓 Academic Exam Stress
+                </button>
+                <button
+                  type="button"
+                  class="example-scenario-btn text-[10px] font-medium text-slate-300 bg-slate-900/40 hover:bg-slate-800/80 border border-slate-700/50 hover:border-slate-500 rounded-lg px-2.5 py-1 transition-all duration-200 text-left"
+                  data-scenario="Engrossed in writing a complex software algorithm, completely in the zone and ignoring distractions."
+                >
+                  💻 Deep Focus Study Session
+                </button>
+                <button
+                  type="button"
+                  class="example-scenario-btn text-[10px] font-medium text-slate-300 bg-slate-900/40 hover:bg-slate-800/80 border border-slate-700/50 hover:border-slate-500 rounded-lg px-2.5 py-1 transition-all duration-200 text-left"
+                  data-scenario="Generating a flood of novel ideas for a new sci-fi story, jumping from concept to concept."
+                >
+                  🎨 Creative Brainstorming
+                </button>
+                <button
+                  type="button"
+                  class="example-scenario-btn text-[10px] font-medium text-slate-300 bg-slate-900/40 hover:bg-slate-800/80 border border-slate-700/50 hover:border-slate-500 rounded-lg px-2.5 py-1 transition-all duration-200 text-left"
+                  data-scenario="Stepping onto a stage in front of a thousand people, feeling a sudden surge of stage fright."
+                >
+                  🎤 Public Speaking Anxiety
+                </button>
+                <button
+                  type="button"
+                  class="example-scenario-btn text-[10px] font-medium text-slate-300 bg-slate-900/40 hover:bg-slate-800/80 border border-slate-700/50 hover:border-slate-500 rounded-lg px-2.5 py-1 transition-all duration-200 text-left"
+                  data-scenario="Playing a fast-paced multiplayer match, tracking multiple opponents and making split-second tactical decisions."
+                >
+                  🎮 Competitive Gaming Focus
+                </button>
+                <button
+                  type="button"
+                  class="example-scenario-btn text-[10px] font-medium text-slate-300 bg-slate-900/40 hover:bg-slate-800/80 border border-slate-700/50 hover:border-slate-500 rounded-lg px-2.5 py-1 transition-all duration-200 text-left"
+                  data-scenario="Engaging in warm, relaxed storytelling with close friends around a campfire."
+                >
+                  🔥 Social Interaction Scenario
+                </button>
+              </div>
+            </div>
             <div class="cognigraph-settings-body rounded-xl border border-amber-300/25 bg-amber-500/10 px-3 py-2">
               <div class="flex items-center justify-between gap-2">
                 <p class="text-[10px] uppercase tracking-widest text-amber-200 font-semibold">API Settings</p>
