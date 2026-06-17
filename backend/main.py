@@ -435,7 +435,9 @@ async def _post_openrouter_chat(payload: dict[str, Any], headers: dict[str, str]
     raise RuntimeError(f"OpenRouter request failed: {last_exc}") from last_exc  # pragma: no cover
 
 
-def _parse_and_validate_classification(response_text: str, fallback_on_error: bool = True) -> ClassificationResult:
+def _parse_and_validate_classification(
+    response_text: str, fallback_on_error: bool = True
+) -> ClassificationResult:
     try:
         parsed = _parse_model_json(response_text)
         return validate_classification_payload(parsed)
@@ -445,7 +447,7 @@ def _parse_and_validate_classification(response_text: str, fallback_on_error: bo
         logger.warning(
             "Malformed LLM classification response or parsing error: %s. Returning safe fallback payload.",
             exc,
-            exc_info=True
+            exc_info=True,
         )
         return {
             "active_lobe": "frontal",
@@ -498,7 +500,9 @@ async def classify_scenario(
             raise RuntimeError("OpenRouter returned an empty response.")
 
         try:
-            return _parse_and_validate_classification(response_text, fallback_on_error=(attempt == 1))
+            return _parse_and_validate_classification(
+                response_text, fallback_on_error=(attempt == 1)
+            )
         except Exception as exc:
             last_parse_exc = exc
             if attempt == 0:

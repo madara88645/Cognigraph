@@ -508,7 +508,10 @@ def validate_classification_payload(payload: dict[str, Any]) -> ClassificationRe
                 # Clip valid numeric inputs to [0.0, 1.0]
                 neuromodulator_intensity = max(0.0, min(1.0, neuromodulator_intensity))
             except (TypeError, ValueError):
-                logger.warning("neuromodulator_intensity '%s' is not convertible to float, falling back to 0.5", raw_intensity)
+                logger.warning(
+                    "neuromodulator_intensity '%s' is not convertible to float, falling back to 0.5",
+                    raw_intensity,
+                )
                 neuromodulator_intensity = 0.5
 
     # neuromodulator_rationale fallback
