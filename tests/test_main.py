@@ -165,8 +165,11 @@ def test_classify_scenario_retries_on_invalid_json(mock_post):
 @patch("backend.main._post_openrouter_chat", new_callable=AsyncMock)
 def test_classify_scenario_fails_after_retry_exhausted(mock_post):
     mock_post.return_value = _openrouter_mock_response("still not json")
-    with pytest.raises(RuntimeError, match="invalid JSON payload"):
-        asyncio.run(classify_scenario("focus task"))
+    result = asyncio.run(classify_scenario("focus task"))
+    assert result["active_lobe"] == "frontal"
+    assert result["explanation"] == "Fallback explanation due to validation issue."
+    assert result["dominant_neuromodulator"] == "baseline"
+    assert result["neuromodulator_intensity"] == 0.5
     assert mock_post.call_count == 2
 
 
