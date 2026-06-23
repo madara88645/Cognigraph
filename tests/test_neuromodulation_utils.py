@@ -4,6 +4,7 @@ Covers _lerp_toward_neutral (math helper), validate_classification_payload
 (LLM output sanitisation), and build_vfx_profile (deterministic VFX calc).
 These are deterministic pure functions — no Brian2, no network, no LLM calls.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -69,9 +70,7 @@ class TestValidateClassificationPayload:
 
     def test_all_valid_neuromodulators_accepted(self):
         for mod in NEUROMODULATOR_NAMES:
-            result = validate_classification_payload(
-                self._valid(dominant_neuromodulator=mod)
-            )
+            result = validate_classification_payload(self._valid(dominant_neuromodulator=mod))
             assert result["dominant_neuromodulator"] == mod
 
     def test_result_has_expected_keys(self):
@@ -103,9 +102,7 @@ class TestValidateClassificationPayload:
         assert validate_classification_payload(payload)["dominant_neuromodulator"] == "baseline"
 
     def test_invalid_neuromodulator_defaults_to_baseline(self):
-        result = validate_classification_payload(
-            self._valid(dominant_neuromodulator="melatonin")
-        )
+        result = validate_classification_payload(self._valid(dominant_neuromodulator="melatonin"))
         assert result["dominant_neuromodulator"] == "baseline"
 
     def test_alias_norepinephrine_maps_to_noradrenaline(self):
@@ -115,21 +112,15 @@ class TestValidateClassificationPayload:
         assert result["dominant_neuromodulator"] == "noradrenaline"
 
     def test_alias_epinephrine_maps_to_adrenaline(self):
-        result = validate_classification_payload(
-            self._valid(dominant_neuromodulator="epinephrine")
-        )
+        result = validate_classification_payload(self._valid(dominant_neuromodulator="epinephrine"))
         assert result["dominant_neuromodulator"] == "adrenaline"
 
     def test_alias_5ht_maps_to_serotonin(self):
-        result = validate_classification_payload(
-            self._valid(dominant_neuromodulator="5-ht")
-        )
+        result = validate_classification_payload(self._valid(dominant_neuromodulator="5-ht"))
         assert result["dominant_neuromodulator"] == "serotonin"
 
     def test_alias_ach_maps_to_acetylcholine(self):
-        result = validate_classification_payload(
-            self._valid(dominant_neuromodulator="ach")
-        )
+        result = validate_classification_payload(self._valid(dominant_neuromodulator="ach"))
         assert result["dominant_neuromodulator"] == "acetylcholine"
 
     def test_alias_hydrocortisone_maps_to_cortisol(self):
@@ -139,48 +130,38 @@ class TestValidateClassificationPayload:
         assert result["dominant_neuromodulator"] == "cortisol"
 
     def test_alias_neutral_maps_to_baseline(self):
-        result = validate_classification_payload(
-            self._valid(dominant_neuromodulator="neutral")
-        )
+        result = validate_classification_payload(self._valid(dominant_neuromodulator="neutral"))
         assert result["dominant_neuromodulator"] == "baseline"
 
     # --- intensity clamping ---
 
     def test_intensity_above_one_clamped_to_one(self):
-        result = validate_classification_payload(
-            self._valid(neuromodulator_intensity=1.5)
-        )
+        result = validate_classification_payload(self._valid(neuromodulator_intensity=1.5))
         assert result["neuromodulator_intensity"] == pytest.approx(1.0)
 
     def test_intensity_below_zero_clamped_to_zero(self):
-        result = validate_classification_payload(
-            self._valid(neuromodulator_intensity=-0.3)
-        )
+        result = validate_classification_payload(self._valid(neuromodulator_intensity=-0.3))
         assert result["neuromodulator_intensity"] == pytest.approx(0.0)
 
     def test_boolean_intensity_defaults_to_half(self):
-        result = validate_classification_payload(
-            self._valid(neuromodulator_intensity=True)
-        )
+        result = validate_classification_payload(self._valid(neuromodulator_intensity=True))
         assert result["neuromodulator_intensity"] == pytest.approx(0.5)
 
     def test_non_numeric_intensity_defaults_to_half(self):
-        result = validate_classification_payload(
-            self._valid(neuromodulator_intensity="high")
-        )
+        result = validate_classification_payload(self._valid(neuromodulator_intensity="high"))
         assert result["neuromodulator_intensity"] == pytest.approx(0.5)
 
     def test_missing_intensity_defaults_to_half(self):
         payload = self._valid()
         del payload["neuromodulator_intensity"]
-        assert validate_classification_payload(payload)["neuromodulator_intensity"] == pytest.approx(0.5)
+        assert validate_classification_payload(payload)[
+            "neuromodulator_intensity"
+        ] == pytest.approx(0.5)
 
     # --- explanation / rationale truncation ---
 
     def test_explanation_truncated_at_2000_chars(self):
-        result = validate_classification_payload(
-            self._valid(explanation="x" * 3000)
-        )
+        result = validate_classification_payload(self._valid(explanation="x" * 3000))
         assert len(result["explanation"]) == 2000
 
     def test_empty_explanation_uses_fallback_text(self):
@@ -189,9 +170,7 @@ class TestValidateClassificationPayload:
         assert "fallback" in result["explanation"].lower()
 
     def test_rationale_truncated_at_500_chars(self):
-        result = validate_classification_payload(
-            self._valid(neuromodulator_rationale="r" * 600)
-        )
+        result = validate_classification_payload(self._valid(neuromodulator_rationale="r" * 600))
         assert len(result["neuromodulator_rationale"]) == 500
 
     def test_missing_rationale_defaults_to_empty_string(self):
