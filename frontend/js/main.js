@@ -49,6 +49,7 @@ import {
 } from "./requestRetryState.js";
 import { createColdStartTimer } from "./coldStartIndicator.js";
 import { mapErrorToUserMessage } from "./errorMessages.js";
+import { resolvePromptText } from "./promptText.js";
 
 
 const {
@@ -1104,7 +1105,7 @@ async function handleSimulateClick(promptOverride = "") {
     log("Brain model is not loaded yet.", "error");
     return;
   }
-  const prompt = (promptOverride || promptInput.value || "").trim();
+  const prompt = resolvePromptText(promptOverride, promptInput.value);
   if (!prompt) {
     setStatus("Scenario required.");
     setActionHint("Add a short scenario first (1-2 sentences), then click Analyze.");

@@ -19,6 +19,7 @@ import {
   markRetryableFailure,
   syncRetryStateWithPrompt,
 } from "../frontend/js/requestRetryState.js";
+import { resolvePromptText } from "../frontend/js/promptText.js";
 
 // --- derivePhaseUiState ------------------------------------------------------
 
@@ -245,4 +246,36 @@ test("cold-start timer.start() is idempotent — second start replaces first", (
   assert.equal(slow, 0);
   scheduler.advance(2000); // total 5000ms into the new timer
   assert.equal(slow, 1);
+});
+
+// --- resolvePromptText ------------------------------------------------------
+// Regression guard for the Analyze-button bug (PR #60): the click handler was
+// wired as addEventListener("click", handleSimulateClick), so the click Event
+// leaked into the `promptOverride` argument and `Event.trim()` threw, killing
+// /simulate. resolvePromptText must ignore any non-string override and fall
+// back to the textarea value instead of crashing.
+
+test("resolvePromptText uses a string override, trimmed", () => {
+  assert.equal(resolvePromptText("  retry this  ", "typed text"), "retry this");
+});
+
+test("resolvePromptText falls back to the input value when override is empty", () => {
+  assert.equal(resolvePromptText("", "  studying for finals  "), "studying for finals");
+});
+
+test("resolvePromptText ignores a non-string override (click Event regression)", () => {
+  // A DOM click Event — the exact value that crashed the old handler.
+  const clickEvent = { type: "click", isTrusted: true };
+  assert.equal(resolvePromptText(clickEvent, "drinking espresso"), "drinking espresso");
+});
+
+test("resolvePromptText ignores null/undefined override and uses the input", () => {
+  assert.equal(resolvePromptText(undefined, "deadlift PR"), "deadlift PR");
+  assert.equal(resolvePromptText(null, "deadlift PR"), "deadlift PR");
+});
+
+test("resolvePromptText returns empty string when nothing usable is provided", () => {
+  assert.equal(resolvePromptText({ type: "click" }, ""), "");
+  assert.equal(resolvePromptText(undefined, undefined), "");
+  assert.equal(resolvePromptText(null, "   "), "");
 });
