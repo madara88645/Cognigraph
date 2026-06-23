@@ -19,24 +19,24 @@ from backend.neuromodulation import (
 # Format: (v_thresh, tau_ms, refractory_ms, epsp, active_hz, bg_hz)
 # ---------------------------------------------------------------------------
 _SNN_FULL = {
-    "dopamine":      (0.77, 19.0, 4.5,  0.46, 125.0, 10.5),
-    "serotonin":     (0.84, 23.0, 5.75, 0.38, 105.0, 10.0),
-    "acetylcholine": (0.78, 19.0, 5.0,  0.44, 140.0,  7.5),
-    "noradrenaline": (0.76, 18.0, 4.25, 0.42, 145.0,  8.5),
-    "baseline":      (0.80, 20.0, 5.0,  0.40, 100.0, 10.0),
-    "adrenaline":    (0.74, 17.0, 3.75, 0.44, 135.0, 12.5),
-    "gaba":          (0.88, 25.0, 6.0,  0.30,  75.0,  7.0),
+    "dopamine": (0.77, 19.0, 4.5, 0.46, 125.0, 10.5),
+    "serotonin": (0.84, 23.0, 5.75, 0.38, 105.0, 10.0),
+    "acetylcholine": (0.78, 19.0, 5.0, 0.44, 140.0, 7.5),
+    "noradrenaline": (0.76, 18.0, 4.25, 0.42, 145.0, 8.5),
+    "baseline": (0.80, 20.0, 5.0, 0.40, 100.0, 10.0),
+    "adrenaline": (0.74, 17.0, 3.75, 0.44, 135.0, 12.5),
+    "gaba": (0.88, 25.0, 6.0, 0.30, 75.0, 7.0),
 }
 
 # Expected values at intensity=1.0, derived from VFX_PROFILE_TABLE + NEUROMOD_GLOW_HEX.
 # Format: (glow_hex, bloom_mult, tween_in_ms, burst_threshold, active_lobe_bloom_scale)
 _VFX_FULL = {
-    "dopamine":      ("#FFD700", 1.12, 480, 0.52, 1.05),
-    "serotonin":     ("#E0FFFF", 0.95, 720, 0.68, 1.00),
+    "dopamine": ("#FFD700", 1.12, 480, 0.52, 1.05),
+    "serotonin": ("#E0FFFF", 0.95, 720, 0.68, 1.00),
     "acetylcholine": ("#FFD700", 1.05, 520, 0.55, 1.12),
-    "adrenaline":    ("#FF4500", 1.25, 350, 0.45, 1.00),
-    "gaba":          ("#8A2BE2", 0.80, 900, 0.72, 1.00),
-    "baseline":      ("#E0FFFF", 1.00, 600, 0.60, 1.00),
+    "adrenaline": ("#FF4500", 1.25, 350, 0.45, 1.00),
+    "gaba": ("#8A2BE2", 0.80, 900, 0.72, 1.00),
+    "baseline": ("#E0FFFF", 1.00, 600, 0.60, 1.00),
     "noradrenaline": ("#FF4500", 1.20, 420, 0.50, 1.35),
 }
 
