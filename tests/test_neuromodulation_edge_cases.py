@@ -3,6 +3,7 @@
 The existing test_neuromodulation.py covers the main happy paths.
 This file targets boundary conditions and fallback paths not covered there.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -95,7 +96,14 @@ class TestBuildVfxProfile:
 
     def test_intensity_one_returns_table_values_for_non_cortisol(self) -> None:
         # tlerp(neutral, base, 1) == base == VFX_PROFILE_TABLE[mod]
-        for mod in ("adrenaline", "dopamine", "serotonin", "gaba", "noradrenaline", "acetylcholine"):
+        for mod in (
+            "adrenaline",
+            "dopamine",
+            "serotonin",
+            "gaba",
+            "noradrenaline",
+            "acetylcholine",
+        ):
             v = build_vfx_profile(mod, 1.0)
             expected = VFX_PROFILE_TABLE[mod]["bloom_mult"]
             assert v["bloom_mult"] == pytest.approx(expected, abs=1e-9), mod
@@ -108,8 +116,13 @@ class TestBuildVfxProfile:
 
     def test_non_cortisol_mods_have_zero_chaos_desaturate_scatter(self) -> None:
         non_cortisol = [
-            "adrenaline", "noradrenaline", "dopamine",
-            "serotonin", "gaba", "acetylcholine", "baseline",
+            "adrenaline",
+            "noradrenaline",
+            "dopamine",
+            "serotonin",
+            "gaba",
+            "acetylcholine",
+            "baseline",
         ]
         for mod in non_cortisol:
             v = build_vfx_profile(mod, 0.5)
