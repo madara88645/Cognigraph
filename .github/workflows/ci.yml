@@ -27,3 +27,9 @@ jobs:
         run: mypy backend tests
       - name: Pytest
         run: pytest
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Frontend JS tests
+        run: node --test tests/test_frontend_logic.js frontend/js/*.test.mjs
