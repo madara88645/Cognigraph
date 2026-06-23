@@ -1340,7 +1340,7 @@ function hookUiEvents() {
       }
     });
   });
-  simulateButton.addEventListener("click", handleSimulateClick);
+  simulateButton.addEventListener("click", () => handleSimulateClick());
   replayButton.addEventListener("click", () => {
     if (!lastPayload) return;
     startPlayback(lastPayload);
