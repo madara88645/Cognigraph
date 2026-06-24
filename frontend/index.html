@@ -49,7 +49,7 @@
           </div>
 
           <!-- Top Right: Input & Simulation -->
-          <div class="cognigraph-input-panel pointer-events-auto glass-panel p-5 w-80 md:w-96 flex flex-col gap-4">
+          <div class="cognigraph-input-panel pointer-events-auto glass-panel p-3.5 w-[300px] flex flex-col gap-2">
             <div class="flex justify-between items-center">
               <span class="text-xs font-medium uppercase tracking-widest sub-text">Sequence Input</span>
               <button id="rotate-btn" aria-pressed="true" class="text-[10px] uppercase font-semibold text-slate-400 hover:text-white border border-slate-700 rounded-full px-2 py-1">Auto-Rotate: ON</button>
@@ -57,14 +57,12 @@
             <label for="prompt" class="text-[11px] font-medium text-slate-200">Describe the scenario you want analyzed</label>
             <textarea
               id="prompt"
-              class="w-full shrink-0 bg-slate-900/30 border border-slate-700/50 rounded-xl p-3 text-sm text-slate-100 placeholder:text-slate-600 outline-none focus:border-white transition-colors resize-none h-20"
+              class="w-full shrink-0 bg-slate-900/30 border border-slate-700/50 rounded-xl p-3 text-sm text-slate-100 placeholder:text-slate-600 outline-none focus:border-white transition-colors resize-none h-16"
               placeholder="E.g., Solving a complex math problem..."
-              aria-describedby="prompt-help"
             ></textarea>
-            <p id="prompt-help" class="text-[11px] text-slate-400 leading-relaxed">Tip: 1-2 concise sentences works best. You can tune playback after results load.</p>
             <div class="flex flex-col gap-2">
               <span class="text-[10px] uppercase font-semibold tracking-wider text-slate-400">Try an Example:</span>
-              <div class="flex flex-wrap gap-1.5">
+              <div class="grid grid-cols-2 gap-1.5">
                 <button
                   type="button"
                   class="example-scenario-btn text-[10px] font-medium text-slate-300 bg-slate-900/40 hover:bg-slate-800/80 border border-slate-700/50 hover:border-slate-500 rounded-lg px-2.5 py-1 transition-all duration-200 text-left"

@@ -7,7 +7,7 @@
   --cg-text-primary: #f8fafc;
   --cg-text-muted: #b6c1d1;
   --cg-text-subtle: #94a3b8;
-  --cg-radius-panel: 24px;
+  --cg-radius-panel: 16px;
   --cg-radius-control: 12px;
   --cg-space-1: 0.25rem;
   --cg-space-2: 0.5rem;
@@ -82,9 +82,27 @@ input[type="range"] {
 @media (min-width: 1025px) {
   .cognigraph-middle-col .analysis-panel {
     transition: opacity 0.28s ease;
+    /* Stack the Analysis panel directly under the input panel on the right
+       rail instead of vertically centering it — the centered position used to
+       collide with the (tall) input panel and hide its top rows. */
+    top: 0 !important;
+    bottom: auto !important;
+    transform: none !important;
+    width: 16rem;
+    min-width: 0;
+    max-height: 100%;
   }
   .cognigraph-middle-col .analysis-panel.analysis-panel--recessed {
     opacity: 0.48;
+  }
+  /* Compact the example chips so the input panel stays short on desktop. */
+  .cognigraph-input-panel .example-scenario-btn {
+    font-size: 9px;
+    padding: 3px 7px;
+  }
+  .cognigraph-signatures-panel,
+  .cognigraph-log-panel {
+    padding: 0.75rem;
   }
 }
 .cognigraph-input-panel {

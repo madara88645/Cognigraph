@@ -150,7 +150,7 @@ const scene = new THREE.Scene();
 scene.background = null;
 
 const camera = new THREE.PerspectiveCamera(58, 1, 0.1, 200);
-camera.position.set(0, 0.5, 5.0);
+camera.position.set(0, 0.4, 3.9);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 renderer.setPixelRatio(getOptimalPixelRatio());
@@ -481,7 +481,7 @@ function colorBrainByLobe(meshes, center, size) {
       wireframe: true,
       vertexColors: true,
       transparent: true,
-      opacity: 0.72,
+      opacity: 0.82,
       side: THREE.DoubleSide,
     });
     mesh.renderOrder = 0;
@@ -489,7 +489,7 @@ function colorBrainByLobe(meshes, center, size) {
     const solidMat = new THREE.MeshBasicMaterial({
       vertexColors: true,
       transparent: true,
-      opacity: 0.06,
+      opacity: 0.13,
       side: THREE.DoubleSide,
       depthWrite: false,
     });
