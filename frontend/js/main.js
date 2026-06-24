@@ -494,7 +494,7 @@ function colorBrainByLobe(meshes, center, size) {
     const solidMat = new THREE.MeshBasicMaterial({
       vertexColors: true,
       transparent: true,
-      opacity: 0.13,
+      opacity: 0.09,
       side: THREE.DoubleSide,
       depthWrite: false,
     });
