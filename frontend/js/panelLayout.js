@@ -77,6 +77,12 @@ function writeState(storage, state) {
 
 function applyPanel(panel, key, collapsed) {
   panel.setAttribute("data-cg-collapsed", collapsed ? "true" : "false");
+  // Mirror the input panel's folded state onto the shell so the results rail
+  // (a sibling subtree) can react with a plain descendant selector.
+  if (key === "input") {
+    const shell = panel.closest(".cognigraph-shell");
+    if (shell) shell.setAttribute("data-cg-input-folded", collapsed ? "true" : "false");
+  }
   const toggle = panel.querySelector(`[data-cg-toggle="${key}"]`);
   if (toggle) {
     toggle.setAttribute("aria-expanded", collapsed ? "false" : "true");
@@ -86,12 +92,17 @@ function applyPanel(panel, key, collapsed) {
   }
 }
 
+let activeDoc = null;
+let activeStorage = null;
+
 /**
  * Wire up the collapse toggles and restore persisted state.
  * Safe to call once after the DOM is ready; missing panels are skipped.
  */
 export function initPanelLayout({ doc = document, storage = window.localStorage } = {}) {
-  let state = readState(storage);
+  activeDoc = doc;
+  activeStorage = storage;
+  const state = readState(storage);
 
   for (const cfg of PANEL_CONFIG) {
     const panel = doc.querySelector(cfg.selector);
@@ -101,10 +112,30 @@ export function initPanelLayout({ doc = document, storage = window.localStorage 
 
     const toggle = panel.querySelector(`[data-cg-toggle="${cfg.key}"]`);
     if (!toggle) continue;
+    // Read the live DOM state so programmatic changes (setPanelCollapsed) and
+    // manual toggles never diverge.
     toggle.addEventListener("click", () => {
-      state = togglePanelState(state, cfg.key);
-      applyPanel(panel, cfg.key, isCollapsed(state, cfg.key));
-      writeState(storage, state);
+      const next = panel.getAttribute("data-cg-collapsed") !== "true";
+      applyPanel(panel, cfg.key, next);
+      writeState(storage, withPanelState(readState(storage), cfg.key, next));
     });
+  }
+}
+
+/**
+ * Collapse or expand a panel from code — e.g. fold the input panel once a
+ * simulation populates the results so the readout gets the full rail. Applies
+ * to the DOM immediately; `persist` defaults to false so a transient
+ * auto-collapse doesn't outlive a reload.
+ */
+export function setPanelCollapsed(key, collapsed, { persist = false } = {}) {
+  const doc = activeDoc || document;
+  const cfg = PANEL_CONFIG.find((c) => c.key === key);
+  if (!cfg) return;
+  const panel = doc.querySelector(cfg.selector);
+  if (!panel) return;
+  applyPanel(panel, key, collapsed);
+  if (persist && activeStorage) {
+    writeState(activeStorage, withPanelState(readState(activeStorage), key, collapsed));
   }
 }

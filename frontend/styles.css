@@ -79,26 +79,30 @@ input[type="range"] {
   overscroll-behavior: contain;
   z-index: 1;
 }
-/* Give the results panel real presence even before a simulation populates it. */
 @media (min-width: 1025px) {
-  .cognigraph-middle-col .analysis-panel:not([data-cg-collapsed="true"]) {
-    min-height: 15rem;
-  }
-}
-@media (min-width: 1025px) {
-  .cognigraph-middle-col .analysis-panel {
-    transition: opacity 0.28s ease;
-    /* Stack the Analysis panel directly under the input panel on the right
-       rail instead of vertically centering it — the centered position used to
-       collide with the (tall) input panel and hide its top rows. */
-    top: 0 !important;
-    bottom: auto !important;
-    transform: none !important;
+  /* Results readout on its own right rail, anchored to the viewport so the
+     left column's height can't squeeze it. It spans from below the input panel
+     down toward the timeline; folding the input panel (JS, on results) lifts
+     the top so the whole readout shows without scrolling. */
+  .cg-analysis-rail {
+    position: absolute;
+    right: 1.5rem;
+    top: 30.5rem;
     width: 20rem;
     min-width: 0;
-    max-height: 100%;
+    /* Size to content; only scroll if it would run past the viewport. */
+    max-height: calc(100vh - 34rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    transition: top 0.32s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.28s ease;
   }
-  .cognigraph-middle-col .analysis-panel.analysis-panel--recessed {
+  /* With the input folded the rail climbs to the top of the right column and is
+     allowed to run nearly the full height, so a populated readout shows whole. */
+  .cognigraph-shell[data-cg-input-folded="true"] .cg-analysis-rail {
+    top: 6rem;
+    max-height: calc(100vh - 9.5rem);
+  }
+  .cg-analysis-rail.analysis-panel--recessed {
     opacity: 0.48;
   }
   /* Compact the example chips so the input panel stays short on desktop. */
@@ -327,15 +331,22 @@ summary:focus-visible {
     position: relative !important;
     min-height: 0;
   }
-  .cognigraph-middle-col .analysis-panel {
+  .cg-analysis-rail {
     position: relative !important;
     top: auto !important;
+    bottom: auto !important;
     right: auto !important;
     left: auto !important;
     transform: none !important;
     width: 100% !important;
     max-width: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
     margin-bottom: 0.75rem;
+  }
+  /* Empty middle band shouldn't grow and add a gap once Analysis left it. */
+  .cognigraph-middle-col {
+    flex: 0 0 auto !important;
   }
   /* The left rail (branding + Signatures) spans full width when stacked. */
   .cognigraph-left-col {

@@ -50,7 +50,7 @@ import {
 import { createColdStartTimer } from "./coldStartIndicator.js";
 import { mapErrorToUserMessage } from "./errorMessages.js";
 import { resolvePromptText } from "./promptText.js";
-import { initPanelLayout } from "./panelLayout.js";
+import { initPanelLayout, setPanelCollapsed } from "./panelLayout.js";
 
 
 const {
@@ -1193,6 +1193,12 @@ async function handleSimulateClick(promptOverride = "") {
     assertValidResponse(payload);
     lastPayload = payload;
     startPlayback(payload);
+    // On desktop, fold the input panel so the results readout gets the full
+    // right rail (input + a populated Analysis can't both fit unscrolled).
+    if (window.innerWidth > 1024) {
+      setPanelCollapsed("input", true);
+      setPanelCollapsed("analysis", false);
+    }
     resetRetryRecovery();
     setRequestPhase(resolvePhaseAfterOutcome("success"));
     log(`Active lobe: ${payload.active_lobe}`);

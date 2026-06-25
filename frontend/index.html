@@ -194,9 +194,12 @@
         </div>
 
         <!-- Middle: wrapper must NOT capture pointer events — otherwise OrbitControls cannot rotate the brain -->
-        <div class="cognigraph-middle-col flex-1 pointer-events-none relative min-h-0">
-           <!-- Analysis floating panel (Middle Right) -->
-           <div id="cg-panel-analysis" class="pointer-events-auto analysis-panel cg-panel cg-panel-accordion glass-panel absolute right-0 top-1/2 -translate-y-1/2 p-5 w-72 flex flex-col gap-4">
+        <div class="cognigraph-middle-col flex-1 pointer-events-none relative min-h-0"></div>
+
+        <!-- Results readout: its own right rail, decoupled from the left column's
+             height so it can run tall. The input panel folds (via JS) once a
+             simulation populates this, handing over the space. -->
+        <div id="cg-panel-analysis" class="cg-analysis-rail pointer-events-auto analysis-panel cg-panel cg-panel-accordion glass-panel p-5 flex flex-col gap-4">
               <div class="cg-panel-header flex items-center justify-between gap-2 border-b border-slate-600/60 pb-2">
                 <h2 class="text-xs font-semibold uppercase tracking-widest text-slate-300">Analysis</h2>
                 <button type="button" data-cg-toggle="analysis" class="cg-collapse-btn" aria-expanded="true" aria-controls="cg-panel-analysis" aria-label="Collapse panel" title="Collapse panel"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg></button>
@@ -224,7 +227,6 @@
               <p id="explanation-text" class="analysis-body mt-1">Awaiting simulation sequence to provide context.</p>
               <p id="neuromod-rationale" class="hidden analysis-body text-slate-200/95 mt-1"></p>
               <p id="hpa-context-hint" class="hidden text-xs text-amber-200 mt-1 font-medium" aria-live="polite"></p>
-           </div>
         </div>
 
         <!-- Bottom Row -->
