@@ -79,6 +79,12 @@ input[type="range"] {
   overscroll-behavior: contain;
   z-index: 1;
 }
+/* Give the results panel real presence even before a simulation populates it. */
+@media (min-width: 1025px) {
+  .cognigraph-middle-col .analysis-panel:not([data-cg-collapsed="true"]) {
+    min-height: 15rem;
+  }
+}
 @media (min-width: 1025px) {
   .cognigraph-middle-col .analysis-panel {
     transition: opacity 0.28s ease;
@@ -88,7 +94,7 @@ input[type="range"] {
     top: 0 !important;
     bottom: auto !important;
     transform: none !important;
-    width: 18rem;
+    width: 20rem;
     min-width: 0;
     max-height: 100%;
   }
@@ -102,7 +108,7 @@ input[type="range"] {
   }
   .cognigraph-signatures-panel,
   .cognigraph-log-panel {
-    padding: 0.75rem;
+    padding: 0.9rem;
   }
 }
 .cognigraph-input-panel {
@@ -128,18 +134,18 @@ input[type="range"] {
 }
 .analysis-label {
   color: #d4deea;
-  font-size: var(--cg-font-size-xs);
+  font-size: 0.8125rem;
   font-weight: 600;
   letter-spacing: 0.06em;
 }
 .analysis-body {
   color: #ecf2fb;
-  font-size: var(--cg-font-size-sm);
-  line-height: 1.55;
+  font-size: 0.9rem;
+  line-height: 1.65;
 }
 .analysis-value {
   color: var(--cg-text-primary);
-  font-size: var(--cg-font-size-body);
+  font-size: 1.0625rem;
   font-weight: 600;
 }
 
@@ -275,8 +281,7 @@ summary:focus-visible {
     position: relative !important;
     min-height: 0;
   }
-  .cognigraph-middle-col .analysis-panel,
-  .cognigraph-middle-col .cognigraph-signatures-panel {
+  .cognigraph-middle-col .analysis-panel {
     position: relative !important;
     top: auto !important;
     right: auto !important;
@@ -285,6 +290,16 @@ summary:focus-visible {
     width: 100% !important;
     max-width: 100% !important;
     margin-bottom: 0.75rem;
+  }
+  /* The left rail (branding + Signatures) spans full width when stacked. */
+  .cognigraph-left-col {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  .cognigraph-left-col .glass-panel--info,
+  .cognigraph-left-col .cognigraph-signatures-panel {
+    width: 100% !important;
+    max-width: 100% !important;
   }
   .cognigraph-bottom-row {
     flex-direction: column;

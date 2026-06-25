@@ -18,7 +18,9 @@
 
         <!-- Top Row: outer row does not capture hits (only panels do) -->
         <div class="cognigraph-top-row pointer-events-none flex justify-between items-start gap-6">
-          <!-- Top Left: Branding & Status -->
+          <!-- Top-left rail: branding + lobe legend, stacked so they use the
+               upper-left space and never crowd the bottom Event Log. -->
+          <div class="cognigraph-left-col pointer-events-none flex flex-col gap-6 items-start">
           <div class="pointer-events-auto glass-panel glass-panel--info px-5 py-3 flex flex-col gap-1 max-w-md">
             <h1 class="text-sm font-semibold tracking-widest uppercase accent-text">CogniGraph</h1>
             <p id="status-chip" class="text-[11px] tracking-wide sub-text" role="status" aria-live="polite">Initializing...</p>
@@ -46,6 +48,16 @@
                 class="text-[10px] uppercase font-semibold text-slate-500 hover:text-slate-300 underline decoration-slate-600 underline-offset-2"
               >Open live demo</a>
             </div>
+          </div>
+
+          <!-- Lobe legend, grouped directly under the branding -->
+          <div id="cg-panel-signatures" class="cognigraph-signatures-panel cg-panel cg-panel-dock pointer-events-auto glass-panel p-4 w-52 flex flex-col gap-3.5">
+             <div class="cg-panel-header flex items-center justify-between gap-2 border-b border-slate-700/50 pb-2">
+               <h2 class="text-[10px] font-medium uppercase tracking-widest sub-text">Signatures</h2>
+               <button type="button" data-cg-toggle="signatures" class="cg-collapse-btn" aria-expanded="true" aria-controls="cg-panel-signatures" aria-label="Collapse panel" title="Collapse panel"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg></button>
+             </div>
+             <div id="legend-panel" class="flex flex-col gap-2.5 text-[11px] font-medium"></div>
+          </div>
           </div>
 
           <!-- Top Right: Input & Simulation -->
@@ -184,7 +196,7 @@
         <!-- Middle: wrapper must NOT capture pointer events — otherwise OrbitControls cannot rotate the brain -->
         <div class="cognigraph-middle-col flex-1 pointer-events-none relative min-h-0">
            <!-- Analysis floating panel (Middle Right) -->
-           <div id="cg-panel-analysis" class="pointer-events-auto analysis-panel cg-panel cg-panel-accordion glass-panel absolute right-0 top-1/2 -translate-y-1/2 p-5 w-72 flex flex-col gap-3.5">
+           <div id="cg-panel-analysis" class="pointer-events-auto analysis-panel cg-panel cg-panel-accordion glass-panel absolute right-0 top-1/2 -translate-y-1/2 p-5 w-72 flex flex-col gap-4">
               <div class="cg-panel-header flex items-center justify-between gap-2 border-b border-slate-600/60 pb-2">
                 <h2 class="text-xs font-semibold uppercase tracking-widest text-slate-300">Analysis</h2>
                 <button type="button" data-cg-toggle="analysis" class="cg-collapse-btn" aria-expanded="true" aria-controls="cg-panel-analysis" aria-label="Collapse panel" title="Collapse panel"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg></button>
@@ -207,22 +219,13 @@
               <p id="neuromod-rationale" class="hidden analysis-body text-slate-200/95 mt-1"></p>
               <p id="hpa-context-hint" class="hidden text-xs text-amber-200 mt-1 font-medium" aria-live="polite"></p>
            </div>
-
-           <!-- Signatures (Middle Left) -->
-           <div id="cg-panel-signatures" class="cognigraph-signatures-panel cg-panel cg-panel-dock pointer-events-auto absolute left-0 top-1/2 -translate-y-1/2 glass-panel p-4 w-48 flex flex-col gap-3">
-              <div class="cg-panel-header flex items-center justify-between gap-2 border-b border-slate-700/50 pb-2">
-                <h2 class="text-[10px] font-medium uppercase tracking-widest sub-text">Signatures</h2>
-                <button type="button" data-cg-toggle="signatures" class="cg-collapse-btn" aria-expanded="true" aria-controls="cg-panel-signatures" aria-label="Collapse panel" title="Collapse panel"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg></button>
-              </div>
-              <div id="legend-panel" class="flex flex-col gap-2 text-[10px] font-medium"></div>
-           </div>
         </div>
 
         <!-- Bottom Row -->
         <div class="cognigraph-bottom-row pointer-events-none flex justify-between items-end gap-6">
 
           <!-- Bottom Left: Log -->
-          <div id="cg-panel-log" class="cognigraph-log-panel cg-panel cg-panel-dock pointer-events-auto glass-panel p-4 w-64 h-32 flex flex-col gap-2">
+          <div id="cg-panel-log" class="cognigraph-log-panel cg-panel cg-panel-dock pointer-events-auto glass-panel p-4 w-72 h-40 flex flex-col gap-2">
             <div class="cg-panel-header flex items-center justify-between gap-2">
               <span class="text-[10px] font-medium uppercase tracking-widest sub-text">Event Log</span>
               <button type="button" data-cg-toggle="log" class="cg-collapse-btn" aria-expanded="true" aria-controls="cg-panel-log" aria-label="Collapse panel" title="Collapse panel"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg></button>
