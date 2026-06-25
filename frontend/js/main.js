@@ -114,8 +114,10 @@ const timelineFrameLabel = document.getElementById("timeline-frame-label");
 const statusChip        = document.getElementById("status-chip");
 const explanationText   = document.getElementById("explanation-text");
 const activeLobePill    = document.getElementById("active-lobe-pill");
+const activeLobeDot     = document.getElementById("active-lobe-dot");
 const neuromodPill      = document.getElementById("neuromod-pill");
 const neuromodIntensityLabel = document.getElementById("neuromod-intensity-label");
+const neuromodMeterFill = document.getElementById("neuromod-meter-fill");
 const neuromodRationaleEl = document.getElementById("neuromod-rationale");
 const hpaContextHint    = document.getElementById("hpa-context-hint");
 const legendPanel       = document.getElementById("legend-panel");
@@ -974,6 +976,11 @@ function updateNeuromodPanel(payload) {
     mod,
     brain.neuromodulatorIntensity
   );
+  if (neuromodMeterFill) {
+    const pct = Math.round(Math.max(0, Math.min(1, brain.neuromodulatorIntensity)) * 100);
+    neuromodMeterFill.style.width = `${pct}%`;
+    neuromodMeterFill.style.background = hex;
+  }
   const rat = payload.neuromodulator_rationale;
   if (rat && String(rat).trim()) {
     neuromodRationaleEl.textContent = String(rat).trim();
@@ -1093,7 +1100,12 @@ function startPlayback(payload) {
 
   explanationText.textContent = payload.explanation || "";
   activeLobePill.textContent = payload.active_lobe;
-  activeLobePill.style.color = `#${LOBE_COLORS[payload.active_lobe].getHexString()}`;
+  const activeLobeHex = `#${LOBE_COLORS[payload.active_lobe].getHexString()}`;
+  activeLobePill.style.color = activeLobeHex;
+  if (activeLobeDot) {
+    activeLobeDot.style.background = activeLobeHex;
+    activeLobeDot.style.boxShadow = `0 0 10px ${activeLobeHex}`;
+  }
 
   playPauseButton.textContent = "Pause";
   refreshLegendCounts();

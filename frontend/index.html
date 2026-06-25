@@ -203,16 +203,22 @@
               </div>
 
               <div>
-                <span class="analysis-label uppercase block mb-1">Primary Region</span>
-                <span id="active-lobe-pill" class="analysis-value capitalize">N/A</span>
+                <span class="analysis-label uppercase block mb-1.5">Primary Region</span>
+                <div class="flex items-center gap-2.5">
+                  <span id="active-lobe-dot" class="cg-region-dot" aria-hidden="true"></span>
+                  <span id="active-lobe-pill" class="cg-region-name capitalize">N/A</span>
+                </div>
               </div>
 
+              <div class="cg-divider"></div>
+
               <div>
-                <span class="analysis-label uppercase block mb-1">Neuromodulation <button type="button" id="hpa-help-btn" class="inline-flex items-center justify-center bg-slate-700/90 text-slate-200 rounded-full w-5 h-5 text-[11px] font-semibold leading-none ml-1 align-middle" title="HPA info">?</button></span>
-                <div class="flex items-center justify-between gap-2 mt-0.5">
+                <span class="analysis-label uppercase block mb-1.5">Neuromodulation <button type="button" id="hpa-help-btn" class="inline-flex items-center justify-center bg-slate-700/90 text-slate-200 rounded-full w-5 h-5 text-[11px] font-semibold leading-none ml-1 align-middle" title="HPA info">?</button></span>
+                <div class="flex items-center justify-between gap-2">
                   <span id="neuromod-pill" class="analysis-value capitalize">—</span>
                   <span id="neuromod-intensity-label" class="text-xs font-mono text-slate-100 bg-slate-800/90 border border-slate-600/50 px-2 py-1 rounded-md tabular-nums">—</span>
                 </div>
+                <div class="cg-meter mt-2.5" aria-hidden="true"><div id="neuromod-meter-fill" class="cg-meter-fill"></div></div>
               </div>
 
               <p id="explanation-text" class="analysis-body mt-1">Awaiting simulation sequence to provide context.</p>

@@ -148,6 +148,52 @@ input[type="range"] {
   font-size: 1.0625rem;
   font-weight: 600;
 }
+/* Results readout: the active region reads as the headline of the panel, with a
+   colour chip that matches the lobe across the legend and the 3D brain. */
+.cg-region-name {
+  color: var(--cg-text-primary);
+  font-size: 1.4rem;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+.cg-region-dot {
+  width: 0.7rem;
+  height: 0.7rem;
+  flex: none;
+  border-radius: 9999px;
+  background: var(--cg-text-subtle);
+  transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+.cg-divider {
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    rgba(148, 163, 184, 0.22),
+    rgba(148, 163, 184, 0.04)
+  );
+}
+/* Neuromodulator intensity gauge: turns the 0–1 measurement into a glanceable
+   bar, tinted with that neuromodulator's glow colour (set from JS). */
+.cg-meter {
+  height: 5px;
+  border-radius: 9999px;
+  background: rgba(148, 163, 184, 0.14);
+  overflow: hidden;
+}
+.cg-meter-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 9999px;
+  background: var(--cg-text-subtle);
+  transition: width 0.55s cubic-bezier(0.22, 1, 0.36, 1), background 0.3s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cg-region-dot,
+  .cg-meter-fill {
+    transition: none;
+  }
+}
 
 /* ── Panel collapse / expand ────────────────────────────────────────────────
    Desktop-only affordance: fold floating panels to give the 3D brain room.
