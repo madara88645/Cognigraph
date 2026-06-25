@@ -88,7 +88,7 @@ input[type="range"] {
     top: 0 !important;
     bottom: auto !important;
     transform: none !important;
-    width: 16rem;
+    width: 18rem;
     min-width: 0;
     max-height: 100%;
   }
@@ -142,6 +142,65 @@ input[type="range"] {
   font-size: var(--cg-font-size-body);
   font-weight: 600;
 }
+
+/* ── Panel collapse / expand ────────────────────────────────────────────────
+   Desktop-only affordance: fold floating panels to give the 3D brain room.
+   ≤768px is the mobile drawer shell (mobile.js), so the controls hide there. */
+.cg-collapse-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  flex: none;
+  border-radius: 9999px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  color: var(--cg-text-subtle);
+  background: rgba(148, 163, 184, 0.06);
+}
+.cg-collapse-btn svg {
+  width: 0.85rem;
+  height: 0.85rem;
+  transition: transform 0.2s ease;
+}
+.cg-collapse-btn:hover {
+  color: var(--cg-text-primary);
+  border-color: rgba(148, 163, 184, 0.55);
+}
+/* Chevron points down when open; rotates to point sideways when collapsed. */
+.cg-panel[data-cg-collapsed="true"] .cg-collapse-btn svg {
+  transform: rotate(-90deg);
+}
+
+@media (min-width: 769px) {
+  /* Accordion + dock alike: fold every child except the header bar. */
+  .cg-panel[data-cg-collapsed="true"] > :not(.cg-panel-header) {
+    display: none !important;
+  }
+  /* Dock panels (Signatures, Event Log) shrink to a compact in-place chip. */
+  .cg-panel-dock[data-cg-collapsed="true"] {
+    width: auto !important;
+    min-width: 0 !important;
+    height: auto !important;
+  }
+  .cg-panel-dock[data-cg-collapsed="true"] .cg-panel-header {
+    border-bottom: 0 !important;
+    padding-bottom: 0 !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .cg-collapse-btn {
+    display: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cg-collapse-btn svg {
+    transition: none;
+  }
+}
+
 button {
   transition: all 0.2s ease;
 }

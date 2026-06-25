@@ -50,6 +50,7 @@ import {
 import { createColdStartTimer } from "./coldStartIndicator.js";
 import { mapErrorToUserMessage } from "./errorMessages.js";
 import { resolvePromptText } from "./promptText.js";
+import { initPanelLayout } from "./panelLayout.js";
 
 
 const {
@@ -263,6 +264,7 @@ updateTimelineUi();
 setRequestPhase(REQUEST_PHASE.IDLE);
 updateControlAccessibilityState();
 hookUiEvents();
+initPanelLayout();
 if (openDemoLink) {
   openDemoLink.href = PRIMARY_LIVE_DEMO_URL;
   if (window.location.origin === PRIMARY_LIVE_DEMO_ORIGIN) {

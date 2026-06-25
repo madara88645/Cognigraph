@@ -49,10 +49,13 @@
           </div>
 
           <!-- Top Right: Input & Simulation -->
-          <div class="cognigraph-input-panel pointer-events-auto glass-panel p-3 w-[268px] flex flex-col gap-2">
-            <div class="flex justify-between items-center">
+          <div id="cg-panel-input" class="cognigraph-input-panel cg-panel cg-panel-accordion pointer-events-auto glass-panel p-3 w-[268px] flex flex-col gap-2">
+            <div class="cg-panel-header flex justify-between items-center gap-2">
               <span class="text-xs font-medium uppercase tracking-widest sub-text">Sequence Input</span>
-              <button id="rotate-btn" aria-pressed="true" class="text-[10px] uppercase font-semibold text-slate-400 hover:text-white border border-slate-700 rounded-full px-2 py-1">Auto-Rotate: ON</button>
+              <div class="flex items-center gap-2">
+                <button id="rotate-btn" aria-pressed="true" class="text-[10px] uppercase font-semibold text-slate-400 hover:text-white border border-slate-700 rounded-full px-2 py-1">Auto-Rotate: ON</button>
+                <button type="button" data-cg-toggle="input" class="cg-collapse-btn" aria-expanded="true" aria-controls="cg-panel-input" aria-label="Collapse panel" title="Collapse panel"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg></button>
+              </div>
             </div>
             <label for="prompt" class="text-[11px] font-medium text-slate-200">Describe the scenario you want analyzed</label>
             <textarea
@@ -181,8 +184,11 @@
         <!-- Middle: wrapper must NOT capture pointer events — otherwise OrbitControls cannot rotate the brain -->
         <div class="cognigraph-middle-col flex-1 pointer-events-none relative min-h-0">
            <!-- Analysis floating panel (Middle Right) -->
-           <div class="pointer-events-auto analysis-panel glass-panel absolute right-0 top-1/2 -translate-y-1/2 p-5 w-72 flex flex-col gap-3.5">
-              <h2 class="text-xs font-semibold uppercase tracking-widest text-slate-300 border-b border-slate-600/60 pb-2">Analysis</h2>
+           <div id="cg-panel-analysis" class="pointer-events-auto analysis-panel cg-panel cg-panel-accordion glass-panel absolute right-0 top-1/2 -translate-y-1/2 p-5 w-72 flex flex-col gap-3.5">
+              <div class="cg-panel-header flex items-center justify-between gap-2 border-b border-slate-600/60 pb-2">
+                <h2 class="text-xs font-semibold uppercase tracking-widest text-slate-300">Analysis</h2>
+                <button type="button" data-cg-toggle="analysis" class="cg-collapse-btn" aria-expanded="true" aria-controls="cg-panel-analysis" aria-label="Collapse panel" title="Collapse panel"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg></button>
+              </div>
 
               <div>
                 <span class="analysis-label uppercase block mb-1">Primary Region</span>
@@ -203,8 +209,11 @@
            </div>
 
            <!-- Signatures (Middle Left) -->
-           <div class="cognigraph-signatures-panel pointer-events-auto absolute left-0 top-1/2 -translate-y-1/2 glass-panel p-4 w-48 flex flex-col gap-3">
-              <h2 class="text-[10px] font-medium uppercase tracking-widest sub-text border-b border-slate-700/50 pb-2">Signatures</h2>
+           <div id="cg-panel-signatures" class="cognigraph-signatures-panel cg-panel cg-panel-dock pointer-events-auto absolute left-0 top-1/2 -translate-y-1/2 glass-panel p-4 w-48 flex flex-col gap-3">
+              <div class="cg-panel-header flex items-center justify-between gap-2 border-b border-slate-700/50 pb-2">
+                <h2 class="text-[10px] font-medium uppercase tracking-widest sub-text">Signatures</h2>
+                <button type="button" data-cg-toggle="signatures" class="cg-collapse-btn" aria-expanded="true" aria-controls="cg-panel-signatures" aria-label="Collapse panel" title="Collapse panel"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg></button>
+              </div>
               <div id="legend-panel" class="flex flex-col gap-2 text-[10px] font-medium"></div>
            </div>
         </div>
@@ -213,8 +222,11 @@
         <div class="cognigraph-bottom-row pointer-events-none flex justify-between items-end gap-6">
 
           <!-- Bottom Left: Log -->
-          <div class="cognigraph-log-panel pointer-events-auto glass-panel p-4 w-64 h-32 flex flex-col gap-2">
-            <span class="text-[10px] font-medium uppercase tracking-widest sub-text">Event Log</span>
+          <div id="cg-panel-log" class="cognigraph-log-panel cg-panel cg-panel-dock pointer-events-auto glass-panel p-4 w-64 h-32 flex flex-col gap-2">
+            <div class="cg-panel-header flex items-center justify-between gap-2">
+              <span class="text-[10px] font-medium uppercase tracking-widest sub-text">Event Log</span>
+              <button type="button" data-cg-toggle="log" class="cg-collapse-btn" aria-expanded="true" aria-controls="cg-panel-log" aria-label="Collapse panel" title="Collapse panel"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg></button>
+            </div>
             <div id="log-panel" class="thin-scroll flex-1 overflow-y-auto whitespace-pre-wrap text-[11px] font-mono text-slate-300"></div>
           </div>
 
