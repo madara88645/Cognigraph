@@ -8,13 +8,16 @@ import pytest
 from fastapi.testclient import TestClient
 
 from backend.main import (
+    MAX_EXCEPTION_MESSAGE_LENGTH,
     _classification_system_instruction,
+    _do_openrouter_post,
     _extract_chat_message_text,
     _extract_json_object,
     _load_dotenv_file,
     _normalize_byok_model_slug,
     _openrouter_http_referer,
     _parse_model_json,
+    _post_openrouter_chat,
     _resolve_openrouter_api_key,
     _select_openrouter_model,
     _strip_markdown_fences,
@@ -22,7 +25,7 @@ from backend.main import (
     classify_scenario,
     run_snn,
 )
-from backend.neuromodulation import resolve_snn_modulation
+from backend.neuromodulation import LOBE_NAMES, resolve_snn_modulation
 
 client = TestClient(app)
 
@@ -110,6 +113,16 @@ def test_extract_json_object_respects_braces_in_strings():
     assert _extract_json_object(raw) == raw
 
 
+def test_extract_json_object_handles_escaped_quotes_in_strings():
+    raw = r'{"explanation": "say \"hello\" {not a brace}", "n": 1}'
+    assert _extract_json_object(raw) == raw
+
+
+def test_extract_json_object_handles_backslash_escape_in_strings():
+    raw = r'{"path": "C:\\tmp\\file", "n": 1}'
+    assert _extract_json_object(raw) == raw
+
+
 def test_extract_json_object_returns_empty_when_missing():
     assert _extract_json_object("no json here") == ""
 
@@ -145,6 +158,68 @@ def _openrouter_mock_response(content: str) -> MagicMock:
     mock = MagicMock()
     mock.json.return_value = {"choices": [{"message": {"content": content}}]}
     return mock
+
+
+@patch.dict(os.environ, {"OPENROUTER_API_KEY": "sk-test"}, clear=False)
+@patch("backend.main._post_openrouter_chat", new_callable=AsyncMock)
+def test_classify_scenario_empty_openrouter_response(mock_post):
+    mock_post.return_value = _openrouter_mock_response("")
+    with pytest.raises(RuntimeError, match="empty response"):
+        asyncio.run(classify_scenario("focus task"))
+
+
+@patch.dict(os.environ, {"OPENROUTER_API_KEY": "sk-test"}, clear=False)
+@patch("backend.main._post_openrouter_chat", new_callable=AsyncMock)
+def test_classify_scenario_malformed_openrouter_response_json(mock_post):
+    broken = MagicMock()
+    broken.json.side_effect = ValueError("invalid json")
+    mock_post.return_value = broken
+    with pytest.raises(RuntimeError, match="malformed response"):
+        asyncio.run(classify_scenario("focus task"))
+
+
+@patch.dict(os.environ, {"OPENROUTER_API_KEY": "sk-test"}, clear=False)
+@patch("backend.main._do_openrouter_post", new_callable=AsyncMock)
+@patch("backend.main.OPENROUTER_RETRY_BACKOFF_SEC", 0.0)
+def test_post_openrouter_chat_retries_on_504(mock_do_post):
+    mock_do_post.side_effect = [
+        _httpx_status_error(504, "gateway timeout"),
+        _openrouter_mock_response(_VALID_CLASSIFICATION_JSON),
+    ]
+    result = asyncio.run(classify_scenario("focus task"))
+    assert result["active_lobe"] == "frontal"
+    assert mock_do_post.call_count == 2
+
+
+@patch.dict(os.environ, {"OPENROUTER_API_KEY": "sk-test"}, clear=False)
+@patch("backend.main._do_openrouter_post", new_callable=AsyncMock)
+@patch("backend.main.OPENROUTER_RETRY_MAX_ATTEMPTS", 1)
+def test_post_openrouter_chat_truncates_large_error_body(mock_do_post):
+    huge_body = "x" * (MAX_EXCEPTION_MESSAGE_LENGTH + 500)
+    mock_do_post.side_effect = _httpx_status_error(503, huge_body)
+    with pytest.raises(RuntimeError, match="503") as exc_info:
+        asyncio.run(_post_openrouter_chat({}, {}))
+    message = str(exc_info.value)
+    assert "…" in message
+    assert len(message) < len(huge_body)
+
+
+@patch("backend.main.http_client", None)
+def test_do_openrouter_post_uses_ephemeral_client_when_global_client_unset():
+    mock_response = MagicMock()
+    mock_response.raise_for_status = MagicMock()
+
+    mock_instance = AsyncMock()
+    mock_instance.post = AsyncMock(return_value=mock_response)
+    mock_instance.__aenter__ = AsyncMock(return_value=mock_instance)
+    mock_instance.__aexit__ = AsyncMock(return_value=False)
+
+    with patch("httpx.AsyncClient", return_value=mock_instance) as mock_client_cls:
+        result = asyncio.run(_do_openrouter_post({"model": "test"}, {"Authorization": "Bearer x"}))
+
+    assert result is mock_response
+    mock_client_cls.assert_called_once()
+    mock_instance.post.assert_awaited_once()
 
 
 @patch.dict(os.environ, {"OPENROUTER_API_KEY": "sk-test"}, clear=False)
@@ -497,6 +572,28 @@ def test_run_snn_invalid_lobe():
     params = resolve_snn_modulation("adrenaline", 1.0)
     with pytest.raises(ValueError, match="Unknown lobe: invalid_lobe"):
         run_snn("invalid_lobe", params)  # type: ignore
+
+
+def test_run_snn_invalid_duration_ms():
+    params = resolve_snn_modulation("adrenaline", 1.0)
+    with pytest.raises(ValueError, match="duration_ms must be > 0"):
+        run_snn("frontal", params, duration_ms=0)
+
+
+def test_run_snn_invalid_neurons_per_lobe():
+    params = resolve_snn_modulation("adrenaline", 1.0)
+    with pytest.raises(ValueError, match="neurons_per_lobe must be > 0"):
+        run_snn("frontal", params, neurons_per_lobe=0)
+
+
+def test_run_snn_honors_per_lobe_rates_from_cortisol_toxic():
+    resolved = resolve_snn_modulation("cortisol", 0.85, active_lobe="frontal")
+    assert resolved.lobe_rates_hz is not None
+    spikes = run_snn("frontal", resolved, duration_ms=100, neurons_per_lobe=20)
+    for lobe in LOBE_NAMES:
+        assert lobe in spikes
+        assert isinstance(spikes[lobe].indices, list)
+        assert isinstance(spikes[lobe].times_ms, list)
 
 
 def test_normalize_byok_model_slug_valid_edge_cases():

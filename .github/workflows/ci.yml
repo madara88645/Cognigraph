@@ -32,4 +32,4 @@ jobs:
         with:
           node-version: "20"
       - name: Frontend JS tests
-        run: node --test tests/test_frontend_logic.js frontend/js/*.test.mjs
+        run: node --import ./tests/frontend-test-setup.mjs --test tests/*.js frontend/js/*.test.mjs

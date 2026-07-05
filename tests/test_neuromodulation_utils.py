@@ -133,6 +133,36 @@ class TestValidateClassificationPayload:
         result = validate_classification_payload(self._valid(dominant_neuromodulator="neutral"))
         assert result["dominant_neuromodulator"] == "baseline"
 
+    def test_alias_epi_maps_to_adrenaline(self):
+        result = validate_classification_payload(self._valid(dominant_neuromodulator="epi"))
+        assert result["dominant_neuromodulator"] == "adrenaline"
+
+    def test_alias_5ht_maps_to_serotonin(self):
+        result = validate_classification_payload(self._valid(dominant_neuromodulator="5ht"))
+        assert result["dominant_neuromodulator"] == "serotonin"
+
+    def test_alias_acetyl_choline_maps_to_acetylcholine(self):
+        result = validate_classification_payload(
+            self._valid(dominant_neuromodulator="acetyl_choline")
+        )
+        assert result["dominant_neuromodulator"] == "acetylcholine"
+
+    def test_alias_stress_hormone_maps_to_cortisol(self):
+        result = validate_classification_payload(
+            self._valid(dominant_neuromodulator="stress_hormone")
+        )
+        assert result["dominant_neuromodulator"] == "cortisol"
+
+    def test_alias_normal_maps_to_baseline(self):
+        result = validate_classification_payload(self._valid(dominant_neuromodulator="normal"))
+        assert result["dominant_neuromodulator"] == "baseline"
+
+    def test_non_dict_payload_defaults_safely(self):
+        result = validate_classification_payload([])  # type: ignore[arg-type]
+        assert result["active_lobe"] == "frontal"
+        assert result["dominant_neuromodulator"] == "baseline"
+        assert result["neuromodulator_intensity"] == pytest.approx(0.5)
+
     # --- intensity clamping ---
 
     def test_intensity_above_one_clamped_to_one(self):

@@ -11,6 +11,7 @@ import {
   REQUEST_PHASE,
   resolvePhaseAfterOutcome,
   derivePhaseUiState,
+  shouldHandleRequestResult,
 } from "../frontend/js/requestLifecycle.js";
 import { createColdStartTimer } from "../frontend/js/coldStartIndicator.js";
 import { mapErrorToUserMessage } from "../frontend/js/errorMessages.js";
@@ -20,6 +21,12 @@ import {
   syncRetryStateWithPrompt,
 } from "../frontend/js/requestRetryState.js";
 import { resolvePromptText } from "../frontend/js/promptText.js";
+import {
+  formatFastApiDetail,
+  assertValidResponse,
+  isSimulationCanceledError,
+} from "../frontend/js/simulation.js";
+import { formatTimelineFrames } from "../frontend/js/timeline.js";
 
 // --- derivePhaseUiState ------------------------------------------------------
 
@@ -47,6 +54,31 @@ test("ERROR phase re-enables Analyze", () => {
   const ui = derivePhaseUiState(REQUEST_PHASE.ERROR);
   assert.equal(ui.analyzeDisabled, false);
   assert.equal(ui.cancelHidden, true);
+});
+
+test("error outcome resolves to ERROR phase", () => {
+  assert.equal(resolvePhaseAfterOutcome("error"), REQUEST_PHASE.ERROR);
+});
+
+test("success outcome resolves to READY phase", () => {
+  assert.equal(resolvePhaseAfterOutcome("success"), REQUEST_PHASE.READY);
+});
+
+test("READY phase keeps Analyze enabled", () => {
+  const ui = derivePhaseUiState(REQUEST_PHASE.READY);
+  assert.equal(ui.analyzeDisabled, false);
+  assert.equal(ui.analyzeText, "Analyze");
+  assert.equal(ui.retryHidden, true);
+});
+
+test("shouldHandleRequestResult rejects invalid ids", () => {
+  assert.equal(shouldHandleRequestResult(1, 1), true);
+  assert.equal(shouldHandleRequestResult(2, 1), false);
+  assert.equal(shouldHandleRequestResult(0, 1), false);
+  assert.equal(shouldHandleRequestResult(1, 0), false);
+  assert.equal(shouldHandleRequestResult("1", 1), false);
+  assert.equal(shouldHandleRequestResult(1, "1"), false);
+  assert.equal(shouldHandleRequestResult(null, 1), false);
 });
 
 // --- mapErrorToUserMessage ---------------------------------------------------
@@ -83,6 +115,37 @@ test("502 maps to 'rephrase your prompt'", () => {
   const m = mapErrorToUserMessage({ kind: "http", status: 502 });
   assert.equal(m.toastSeverity, "error");
   assert.match(m.toastText, /rephrasing your prompt/i);
+});
+
+test("502 with deprecated model detail maps to model-unavailable copy", () => {
+  const m = mapErrorToUserMessage({
+    kind: "http",
+    status: 502,
+    detail: "Model openai/gpt-4 is deprecated",
+  });
+  assert.equal(m.toastSeverity, "error");
+  assert.match(m.toastText, /model configured on the server is unavailable/i);
+  assert.match(m.actionHintText, /API Settings/i);
+});
+
+test("502 with status 404 in detail maps to model-unavailable copy", () => {
+  const m = mapErrorToUserMessage({
+    kind: "http",
+    status: 502,
+    detail: "OpenRouter request failed with status 404: not found",
+  });
+  assert.match(m.toastText, /unavailable/i);
+  assert.equal(m.retryable, false);
+});
+
+test("unrecognized http status falls back to detail string", () => {
+  const m = mapErrorToUserMessage({
+    kind: "http",
+    status: 404,
+    detail: "Not found on server",
+  });
+  assert.equal(m.toastText, "Not found on server");
+  assert.equal(m.toastSeverity, "error");
 });
 
 test("500 maps to 'brain simulation failed'", () => {
@@ -278,4 +341,94 @@ test("resolvePromptText returns empty string when nothing usable is provided", (
   assert.equal(resolvePromptText({ type: "click" }, ""), "");
   assert.equal(resolvePromptText(undefined, undefined), "");
   assert.equal(resolvePromptText(null, "   "), "");
+});
+
+// --- formatFastApiDetail / assertValidResponse / isSimulationCanceledError ---
+
+test("formatFastApiDetail returns string detail when non-blank", () => {
+  assert.equal(formatFastApiDetail("bad prompt", 400), "bad prompt");
+});
+
+test("formatFastApiDetail treats whitespace-only string as empty", () => {
+  assert.equal(formatFastApiDetail("   ", 400), "Simulation failed (400)");
+});
+
+test("formatFastApiDetail joins validation error arrays", () => {
+  const detail = [{ msg: "Field required" }, { msg: "Too short" }];
+  assert.equal(formatFastApiDetail(detail, 422), "Field required; Too short");
+});
+
+test("formatFastApiDetail stringifies object detail", () => {
+  assert.equal(formatFastApiDetail({ code: "x" }, 500), '{"code":"x"}');
+});
+
+test("formatFastApiDetail falls back when detail is empty", () => {
+  assert.equal(formatFastApiDetail("", 503), "Simulation failed (503)");
+});
+
+test("assertValidResponse accepts a well-formed payload and clamps intensity", () => {
+  const payload = {
+    active_lobe: "frontal",
+    explanation: "Planning task.",
+    duration_ms: "500",
+    dominant_neuromodulator: "dopamine",
+    neuromodulator_intensity: 1.4,
+    neuromodulator_rationale: "",
+    spikes: { frontal: { indices: [], times_ms: [] } },
+    snn_modulation: { v_thresh: 0.8 },
+    vfx_profile: { glow_hex: "#FFD700" },
+  };
+  assertValidResponse(payload);
+  assert.equal(payload.duration_ms, 500);
+  assert.equal(payload.neuromodulator_intensity, 1);
+});
+
+test("assertValidResponse rejects missing active_lobe", () => {
+  assert.throws(
+    () =>
+      assertValidResponse({
+        explanation: "x",
+        duration_ms: 500,
+        dominant_neuromodulator: "baseline",
+        neuromodulator_intensity: 0.5,
+        spikes: {},
+        snn_modulation: {},
+        vfx_profile: {},
+      }),
+    /active_lobe missing or invalid/
+  );
+});
+
+test("assertValidResponse rejects missing neuromod build fields", () => {
+  assert.throws(
+    () =>
+      assertValidResponse({
+        active_lobe: "frontal",
+        explanation: "x",
+        duration_ms: 500,
+        dominant_neuromodulator: "baseline",
+        neuromodulator_intensity: 0.5,
+        spikes: { frontal: {} },
+      }),
+    /snn_modulation missing/
+  );
+});
+
+test("isSimulationCanceledError detects the cancel sentinel", () => {
+  assert.equal(isSimulationCanceledError(new Error("SIMULATION_CANCELED")), true);
+  assert.equal(isSimulationCanceledError(new Error("other")), false);
+  assert.equal(isSimulationCanceledError("SIMULATION_CANCELED"), false);
+});
+
+// --- formatTimelineFrames ----------------------------------------------------
+
+test("formatTimelineFrames clamps and labels frame position", () => {
+  assert.equal(
+    formatTimelineFrames({ simMs: 250.9, durationMs: 1000 }),
+    "250 / 1000 · 250 ms"
+  );
+});
+
+test("formatTimelineFrames never divides by zero duration", () => {
+  assert.equal(formatTimelineFrames({ simMs: -5, durationMs: 0 }), "0 / 1 · 0 ms");
 });

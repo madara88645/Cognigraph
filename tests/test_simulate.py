@@ -1,4 +1,5 @@
 import asyncio
+import os
 from unittest.mock import AsyncMock, patch
 
 import httpx
@@ -249,4 +250,159 @@ def test_simulate_inflight_failure_does_not_poison_cache():
     assert second.status_code == 200
     assert attempts == 2
     # Inflight registry must be clean so the second request can become leader.
+    assert not main._classification_inflight
+
+
+@patch.dict(os.environ, {}, clear=True)
+def test_simulate_503_when_api_key_missing():
+    with TestClient(app) as client:
+        response = client.post("/simulate", json={"prompt": "focus"})
+    assert response.status_code == 503
+    assert "OPENROUTER_API_KEY" in response.json()["detail"]
+
+
+def test_simulate_422_empty_prompt():
+    with TestClient(app) as client:
+        response = client.post("/simulate", json={"prompt": ""})
+    assert response.status_code == 422
+
+
+@patch("backend.main.run_snn", return_value=_CANNED_SPIKES)
+@patch("backend.main.classify_scenario", new_callable=AsyncMock)
+def test_simulate_400_whitespace_only_prompt(mock_classify, _mock_run_snn):
+    with TestClient(app) as client:
+        response = client.post("/simulate", json={"prompt": "   "})
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Prompt cannot be empty."
+    mock_classify.assert_not_called()
+
+
+@patch("backend.main.classify_scenario", new_callable=AsyncMock)
+def test_simulate_500_when_snn_fails(mock_classify):
+    mock_classify.return_value = _CANNED_CLASSIFICATION
+    with patch("backend.main.run_snn", side_effect=RuntimeError("brian2 boom")):
+        with TestClient(app) as client:
+            response = client.post("/simulate", json={"prompt": "focus"})
+    assert response.status_code == 500
+    assert "SNN simulation failed" in response.json()["detail"]
+
+
+@patch("backend.main.run_snn", return_value=_CANNED_SPIKES)
+@patch("backend.main.classify_scenario", new_callable=AsyncMock)
+def test_simulate_502_when_classification_raises_unexpected_error(mock_classify, _mock_run_snn):
+    mock_classify.side_effect = ValueError("unexpected classifier bug")
+    with TestClient(app) as client:
+        response = client.post("/simulate", json={"prompt": "focus"})
+    assert response.status_code == 502
+    assert response.json()["detail"] == main.ERR_UNEXPECTED_LLM_FAILURE
+
+
+_SNN_MODULATION_KEYS = {
+    "v_thresh",
+    "tau_ms",
+    "refractory_ms",
+    "epsp",
+    "v_center",
+    "v_spread",
+    "active_rate_hz",
+    "background_rate_hz",
+}
+_VFX_PROFILE_KEYS = {
+    "glow_hex",
+    "bloom_mult",
+    "bloom_activity_boost_mult",
+    "tween_in_ms",
+    "tween_out_ms",
+    "idle_breath_speed_mult",
+    "idle_breath_amp_mult",
+    "vertex_wave_mult",
+    "burst_threshold",
+    "active_lobe_bloom_scale",
+    "global_chaos_mult",
+    "desaturate",
+    "scatter_flash_prob",
+}
+
+
+@patch("backend.main.run_snn", return_value=_CANNED_SPIKES)
+@patch("backend.main.classify_scenario", new_callable=AsyncMock)
+def test_simulate_200_response_contract(mock_classify, _mock_run_snn):
+    mock_classify.return_value = _CANNED_CLASSIFICATION
+    with TestClient(app) as client:
+        response = client.post("/simulate", json={"prompt": "focus"})
+    assert response.status_code == 200
+    data = response.json()
+    assert set(data.keys()) == {
+        "active_lobe",
+        "dominant_neuromodulator",
+        "neuromodulator_intensity",
+        "neuromodulator_rationale",
+        "explanation",
+        "duration_ms",
+        "spikes",
+        "snn_modulation",
+        "vfx_profile",
+    }
+    assert data["active_lobe"] in LOBE_NAMES
+    assert 0.0 <= data["neuromodulator_intensity"] <= 1.0
+    assert isinstance(data["explanation"], str)
+    assert isinstance(data["neuromodulator_rationale"], str)
+    assert set(data["snn_modulation"].keys()) == _SNN_MODULATION_KEYS
+    assert set(data["vfx_profile"].keys()) == _VFX_PROFILE_KEYS
+    for lobe in LOBE_NAMES:
+        assert lobe in data["spikes"]
+        assert set(data["spikes"][lobe].keys()) == {"indices", "times_ms"}
+
+
+@patch("backend.main.classify_scenario", new_callable=AsyncMock)
+def test_simulate_integration_real_run_snn(mock_classify):
+    """Mock LLM only; exercise Brian2 wiring through the full /simulate route."""
+    mock_classify.return_value = _CANNED_CLASSIFICATION
+    with TestClient(app) as client:
+        response = client.post("/simulate", json={"prompt": "focus"})
+    assert response.status_code == 200
+    data = response.json()
+    for lobe in LOBE_NAMES:
+        assert lobe in data["spikes"]
+        assert isinstance(data["spikes"][lobe]["indices"], list)
+        assert isinstance(data["spikes"][lobe]["times_ms"], list)
+
+
+def test_simulate_waiter_gets_502_when_leader_fails():
+    """Concurrent peer awaiting a failed leader must receive the same 502."""
+
+    leader_started = asyncio.Event()
+    release_classify = asyncio.Event()
+
+    async def failing_classify(prompt, **_kwargs):
+        leader_started.set()
+        await release_classify.wait()
+        raise RuntimeError("OpenRouter request failed with status 502: bad gateway")
+
+    async def run() -> tuple[int, int]:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(
+            transport=transport, base_url="http://testserver", timeout=10.0
+        ) as ac:
+            leader_task = asyncio.create_task(
+                ac.post("/simulate", json={"prompt": "peer failure scenario"})
+            )
+            await leader_started.wait()
+            peer_task = asyncio.create_task(
+                ac.post("/simulate", json={"prompt": "peer failure scenario"})
+            )
+            await asyncio.sleep(0.05)
+            release_classify.set()
+            leader_response = await leader_task
+            peer_response = await peer_task
+            return leader_response.status_code, peer_response.status_code
+
+    with (
+        patch("backend.main.run_snn", return_value=_CANNED_SPIKES),
+        patch("backend.main.classify_scenario", side_effect=failing_classify),
+    ):
+        leader_status, peer_status = asyncio.run(run())
+
+    assert leader_status == 502
+    assert peer_status == 502
     assert not main._classification_inflight
