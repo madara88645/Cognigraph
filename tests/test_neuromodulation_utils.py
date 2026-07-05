@@ -115,7 +115,7 @@ class TestValidateClassificationPayload:
         result = validate_classification_payload(self._valid(dominant_neuromodulator="epinephrine"))
         assert result["dominant_neuromodulator"] == "adrenaline"
 
-    def test_alias_5ht_maps_to_serotonin(self):
+    def test_alias_5_dash_ht_maps_to_serotonin(self):
         result = validate_classification_payload(self._valid(dominant_neuromodulator="5-ht"))
         assert result["dominant_neuromodulator"] == "serotonin"
 

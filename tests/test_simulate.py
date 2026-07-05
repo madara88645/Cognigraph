@@ -280,9 +280,11 @@ def test_simulate_400_whitespace_only_prompt(mock_classify, _mock_run_snn):
 @patch("backend.main.classify_scenario", new_callable=AsyncMock)
 def test_simulate_500_when_snn_fails(mock_classify):
     mock_classify.return_value = _CANNED_CLASSIFICATION
-    with patch("backend.main.run_snn", side_effect=RuntimeError("brian2 boom")):
-        with TestClient(app) as client:
-            response = client.post("/simulate", json={"prompt": "focus"})
+    with (
+        patch("backend.main.run_snn", side_effect=RuntimeError("brian2 boom")),
+        TestClient(app) as client,
+    ):
+        response = client.post("/simulate", json={"prompt": "focus"})
     assert response.status_code == 500
     assert "SNN simulation failed" in response.json()["detail"]
 
