@@ -263,6 +263,7 @@ class VfxProfileDict(TypedDict, total=False):
     global_chaos_mult: float
     desaturate: float
     scatter_flash_prob: float
+    glow_sinusoidal_amp_mult: float
 
 
 def _vfx_cortisol_piecewise(u: float) -> VfxProfileDict:
@@ -284,6 +285,7 @@ def _vfx_cortisol_piecewise(u: float) -> VfxProfileDict:
             "global_chaos_mult": 1.0,
             "desaturate": 0.04 * (1.0 - t),
             "scatter_flash_prob": 0.02 + 0.04 * t,
+            "glow_sinusoidal_amp_mult": 0.0,
         }
     s = (u - CORTISOL_U_CRIT) / (1.0 - CORTISOL_U_CRIT)
     return {
@@ -300,6 +302,7 @@ def _vfx_cortisol_piecewise(u: float) -> VfxProfileDict:
         "global_chaos_mult": 1.0 + 1.25 * s,
         "desaturate": 0.38 + 0.42 * s,
         "scatter_flash_prob": 0.14 + 0.52 * s,
+        "glow_sinusoidal_amp_mult": 0.0,
     }
 
 
@@ -314,6 +317,7 @@ VFX_PROFILE_TABLE: dict[str, VfxProfileDict] = {
         "vertex_wave_mult": 1.4,
         "burst_threshold": 0.45,
         "active_lobe_bloom_scale": 1.0,
+        "glow_sinusoidal_amp_mult": 0.0,
     },
     "noradrenaline": {
         "bloom_mult": 1.2,
@@ -325,6 +329,7 @@ VFX_PROFILE_TABLE: dict[str, VfxProfileDict] = {
         "vertex_wave_mult": 1.15,
         "burst_threshold": 0.5,
         "active_lobe_bloom_scale": 1.35,
+        "glow_sinusoidal_amp_mult": 0.0,
     },
     "dopamine": {
         "bloom_mult": 1.12,
@@ -336,6 +341,7 @@ VFX_PROFILE_TABLE: dict[str, VfxProfileDict] = {
         "vertex_wave_mult": 1.1,
         "burst_threshold": 0.52,
         "active_lobe_bloom_scale": 1.05,
+        "glow_sinusoidal_amp_mult": 0.05,
     },
     "serotonin": {
         "bloom_mult": 0.95,
@@ -347,6 +353,7 @@ VFX_PROFILE_TABLE: dict[str, VfxProfileDict] = {
         "vertex_wave_mult": 0.75,
         "burst_threshold": 0.68,
         "active_lobe_bloom_scale": 1.0,
+        "glow_sinusoidal_amp_mult": 0.0,
     },
     "gaba": {
         "bloom_mult": 0.8,
@@ -358,6 +365,7 @@ VFX_PROFILE_TABLE: dict[str, VfxProfileDict] = {
         "vertex_wave_mult": 0.6,
         "burst_threshold": 0.72,
         "active_lobe_bloom_scale": 1.0,
+        "glow_sinusoidal_amp_mult": 0.0,
     },
     "acetylcholine": {
         "bloom_mult": 1.05,
@@ -369,6 +377,7 @@ VFX_PROFILE_TABLE: dict[str, VfxProfileDict] = {
         "vertex_wave_mult": 1.12,
         "burst_threshold": 0.55,
         "active_lobe_bloom_scale": 1.12,
+        "glow_sinusoidal_amp_mult": 0.0,
     },
     "baseline": {
         "bloom_mult": 1.0,
@@ -380,6 +389,7 @@ VFX_PROFILE_TABLE: dict[str, VfxProfileDict] = {
         "vertex_wave_mult": 1.0,
         "burst_threshold": 0.6,
         "active_lobe_bloom_scale": 1.0,
+        "glow_sinusoidal_amp_mult": 0.0,
     },
 }
 
@@ -396,6 +406,7 @@ VFX_PROFILE_KEYS = (
     "vertex_wave_mult",
     "burst_threshold",
     "active_lobe_bloom_scale",
+    "glow_sinusoidal_amp_mult",
 )
 
 

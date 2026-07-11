@@ -144,6 +144,7 @@ class VfxProfileEcho(BaseModel):
     global_chaos_mult: float = 1.0
     desaturate: float = 0.0
     scatter_flash_prob: float = 0.0
+    glow_sinusoidal_amp_mult: float = 0.0
 
 
 class SimulateResponse(BaseModel):
