@@ -77,7 +77,7 @@ NEUROMODULATOR_TABLE: dict[str, SnnModulationSpec] = {
     "adrenaline": SnnModulationSpec(1.35, 1.25, -0.06, 0.85, 0.75, 1.1, 1.3),
     "noradrenaline": SnnModulationSpec(1.45, 0.85, -0.04, 0.9, 0.85, 1.05, 1.15),
     "dopamine": SnnModulationSpec(1.25, 1.05, -0.03, 0.95, 0.9, 1.15, 1.25),
-    "serotonin": SnnModulationSpec(1.05, 1.0, 0.04, 1.15, 1.15, 0.95, 0.85),
+    "serotonin": SnnModulationSpec(0.95, 1.0, 0.04, 1.15, 1.15, 0.95, 0.85),
     "gaba": SnnModulationSpec(0.75, 0.7, 0.08, 1.25, 1.2, 0.75, 0.7),
     "acetylcholine": SnnModulationSpec(1.4, 0.75, -0.02, 0.95, 1.0, 1.1, 1.1),
 }
