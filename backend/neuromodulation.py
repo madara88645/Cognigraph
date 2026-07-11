@@ -354,7 +354,7 @@ VFX_PROFILE_TABLE: dict[str, VfxProfileDict] = {
         "tween_in_ms": 900,
         "tween_out_ms": 1200,
         "idle_breath_speed_mult": 0.55,
-        "idle_breath_amp_mult": 1.25,
+        "idle_breath_amp_mult": 0.72,
         "vertex_wave_mult": 0.6,
         "burst_threshold": 0.72,
         "active_lobe_bloom_scale": 1.0,
