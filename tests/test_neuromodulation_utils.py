@@ -13,10 +13,24 @@ from backend.neuromodulation import (
     LOBE_NAMES,
     NEUROMOD_GLOW_HEX,
     NEUROMODULATOR_NAMES,
+    _lerp_hex_rgb,
     _lerp_toward_neutral,
     build_vfx_profile,
     validate_classification_payload,
 )
+
+
+class TestLerpHexRgb:
+    """_lerp_hex_rgb interpolates #RRGGBB colors in RGB space."""
+
+    def test_zero_t_returns_first_color(self):
+        assert _lerp_hex_rgb("#E0FFFF", "#FFD700", 0.0) == "#E0FFFF"
+
+    def test_one_t_returns_second_color(self):
+        assert _lerp_hex_rgb("#E0FFFF", "#FFD700", 1.0) == "#FFD700"
+
+    def test_half_t_is_midpoint(self):
+        assert _lerp_hex_rgb("#E0FFFF", "#FFD700", 0.5) == "#F0EB80"
 
 
 class TestLerpTowardNeutral:
@@ -202,6 +216,23 @@ class TestBuildVfxProfile:
                 continue
             profile = build_vfx_profile(mod, 1.0)
             assert profile["glow_hex"] == NEUROMOD_GLOW_HEX[mod]
+
+    def test_glow_hex_interpolates_toward_baseline_by_intensity(self):
+        baseline_hex = NEUROMOD_GLOW_HEX["baseline"]
+        mod_hex = NEUROMOD_GLOW_HEX["dopamine"]
+        assert build_vfx_profile("dopamine", 0.0)["glow_hex"] == baseline_hex
+        assert build_vfx_profile("dopamine", 0.5)["glow_hex"] == _lerp_hex_rgb(
+            baseline_hex, mod_hex, 0.5
+        )
+        assert build_vfx_profile("dopamine", 1.0)["glow_hex"] == mod_hex
+
+    def test_zero_intensity_glow_hex_is_baseline_for_all_non_cortisol(self):
+        baseline_hex = NEUROMOD_GLOW_HEX["baseline"]
+        for mod in NEUROMODULATOR_NAMES:
+            if mod == "cortisol":
+                continue
+            profile = build_vfx_profile(mod, 0.0)
+            assert profile["glow_hex"] == baseline_hex, mod
 
     def test_zero_intensity_lerps_to_baseline_bloom(self):
         # tlerp(neutral, spec, 0.0) = neutral; baseline bloom_mult=1.0

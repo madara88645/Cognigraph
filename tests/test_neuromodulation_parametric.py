@@ -12,6 +12,8 @@ import pytest
 from backend.neuromodulation import (
     build_vfx_profile,
     resolve_snn_modulation,
+    _lerp_hex_rgb,
+    NEUROMOD_GLOW_HEX,
 )
 
 # ---------------------------------------------------------------------------
@@ -124,3 +126,21 @@ class TestBuildVfxProfileParametric:
         for mod in _VFX_FULL:
             p = build_vfx_profile(mod, 0.0)
             assert p["bloom_mult"] == pytest.approx(baseline_bloom, abs=1e-9), mod
+
+    @pytest.mark.parametrize(
+        "neuromod,intensity",
+        [
+            ("dopamine", 0.0),
+            ("dopamine", 0.5),
+            ("dopamine", 1.0),
+            ("adrenaline", 0.0),
+            ("adrenaline", 0.5),
+            ("adrenaline", 1.0),
+        ],
+    )
+    def test_glow_hex_interpolates_toward_baseline(self, neuromod: str, intensity: float) -> None:
+        baseline_hex = NEUROMOD_GLOW_HEX["baseline"]
+        mod_hex = NEUROMOD_GLOW_HEX[neuromod]
+        expected = _lerp_hex_rgb(baseline_hex, mod_hex, intensity)
+        p = build_vfx_profile(neuromod, intensity)
+        assert p["glow_hex"] == expected

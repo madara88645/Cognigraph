@@ -101,6 +101,26 @@ def _lerp_toward_neutral(mult_at_full: float, intensity: float) -> float:
     return 1.0 + (mult_at_full - 1.0) * intensity
 
 
+def _parse_hex_rgb(hex_color: str) -> tuple[int, int, int]:
+    h = hex_color.lstrip("#")
+    return (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))
+
+
+def _format_hex_rgb(r: int, g: int, b: int) -> str:
+    return f"#{r:02X}{g:02X}{b:02X}"
+
+
+def _lerp_hex_rgb(hex_a: str, hex_b: str, t: float) -> str:
+    """Linear RGB interpolation between two #RRGGBB colors."""
+    t = max(0.0, min(1.0, t))
+    ra, ga, ba = _parse_hex_rgb(hex_a)
+    rb, gb, bb = _parse_hex_rgb(hex_b)
+    r = round(ra + (rb - ra) * t)
+    g = round(ga + (gb - ga) * t)
+    b = round(ba + (bb - ba) * t)
+    return _format_hex_rgb(r, g, b)
+
+
 @dataclass(frozen=True)
 class ResolvedSnnParams:
     v_thresh: float
@@ -407,7 +427,9 @@ def build_vfx_profile(neuromodulator: str, intensity: float) -> VfxProfileDict:
         cort["glow_hex"] = str(cort.get("glow_hex", "#FFBF00"))
         return cort
 
-    glow_hex = NEUROMOD_GLOW_HEX.get(neuromodulator, NEUROMOD_GLOW_HEX["baseline"])
+    baseline_hex = NEUROMOD_GLOW_HEX["baseline"]
+    mod_hex = NEUROMOD_GLOW_HEX.get(neuromodulator, baseline_hex)
+    glow_hex = _lerp_hex_rgb(baseline_hex, mod_hex, intensity)
 
     def tlerp(a: float, b: float) -> float:
         return a + (b - a) * intensity

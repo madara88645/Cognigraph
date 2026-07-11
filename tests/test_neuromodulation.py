@@ -175,7 +175,7 @@ def test_glow_hex_per_modulator() -> None:
 
 def test_build_vfx_includes_glow_hex() -> None:
     v = build_vfx_profile("noradrenaline", 0.8)
-    assert v["glow_hex"] == "#FF4500"
+    assert v["glow_hex"] == "#F96A33"
     assert v["tween_in_ms"] < 600
 
 
