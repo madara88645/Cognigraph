@@ -33,7 +33,7 @@ _SNN_FULL = {
 _VFX_FULL = {
     "dopamine": ("#FFD700", 1.12, 480, 0.52, 1.05),
     "serotonin": ("#E0FFFF", 0.95, 720, 0.68, 1.00),
-    "acetylcholine": ("#FFD700", 1.05, 520, 0.55, 1.12),
+    "acetylcholine": ("#FFD700", 1.2, 400, 0.48, 1.2),
     "adrenaline": ("#FF4500", 1.25, 350, 0.45, 1.00),
     "gaba": ("#8A2BE2", 0.80, 900, 0.72, 1.00),
     "baseline": ("#E0FFFF", 1.00, 600, 0.60, 1.00),
