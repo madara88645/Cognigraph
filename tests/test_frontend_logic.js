@@ -20,6 +20,8 @@ import {
   syncRetryStateWithPrompt,
 } from "../frontend/js/requestRetryState.js";
 import { resolvePromptText } from "../frontend/js/promptText.js";
+import { DEFAULT_VFX } from "../frontend/js/constants.js";
+import { mergeVfxProfile } from "../frontend/js/ui.js";
 
 // --- derivePhaseUiState ------------------------------------------------------
 
@@ -278,4 +280,20 @@ test("resolvePromptText returns empty string when nothing usable is provided", (
   assert.equal(resolvePromptText({ type: "click" }, ""), "");
   assert.equal(resolvePromptText(undefined, undefined), "");
   assert.equal(resolvePromptText(null, "   "), "");
+});
+
+// --- DEFAULT_VFX (glow_sinusoidal_amp_mult) ---------------------------------
+
+test("DEFAULT_VFX includes glow_sinusoidal_amp_mult defaulting to 0", () => {
+  assert.equal(DEFAULT_VFX.glow_sinusoidal_amp_mult, 0.0);
+});
+
+test("mergeVfxProfile preserves glow_sinusoidal_amp_mult from API", () => {
+  const merged = mergeVfxProfile({ glow_sinusoidal_amp_mult: 0.05 });
+  assert.equal(merged.glow_sinusoidal_amp_mult, 0.05);
+});
+
+test("mergeVfxProfile defaults glow_sinusoidal_amp_mult to 0", () => {
+  const merged = mergeVfxProfile({});
+  assert.equal(merged.glow_sinusoidal_amp_mult, 0.0);
 });

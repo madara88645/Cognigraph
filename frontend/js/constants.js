@@ -42,6 +42,7 @@ export const DEFAULT_VFX = {
   global_chaos_mult: 1.0,
   desaturate: 0.0,
   scatter_flash_prob: 0.0,
+  glow_sinusoidal_amp_mult: 0.0,
 };
 /** Hard cap for POST /simulate; warm runs are usually well under a minute. */
 export const REQUEST_TIMEOUT_MS = 120000;

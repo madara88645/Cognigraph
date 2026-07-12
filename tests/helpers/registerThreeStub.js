@@ -4,6 +4,7 @@
 //
 // Usage:
 //   node --import ./tests/helpers/registerThreeStub.js --test frontend/js/ui.test.mjs
+//   node --import ./tests/helpers/registerThreeStub.js --test tests/test_frontend_logic.js
 
 import { register } from "node:module";
 
