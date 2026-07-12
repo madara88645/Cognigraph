@@ -124,3 +124,9 @@ class TestBuildVfxProfileParametric:
         for mod in _VFX_FULL:
             p = build_vfx_profile(mod, 0.0)
             assert p["bloom_mult"] == pytest.approx(baseline_bloom, abs=1e-9), mod
+
+    def test_gaba_idle_breath_amp_mult_reduced_for_inhibitory_profile(self) -> None:
+        gaba_amp = build_vfx_profile("gaba", 1.0)["idle_breath_amp_mult"]
+        assert gaba_amp == pytest.approx(0.72, abs=1e-9)
+        assert gaba_amp < build_vfx_profile("adrenaline", 1.0)["idle_breath_amp_mult"]
+        assert gaba_amp < build_vfx_profile("baseline", 1.0)["idle_breath_amp_mult"]

@@ -188,6 +188,11 @@ def test_build_vfx_includes_glow_hex() -> None:
     assert v["tween_in_ms"] < 600
 
 
+def test_gaba_idle_breath_amp_mult_at_full_intensity() -> None:
+    v = build_vfx_profile("gaba", 1.0)
+    assert v["idle_breath_amp_mult"] == pytest.approx(0.72, abs=1e-9)
+
+
 def test_gaba_resolves_lower_rates_than_adrenaline() -> None:
     g = resolve_snn_modulation("gaba", 1.0)
     a = resolve_snn_modulation("adrenaline", 1.0)
