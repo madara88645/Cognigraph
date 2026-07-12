@@ -29,7 +29,16 @@ export function mergeVfxProfile(raw) {
 
 export function neuromodPillTextClass(hex) {
   const h = (hex || "").toUpperCase();
-  if (h === "#E0FFFF" || h === "#FFD700" || h === "#FFBF00" || h === "#FFF8F0") return "text-slate-900";
+  if (
+    h === "#E0FFFF" ||
+    h === "#40E0D0" ||
+    h === "#FFD700" ||
+    h === "#32CD32" ||
+    h === "#FFBF00" ||
+    h === "#FFF8F0"
+  ) {
+    return "text-slate-900";
+  }
   return "text-white";
 }
 
