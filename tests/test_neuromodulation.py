@@ -168,15 +168,29 @@ def test_validate_rationale_too_long() -> None:
 
 def test_glow_hex_per_modulator() -> None:
     assert NEUROMOD_GLOW_HEX["adrenaline"] == "#FF4500"
+    assert NEUROMOD_GLOW_HEX["noradrenaline"] == "#FF8C00"
     assert NEUROMOD_GLOW_HEX["dopamine"] == "#FFD700"
+    assert NEUROMOD_GLOW_HEX["acetylcholine"] == "#32CD32"
+    assert NEUROMOD_GLOW_HEX["serotonin"] == "#40E0D0"
     assert NEUROMOD_GLOW_HEX["baseline"] == "#E0FFFF"
     assert NEUROMOD_GLOW_HEX["gaba"] == "#8A2BE2"
 
 
+def test_glow_hex_all_non_cortisol_modulators_distinct() -> None:
+    non_cortisol = [m for m in NEUROMOD_GLOW_HEX if m != "cortisol"]
+    hexes = [NEUROMOD_GLOW_HEX[m] for m in non_cortisol]
+    assert len(hexes) == len(set(hexes))
+
+
 def test_build_vfx_includes_glow_hex() -> None:
     v = build_vfx_profile("noradrenaline", 0.8)
-    assert v["glow_hex"] == "#FF4500"
+    assert v["glow_hex"] == "#FF8C00"
     assert v["tween_in_ms"] < 600
+
+
+def test_gaba_idle_breath_amp_mult_at_full_intensity() -> None:
+    v = build_vfx_profile("gaba", 1.0)
+    assert v["idle_breath_amp_mult"] == pytest.approx(0.72, abs=1e-9)
 
 
 def test_gaba_resolves_lower_rates_than_adrenaline() -> None:
