@@ -755,8 +755,9 @@ function updateDynamicGlow(now) {
   }
 
   let glowEnv = Math.pow(brain.glowAmount, 0.88);
-  if (brain.dominantNeuromod === "dopamine") {
-    glowEnv *= 1.0 + 0.05 * Math.sin(now * 0.004);
+  const glowSinusoidalAmp = vp.glow_sinusoidal_amp_mult ?? 0;
+  if (glowSinusoidalAmp > 0) {
+    glowEnv *= 1.0 + glowSinusoidalAmp * Math.sin(now * 0.004);
   }
 
   const cortisolToxic = isCortisolToxicVfx();

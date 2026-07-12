@@ -237,3 +237,16 @@ class TestBuildVfxProfile:
         p_unknown = build_vfx_profile("unknown_chemical", 0.5)
         p_baseline = build_vfx_profile("baseline", 0.5)
         assert p_unknown["bloom_mult"] == pytest.approx(p_baseline["bloom_mult"])
+
+    def test_dopamine_full_intensity_has_sinusoidal_glow_amp(self):
+        profile = build_vfx_profile("dopamine", 1.0)
+        assert profile["glow_sinusoidal_amp_mult"] == pytest.approx(0.05)
+
+    def test_non_dopamine_mods_have_zero_sinusoidal_glow_amp(self):
+        for mod in ("adrenaline", "serotonin", "gaba", "baseline"):
+            profile = build_vfx_profile(mod, 1.0)
+            assert profile["glow_sinusoidal_amp_mult"] == pytest.approx(0.0), mod
+
+    def test_zero_intensity_sinusoidal_glow_amp_is_zero(self):
+        profile = build_vfx_profile("dopamine", 0.0)
+        assert profile["glow_sinusoidal_amp_mult"] == pytest.approx(0.0)
