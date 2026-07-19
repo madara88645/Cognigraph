@@ -50,6 +50,7 @@ import {
 import { createColdStartTimer } from "./coldStartIndicator.js";
 import { mapErrorToUserMessage } from "./errorMessages.js";
 import { resolvePromptText } from "./promptText.js";
+import { initPanelLayout, setPanelCollapsed } from "./panelLayout.js";
 
 
 const {
@@ -113,8 +114,10 @@ const timelineFrameLabel = document.getElementById("timeline-frame-label");
 const statusChip        = document.getElementById("status-chip");
 const explanationText   = document.getElementById("explanation-text");
 const activeLobePill    = document.getElementById("active-lobe-pill");
+const activeLobeDot     = document.getElementById("active-lobe-dot");
 const neuromodPill      = document.getElementById("neuromod-pill");
 const neuromodIntensityLabel = document.getElementById("neuromod-intensity-label");
+const neuromodMeterFill = document.getElementById("neuromod-meter-fill");
 const neuromodRationaleEl = document.getElementById("neuromod-rationale");
 const hpaContextHint    = document.getElementById("hpa-context-hint");
 const legendPanel       = document.getElementById("legend-panel");
@@ -150,7 +153,7 @@ const scene = new THREE.Scene();
 scene.background = null;
 
 const camera = new THREE.PerspectiveCamera(58, 1, 0.1, 200);
-camera.position.set(0, 0.5, 5.0);
+camera.position.set(0, 0.4, 3.9);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 renderer.setPixelRatio(getOptimalPixelRatio());
@@ -166,7 +169,7 @@ const bloomPass = new UnrealBloomPass(
   new THREE.Vector2(canvasHost.clientWidth * _dpr, canvasHost.clientHeight * _dpr),
   1.05,   // strength — toned down vs harsh neon
   0.45,   // radius — slightly tighter halo
-  0.42    // threshold — fewer pixels bloom = less wash-out
+  0.5     // threshold — only the brightest (active-lobe) pixels bloom; keeps dim background lobes from washing out the whole brain
 );
 composer.addPass(bloomPass);
 
@@ -185,6 +188,7 @@ controls.minDistance = 2.0;
    STATE
    ═══════════════════════════════════════════════ */
 let autoRotate = true;
+let focusFreeze = false; // pauses idle auto-rotation while the focus animation orients the brain
 let brainGroup = null;
 let lastPayload = null;
 let currentBloomStrength = BLOOM_BASE_STRENGTH;
@@ -262,6 +266,7 @@ updateTimelineUi();
 setRequestPhase(REQUEST_PHASE.IDLE);
 updateControlAccessibilityState();
 hookUiEvents();
+initPanelLayout();
 if (openDemoLink) {
   openDemoLink.href = PRIMARY_LIVE_DEMO_URL;
   if (window.location.origin === PRIMARY_LIVE_DEMO_ORIGIN) {
@@ -481,7 +486,7 @@ function colorBrainByLobe(meshes, center, size) {
       wireframe: true,
       vertexColors: true,
       transparent: true,
-      opacity: 0.72,
+      opacity: 0.82,
       side: THREE.DoubleSide,
     });
     mesh.renderOrder = 0;
@@ -489,7 +494,7 @@ function colorBrainByLobe(meshes, center, size) {
     const solidMat = new THREE.MeshBasicMaterial({
       vertexColors: true,
       transparent: true,
-      opacity: 0.06,
+      opacity: 0.09,
       side: THREE.DoubleSide,
       depthWrite: false,
     });
@@ -971,6 +976,11 @@ function updateNeuromodPanel(payload) {
     mod,
     brain.neuromodulatorIntensity
   );
+  if (neuromodMeterFill) {
+    const pct = Math.round(Math.max(0, Math.min(1, brain.neuromodulatorIntensity)) * 100);
+    neuromodMeterFill.style.width = `${pct}%`;
+    neuromodMeterFill.style.background = hex;
+  }
   const rat = payload.neuromodulator_rationale;
   if (rat && String(rat).trim()) {
     neuromodRationaleEl.textContent = String(rat).trim();
@@ -987,38 +997,69 @@ function updateNeuromodPanel(payload) {
   }
 }
 
+/**
+ * Current world-space center of a lobe, recomputed from live matrices.
+ * brain.lobeCenters is captured once at load (before brainGroup exists and
+ * before auto-rotation), so it goes stale as the brain spins — using it makes
+ * the focus nudge aim at where the lobe *was*, producing a skewed move.
+ */
+function lobeWorldCenterNow(lobe) {
+  const verts = brain.lobeVertices[lobe];
+  if (!verts || !verts.length) return null;
+  if (brainGroup) brainGroup.updateMatrixWorld(true);
+  const wp = new THREE.Vector3();
+  const sum = new THREE.Vector3();
+  for (const { meshIdx, vertexIdx } of verts) {
+    const md = brain.meshEntries[meshIdx];
+    const pos = md.mesh.geometry.getAttribute("position");
+    wp.set(pos.getX(vertexIdx), pos.getY(vertexIdx), pos.getZ(vertexIdx));
+    md.mesh.localToWorld(wp);
+    sum.add(wp);
+  }
+  return sum.multiplyScalar(1 / verts.length);
+}
+
+/**
+ * Focus the active lobe: smoothly rotate the brain so the lobe turns to face
+ * the camera (up to ~180° for rear lobes), with a brief zoom-in punch, then let
+ * auto-rotation resume from the lobe-facing angle. Rotation is frozen for the
+ * duration so the brain doesn't spin out from under the move (which used to make
+ * it look skewed). Without this, a rear lobe just glows through the transparent
+ * mesh and you can't tell which region lit up.
+ */
 function nudgeCameraTowardLobe(lobeName) {
-  if (!brain.lobeCenters[lobeName]) return;
-  const world = brain.lobeCenters[lobeName];
-  const startTarget = controls.target.clone();
+  if (!brainGroup) return;
+  const world = lobeWorldCenterNow(lobeName);
+  if (!world) return;
+
+  const startRot = brainGroup.rotation.y;
+  // Shortest signed turn that brings the lobe's world direction to +z (camera side).
+  const delta = -Math.atan2(world.x, world.z);
   const startPos = camera.position.clone();
-  const endTarget = startTarget.clone().lerp(world, FOCUS_TARGET_BLEND);
-  const dir = world.clone().sub(startPos);
-  if (dir.lengthSq() < 1e-6) return;
-  dir.normalize();
-  const endPos = startPos.clone().add(dir.multiplyScalar(FOCUS_POS_PULL));
-  const backTarget = startTarget.clone();
-  const backPos = startPos.clone();
+  const zoomedPos = startPos.clone().multiplyScalar(0.84); // ~16% dolly-in toward the brain
+  const turnMs = FOCUS_NUDGE_MS + (Math.abs(delta) / Math.PI) * 450; // longer for bigger turns
+
+  focusFreeze = true; // hold idle auto-rotation while we orient
   const out = { t: 0 };
   new TWEEN.Tween(out)
-    .to({ t: 1 }, FOCUS_NUDGE_MS)
-    .easing(TWEEN.Easing.Quadratic.Out)
+    .to({ t: 1 }, turnMs)
+    .easing(TWEEN.Easing.Cubic.InOut)
     .onUpdate(() => {
-      const t = out.t;
-      controls.target.lerpVectors(startTarget, endTarget, t);
-      camera.position.lerpVectors(startPos, endPos, t);
+      brainGroup.rotation.y = startRot + delta * out.t;
+      camera.position.lerpVectors(startPos, zoomedPos, out.t);
       controls.update();
     })
     .onComplete(() => {
-      const inn = { t: 0 };
-      new TWEEN.Tween(inn)
-        .to({ t: 1 }, FOCUS_NUDGE_MS * 0.95)
-        .easing(TWEEN.Easing.Quadratic.InOut)
+      const back = { t: 0 };
+      new TWEEN.Tween(back)
+        .to({ t: 1 }, FOCUS_NUDGE_MS * 0.9)
+        .easing(TWEEN.Easing.Quadratic.Out)
         .onUpdate(() => {
-          const t = inn.t;
-          controls.target.lerpVectors(endTarget, backTarget, t);
-          camera.position.lerpVectors(endPos, backPos, t);
+          camera.position.lerpVectors(zoomedPos, startPos, back.t); // ease the zoom back; keep the new facing
           controls.update();
+        })
+        .onComplete(() => {
+          focusFreeze = false; // resume auto-rotation from the lobe-facing angle
         })
         .start();
     })
@@ -1039,6 +1080,7 @@ function startPlayback(payload) {
   playback.playedCounts = Object.fromEntries(LOBES.map((l) => [l, 0]));
 
   TWEEN.removeAll();
+  focusFreeze = false; // clear any focus freeze that removeAll just cancelled mid-flight
   resetAllLobeColors();
 
   applyNeuromodFromPayload(payload);
@@ -1058,7 +1100,12 @@ function startPlayback(payload) {
 
   explanationText.textContent = payload.explanation || "";
   activeLobePill.textContent = payload.active_lobe;
-  activeLobePill.style.color = `#${LOBE_COLORS[payload.active_lobe].getHexString()}`;
+  const activeLobeHex = `#${LOBE_COLORS[payload.active_lobe].getHexString()}`;
+  activeLobePill.style.color = activeLobeHex;
+  if (activeLobeDot) {
+    activeLobeDot.style.background = activeLobeHex;
+    activeLobeDot.style.boxShadow = `0 0 10px ${activeLobeHex}`;
+  }
 
   playPauseButton.textContent = "Pause";
   refreshLegendCounts();
@@ -1146,6 +1193,12 @@ async function handleSimulateClick(promptOverride = "") {
     assertValidResponse(payload);
     lastPayload = payload;
     startPlayback(payload);
+    // On desktop, fold the input panel so the results readout gets the full
+    // right rail (input + a populated Analysis can't both fit unscrolled).
+    if (window.innerWidth > 1024) {
+      setPanelCollapsed("input", true);
+      setPanelCollapsed("analysis", false);
+    }
     resetRetryRecovery();
     setRequestPhase(resolvePhaseAfterOutcome("success"));
     log(`Active lobe: ${payload.active_lobe}`);
@@ -1425,7 +1478,7 @@ function syncAnalysisRecessedState() {
    ═══════════════════════════════════════════════ */
 
 function render(now = performance.now()) {
-  if (autoRotate && brainGroup) {
+  if (autoRotate && !focusFreeze && brainGroup) {
     brainGroup.rotation.y += 0.002;
   }
 

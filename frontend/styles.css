@@ -7,7 +7,7 @@
   --cg-text-primary: #f8fafc;
   --cg-text-muted: #b6c1d1;
   --cg-text-subtle: #94a3b8;
-  --cg-radius-panel: 24px;
+  --cg-radius-panel: 16px;
   --cg-radius-control: 12px;
   --cg-space-1: 0.25rem;
   --cg-space-2: 0.5rem;
@@ -80,11 +80,39 @@ input[type="range"] {
   z-index: 1;
 }
 @media (min-width: 1025px) {
-  .cognigraph-middle-col .analysis-panel {
-    transition: opacity 0.28s ease;
+  /* Results readout on its own right rail, anchored to the viewport so the
+     left column's height can't squeeze it. It spans from below the input panel
+     down toward the timeline; folding the input panel (JS, on results) lifts
+     the top so the whole readout shows without scrolling. */
+  .cg-analysis-rail {
+    position: absolute;
+    right: 1.5rem;
+    top: 30.5rem;
+    width: 20rem;
+    min-width: 0;
+    /* Size to content; only scroll if it would run past the viewport. */
+    max-height: calc(100vh - 34rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    transition: top 0.32s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.28s ease;
   }
-  .cognigraph-middle-col .analysis-panel.analysis-panel--recessed {
+  /* With the input folded the rail climbs to the top of the right column and is
+     allowed to run nearly the full height, so a populated readout shows whole. */
+  .cognigraph-shell[data-cg-input-folded="true"] .cg-analysis-rail {
+    top: 6rem;
+    max-height: calc(100vh - 9.5rem);
+  }
+  .cg-analysis-rail.analysis-panel--recessed {
     opacity: 0.48;
+  }
+  /* Compact the example chips so the input panel stays short on desktop. */
+  .cognigraph-input-panel .example-scenario-btn {
+    font-size: 9px;
+    padding: 3px 7px;
+  }
+  .cognigraph-signatures-panel,
+  .cognigraph-log-panel {
+    padding: 0.9rem;
   }
 }
 .cognigraph-input-panel {
@@ -110,20 +138,154 @@ input[type="range"] {
 }
 .analysis-label {
   color: #d4deea;
-  font-size: var(--cg-font-size-xs);
+  font-size: 0.8125rem;
   font-weight: 600;
   letter-spacing: 0.06em;
 }
 .analysis-body {
   color: #ecf2fb;
-  font-size: var(--cg-font-size-sm);
-  line-height: 1.55;
+  font-size: 0.9rem;
+  line-height: 1.65;
 }
 .analysis-value {
   color: var(--cg-text-primary);
-  font-size: var(--cg-font-size-body);
+  font-size: 1.0625rem;
   font-weight: 600;
 }
+/* Results readout: the active region reads as the headline of the panel, with a
+   colour chip that matches the lobe across the legend and the 3D brain. */
+.cg-region-name {
+  color: var(--cg-text-primary);
+  font-size: 1.4rem;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+.cg-region-dot {
+  width: 0.7rem;
+  height: 0.7rem;
+  flex: none;
+  border-radius: 9999px;
+  background: var(--cg-text-subtle);
+  transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+.cg-divider {
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    rgba(148, 163, 184, 0.22),
+    rgba(148, 163, 184, 0.04)
+  );
+}
+/* Neuromodulator intensity gauge: turns the 0–1 measurement into a glanceable
+   bar, tinted with that neuromodulator's glow colour (set from JS). */
+.cg-meter {
+  height: 5px;
+  border-radius: 9999px;
+  background: rgba(148, 163, 184, 0.14);
+  overflow: hidden;
+}
+.cg-meter-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 9999px;
+  background: var(--cg-text-subtle);
+  transition: width 0.55s cubic-bezier(0.22, 1, 0.36, 1), background 0.3s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cg-region-dot,
+  .cg-meter-fill {
+    transition: none;
+  }
+}
+
+/* ── Panel collapse / expand ────────────────────────────────────────────────
+   Desktop-only affordance: fold floating panels to give the 3D brain room.
+   ≤768px is the mobile drawer shell (mobile.js), so the controls hide there. */
+.cg-collapse-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  flex: none;
+  border-radius: 9999px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  color: var(--cg-text-subtle);
+  background: rgba(148, 163, 184, 0.06);
+}
+.cg-collapse-btn svg {
+  width: 0.85rem;
+  height: 0.85rem;
+  transition: transform 0.2s ease;
+}
+.cg-collapse-btn:hover {
+  color: var(--cg-text-primary);
+  border-color: rgba(148, 163, 184, 0.55);
+}
+/* Chevron points down when open; rotates to point sideways when collapsed. */
+.cg-panel[data-cg-collapsed="true"] .cg-collapse-btn svg {
+  transform: rotate(-90deg);
+}
+
+@media (min-width: 769px) {
+  /* Accordion + dock alike: fold every child except the header bar. */
+  .cg-panel[data-cg-collapsed="true"] > :not(.cg-panel-header) {
+    display: none !important;
+  }
+  /* Dock panels (Signatures, Event Log) shrink to a compact in-place chip. */
+  .cg-panel-dock[data-cg-collapsed="true"] {
+    width: auto !important;
+    min-width: 0 !important;
+    height: auto !important;
+  }
+  .cg-panel-dock[data-cg-collapsed="true"] .cg-panel-header {
+    border-bottom: 0 !important;
+    padding-bottom: 0 !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .cg-collapse-btn {
+    display: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cg-collapse-btn svg {
+    transition: none;
+  }
+}
+
+/* 769–1024px: the floating panels stack in document flow, so expanding the
+   top-left "How it works" disclosure used to push every panel below it down.
+   Float the open content as an overlay so the branding panel keeps a stable
+   footprint and its stacked siblings stay put. (Desktop >1024px doesn't stack;
+   ≤768px is the mobile drawer shell — both keep the default inline behavior.) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .glass-panel--info {
+    position: relative;
+    z-index: 40; /* lift above the stacked input panel (z-index: 5) so the overlay shows */
+  }
+  .glass-panel--info > details[open] > ol {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 6px;
+    z-index: 30;
+    padding: 0.65rem 0.85rem 0.65rem 1.5rem;
+    border-radius: 12px;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    background: rgba(15, 18, 26, 0.96);
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+}
+
 button {
   transition: all 0.2s ease;
 }
@@ -169,16 +331,32 @@ summary:focus-visible {
     position: relative !important;
     min-height: 0;
   }
-  .cognigraph-middle-col .analysis-panel,
-  .cognigraph-middle-col .cognigraph-signatures-panel {
+  .cg-analysis-rail {
     position: relative !important;
     top: auto !important;
+    bottom: auto !important;
     right: auto !important;
     left: auto !important;
     transform: none !important;
     width: 100% !important;
     max-width: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
     margin-bottom: 0.75rem;
+  }
+  /* Empty middle band shouldn't grow and add a gap once Analysis left it. */
+  .cognigraph-middle-col {
+    flex: 0 0 auto !important;
+  }
+  /* The left rail (branding + Signatures) spans full width when stacked. */
+  .cognigraph-left-col {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  .cognigraph-left-col .glass-panel--info,
+  .cognigraph-left-col .cognigraph-signatures-panel {
+    width: 100% !important;
+    max-width: 100% !important;
   }
   .cognigraph-bottom-row {
     flex-direction: column;

@@ -65,7 +65,7 @@ export const SPIKE_WINDOW_MS = 50;
 export const GLOW_SMOOTHING = 0.08;
 export const GLOW_NOISE_AMP = 0.06;
 export const GLOW_PULSE_SPEED = 0.003;
-export const BG_LOBE_GLOW_SCALE = 0.5;
+export const BG_LOBE_GLOW_SCALE = 0.2;
 // Floor for the auto-calibrated spike-glow normalizer (see computeSpikeNorm).
 // Prevents low-activity runs from dividing by a tiny peak and over-amplifying noise.
 export const MIN_SPIKE_NORM = 40;
@@ -78,8 +78,8 @@ export const BURST_THRESHOLD = 0.6;
 export const BURST_FLASH_INTENSITY = 0.42;
 export const BURST_FLASH_DECAY = 0.92;
 
-export const BLOOM_BASE_STRENGTH = 1.05;
-export const BLOOM_ACTIVITY_BOOST = 0.48;
+export const BLOOM_BASE_STRENGTH = 0.7;
+export const BLOOM_ACTIVITY_BOOST = 0.32;
 export const BLOOM_SMOOTHING = 0.03;
 
 export const IDLE_BREATH_SPEED = 0.0008;
