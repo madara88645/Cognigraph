@@ -6,7 +6,7 @@
 
 **CogniGraph** is an interactive, educational 3D brain simulation platform that bridges natural language, spiking neural networks, and GPU-accelerated graphics. Users input a real-world scenario (e.g., "studying for a final exam" or "drinking a double espresso"), and the system classifies the corresponding cognitive/neuromodulatory state using a Large Language Model (LLM), simulates biologically plausible neural dynamics using a Spiking Neural Network (SNN), and visualizes the resulting spike trains in real-time on an interactive 3D brain model.
 
-### ▶️ [Try the live demo → cognigraph-tau.vercel.app](https://cognigraph-tau.vercel.app/)
+### ▶️ [Try the live demo → cognigraph-13906.fly.dev](https://cognigraph-13906.fly.dev/)
 
 No install needed — type a scenario and watch the 3D brain respond.
 
