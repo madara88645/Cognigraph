@@ -40,8 +40,9 @@ FRONTEND_INDEX = FRONTEND_DIR / "index.html"
 ENV_FILE = PROJECT_ROOT / ".env"
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_OPENROUTER_MODEL = "deepseek/deepseek-v4-flash"
-# Used when the request has no X-OpenRouter-Api-Key (server env key only). Default is Qwen 3.5 Flash on OpenRouter (faster/cheaper than GPT-OSS for short JSON classification).
-DEFAULT_OPENROUTER_DEMO_MODEL = "qwen/qwen3.5-flash-02-23"
+# Used when the request has no X-OpenRouter-Api-Key (server env key only). Matches the BYOK
+# default: Qwen 3.5 Flash returned malformed JSON often enough to break /simulate in production.
+DEFAULT_OPENROUTER_DEMO_MODEL = "deepseek/deepseek-v4-flash"
 
 ERR_UNEXPECTED_LLM_FAILURE = "Unexpected LLM classification failure."
 MAX_EXCEPTION_MESSAGE_LENGTH = 2000

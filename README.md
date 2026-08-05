@@ -158,7 +158,7 @@ CogniGraph uses Brian2 with NumPy code generation, so a local setup does not req
 1. Copy `.env.example` to `.env` in the project root.
 2. Set your `OPENROUTER_API_KEY` from [OpenRouter](https://openrouter.ai/).
 3. **Optional environment variables**:
-   *   `OPENROUTER_DEMO_MODEL` (Default: `qwen/qwen3.5-flash-02-23`): Used for anonymous traffic (no key supplied by the user). It runs with a customized neuroscientist-educator system prompt.
+   *   `OPENROUTER_DEMO_MODEL` (Default: `deepseek/deepseek-v4-flash`): Used for anonymous traffic (no key supplied by the user). It runs with a customized neuroscientist-educator system prompt.
    *   `OPENROUTER_MODEL` (Default: `deepseek/deepseek-v4-flash`): Used when a visitor uses their own key (`X-OpenRouter-Api-Key`) but leaves the model id blank in the UI.
 
 > [!IMPORTANT]
