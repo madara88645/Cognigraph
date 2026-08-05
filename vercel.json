@@ -3,7 +3,6 @@
   "installCommand": "python -m pip install --upgrade pip && python -m pip install -r requirements.vercel.txt",
   "rewrites": [
     { "source": "/simulate", "destination": "https://cognigraph-13906.fly.dev/simulate" },
-    { "source": "/healthz",  "destination": "https://cognigraph-13906.fly.dev/healthz" },
-    { "source": "/(.*)",     "destination": "/src/index.py" }
+    { "source": "/healthz",  "destination": "https://cognigraph-13906.fly.dev/healthz" }
   ]
 }
