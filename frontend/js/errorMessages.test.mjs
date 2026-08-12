@@ -55,6 +55,32 @@ test("http 502 with a deprecated/not-found detail is treated as model-unavailabl
   }
 });
 
+test("http 504 is identified as a retryable server timeout", () => {
+  const result = mapErrorToUserMessage({
+    kind: "http",
+    status: 504,
+    detail: '{"code":"classification_timeout"}',
+  });
+  assert.equal(result.retryable, true);
+  assert.equal(result.toastSeverity, "warning");
+  assert.match(result.statusText, /timed out/i);
+  assert.doesNotMatch(result.toastText, /unexpected response|rephras/i);
+});
+
+test("http 502 proxy-timeout signatures are not mislabeled as model responses", () => {
+  for (const detail of [
+    "",
+    "Simulation failed (502)",
+    "ROUTER_EXTERNAL_TARGET_ERROR",
+    "upstream request timed out",
+  ]) {
+    const result = mapErrorToUserMessage({ kind: "http", status: 502, detail });
+    assert.equal(result.retryable, true, `detail=${detail}`);
+    assert.match(result.statusText, /timed out/i, `detail=${detail}`);
+    assert.doesNotMatch(result.toastText, /unexpected response|rephras/i, `detail=${detail}`);
+  }
+});
+
 test("http 502 without model-unavailable wording falls back to a generic message", () => {
   const result = mapErrorToUserMessage({ kind: "http", status: 502, detail: "weird payload" });
   assert.match(result.statusText, /unexpected response/i);

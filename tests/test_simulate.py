@@ -250,3 +250,47 @@ def test_simulate_inflight_failure_does_not_poison_cache():
     assert attempts == 2
     # Inflight registry must be clean so the second request can become leader.
     assert not main._classification_inflight
+
+
+def test_simulate_deadline_returns_typed_504_to_leader_and_waiter():
+    leader_started = asyncio.Event()
+    release_classify = asyncio.Event()
+    attempts = 0
+
+    async def timed_out_classify(prompt, **_kwargs):
+        nonlocal attempts
+        attempts += 1
+        leader_started.set()
+        await release_classify.wait()
+        raise main.ClassificationTimeoutError(main.CLASSIFICATION_DEADLINE_SEC)
+
+    async def run() -> tuple[httpx.Response, httpx.Response]:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as ac:
+            leader_task = asyncio.create_task(
+                ac.post("/simulate", json={"prompt": "deadline scenario"})
+            )
+            await leader_started.wait()
+            waiter_task = asyncio.create_task(
+                ac.post("/simulate", json={"prompt": "deadline scenario"})
+            )
+            await asyncio.sleep(0.05)
+            release_classify.set()
+            return await asyncio.gather(leader_task, waiter_task)
+
+    with (
+        patch("backend.main.run_snn", return_value=_CANNED_SPIKES),
+        patch("backend.main.classify_scenario", side_effect=timed_out_classify),
+    ):
+        leader_response, waiter_response = asyncio.run(run())
+
+    expected_detail = {
+        "code": "classification_timeout",
+        "message": "AI classification timed out before the 100-second server deadline. Please retry.",
+    }
+    assert leader_response.status_code == 504
+    assert waiter_response.status_code == 504
+    assert leader_response.json()["detail"] == expected_detail
+    assert waiter_response.json()["detail"] == expected_detail
+    assert attempts == 1
+    assert not main._classification_inflight

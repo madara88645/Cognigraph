@@ -81,10 +81,23 @@ test("503 with generic detail does NOT mention the API key", () => {
   assert.match(m.toastText, /unavailable/i);
 });
 
-test("502 maps to 'rephrase your prompt'", () => {
+test("detail-less 502 maps to a retryable proxy timeout", () => {
   const m = mapErrorToUserMessage({ kind: "http", status: 502 });
-  assert.equal(m.toastSeverity, "error");
-  assert.match(m.toastText, /rephrasing your prompt/i);
+  assert.equal(m.toastSeverity, "warning");
+  assert.equal(m.retryable, true);
+  assert.match(m.toastText, /timed out/i);
+  assert.doesNotMatch(m.toastText, /unexpected response|rephras/i);
+});
+
+test("typed backend 504 maps to a retryable timeout", () => {
+  const m = mapErrorToUserMessage({
+    kind: "http",
+    status: 504,
+    detail: '{"code":"classification_timeout"}',
+  });
+  assert.equal(m.toastSeverity, "warning");
+  assert.equal(m.retryable, true);
+  assert.match(m.toastText, /timed out/i);
 });
 
 test("500 maps to 'brain simulation failed'", () => {

@@ -7,6 +7,7 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
+import backend.main as main
 from backend.main import (
     _classification_system_instruction,
     _extract_chat_message_text,
@@ -224,6 +225,43 @@ def test_post_openrouter_chat_retries_on_timeout(mock_do_post):
     result = asyncio.run(classify_scenario("focus task"))
     assert result["active_lobe"] == "frontal"
     assert mock_do_post.call_count == 2
+
+
+def test_classification_retry_schedule_is_capped_below_proxy_timeout():
+    per_outer_attempt = main.OPENROUTER_RETRY_MAX_ATTEMPTS * main.OPENROUTER_HTTP_TIMEOUT_SEC + sum(
+        main.OPENROUTER_RETRY_BACKOFF_SEC * (2**attempt)
+        for attempt in range(main.OPENROUTER_RETRY_MAX_ATTEMPTS - 1)
+    )
+    uncapped_schedule = main.CLASSIFICATION_MAX_ATTEMPTS * per_outer_attempt
+
+    assert uncapped_schedule == 121.0
+    assert main.CLASSIFICATION_DEADLINE_SEC == 100.0
+    assert main.CLASSIFICATION_DEADLINE_SEC < 120.0
+
+
+@patch.dict(os.environ, {"OPENROUTER_API_KEY": "sk-test"}, clear=False)
+@patch("backend.main._post_openrouter_chat", new_callable=AsyncMock)
+def test_classify_scenario_deadline_bounds_full_retry_chain(mock_post):
+    async def slow_response(*_args, **_kwargs):
+        await asyncio.sleep(0.2)
+        return _openrouter_mock_response(_VALID_CLASSIFICATION_JSON)
+
+    mock_post.side_effect = slow_response
+
+    async def run_with_short_deadline():
+        loop = asyncio.get_running_loop()
+        started = loop.time()
+        with (
+            patch.object(main, "CLASSIFICATION_DEADLINE_SEC", 0.02),
+            pytest.raises(main.ClassificationTimeoutError) as exc_info,
+        ):
+            await classify_scenario("focus task")
+        return loop.time() - started, exc_info.value
+
+    elapsed, error = asyncio.run(run_with_short_deadline())
+
+    assert error.timeout_seconds == 0.02
+    assert elapsed < 0.15
 
 
 def test_extract_chat_message_text_none_or_not_dict():
