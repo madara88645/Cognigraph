@@ -46,6 +46,25 @@ export function mapErrorToUserMessage({ kind, status, detail = "" } = {}) {
   }
 
   if (kind === "http") {
+    const lowerDetail = String(detail || "").toLowerCase();
+    const isProxyTimeout =
+      status === 504 ||
+      (status === 502 &&
+        (!lowerDetail ||
+          lowerDetail === "simulation failed (502)" ||
+          lowerDetail.includes("timeout") ||
+          lowerDetail.includes("timed out") ||
+          lowerDetail.includes("router_external_target_error") ||
+          lowerDetail.includes("external target")));
+    if (isProxyTimeout) {
+      return {
+        statusText: "AI analysis timed out.",
+        actionHintText: "The server stopped the request safely. Retry when you're ready.",
+        toastText: "The analysis timed out before it finished. Retry to try again.",
+        toastSeverity: "warning",
+        retryable: true,
+      };
+    }
     if (status === 400) {
         return {
           statusText: "Please enter a valid scenario before analyzing.",
@@ -81,12 +100,11 @@ export function mapErrorToUserMessage({ kind, status, detail = "" } = {}) {
       };
     }
     if (status === 502) {
-      const lower = (detail || "").toLowerCase();
       const isModelUnavailable =
-        lower.includes("deprecated") ||
-        lower.includes("not found") ||
-        /status 404/.test(lower) ||
-        lower.includes("invalid model");
+        lowerDetail.includes("deprecated") ||
+        lowerDetail.includes("not found") ||
+        /status 404/.test(lowerDetail) ||
+        lowerDetail.includes("invalid model");
       if (isModelUnavailable) {
         return {
           statusText: "The configured AI model is unavailable.",

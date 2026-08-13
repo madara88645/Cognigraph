@@ -68,13 +68,38 @@ OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", DEFAULT_OPENROUTER_MODEL)
 OPENROUTER_DEMO_MODEL = os.getenv("OPENROUTER_DEMO_MODEL", DEFAULT_OPENROUTER_DEMO_MODEL)
 
 # Single LLM call should finish well under this on a healthy provider; override if needed.
-OPENROUTER_HTTP_TIMEOUT_SEC = float(os.getenv("OPENROUTER_HTTP_TIMEOUT_SEC", "90"))
+OPENROUTER_HTTP_TIMEOUT_SEC = float(os.getenv("OPENROUTER_HTTP_TIMEOUT_SEC", "30"))
 
 # Retry policy for transient OpenRouter failures (timeouts and 429/502/503/504).
-# Default: 3 attempts total, with full-jitter backoff of base * 2**(attempt-1) seconds.
-OPENROUTER_RETRY_MAX_ATTEMPTS = max(1, int(os.getenv("OPENROUTER_RETRY_MAX_ATTEMPTS", "3")))
+# Default: 2 attempts total, with full-jitter backoff of base * 2**(attempt-1) seconds.
+OPENROUTER_RETRY_MAX_ATTEMPTS = max(1, int(os.getenv("OPENROUTER_RETRY_MAX_ATTEMPTS", "2")))
 OPENROUTER_RETRY_BACKOFF_SEC = max(0.0, float(os.getenv("OPENROUTER_RETRY_BACKOFF_SEC", "0.5")))
 _OPENROUTER_RETRYABLE_STATUS = frozenset({429, 502, 503, 504})
+
+# Two classification attempts preserve the malformed-JSON recovery path. At the
+# defaults, their uncapped retry schedule is 2 * (2 * 30s + 0.5s) = 121s;
+# the hard deadline leaves 20s of margin below the proxy's 120s request ceiling.
+CLASSIFICATION_MAX_ATTEMPTS = 2
+CLASSIFICATION_DEADLINE_SEC = 100.0
+
+
+class ClassificationTimeoutError(RuntimeError):
+    """The complete OpenRouter classification retry chain exceeded its budget."""
+
+    def __init__(self, timeout_seconds: float):
+        self.timeout_seconds = timeout_seconds
+        super().__init__(f"OpenRouter classification exceeded the {timeout_seconds:g}s deadline.")
+
+
+def _classification_timeout_detail(error: ClassificationTimeoutError) -> dict[str, str]:
+    return {
+        "code": "classification_timeout",
+        "message": (
+            "AI classification timed out before the "
+            f"{error.timeout_seconds:g}-second server deadline. Please retry."
+        ),
+    }
+
 
 # Global HTTPX Client
 http_client: httpx.AsyncClient = None  # type: ignore
@@ -460,7 +485,7 @@ def _parse_and_validate_classification(
         }
 
 
-async def classify_scenario(
+async def _classify_scenario_with_retries(
     prompt: str,
     api_key_override: str = "",
     model_override: str = "",
@@ -480,7 +505,7 @@ async def classify_scenario(
     }
 
     last_parse_exc: Exception | None = None
-    for attempt in range(2):
+    for attempt in range(CLASSIFICATION_MAX_ATTEMPTS):
         system_content = instruction
         if attempt == 1:
             logger.info("classification_retry=1")
@@ -503,7 +528,7 @@ async def classify_scenario(
 
         try:
             return _parse_and_validate_classification(
-                response_text, fallback_on_error=(attempt == 1)
+                response_text, fallback_on_error=(attempt == CLASSIFICATION_MAX_ATTEMPTS - 1)
             )
         except Exception as exc:
             last_parse_exc = exc
@@ -515,6 +540,28 @@ async def classify_scenario(
     raise RuntimeError(
         f"OpenRouter returned invalid JSON payload: {last_parse_exc}"
     ) from last_parse_exc
+
+
+async def classify_scenario(
+    prompt: str,
+    api_key_override: str = "",
+    model_override: str = "",
+    http_request: Request | None = None,
+) -> ClassificationResult:
+    try:
+        async with asyncio.timeout(CLASSIFICATION_DEADLINE_SEC):
+            return await _classify_scenario_with_retries(
+                prompt,
+                api_key_override=api_key_override,
+                model_override=model_override,
+                http_request=http_request,
+            )
+    except TimeoutError as exc:
+        logger.warning(
+            "classification_deadline_exceeded budget_sec=%g",
+            CLASSIFICATION_DEADLINE_SEC,
+        )
+        raise ClassificationTimeoutError(CLASSIFICATION_DEADLINE_SEC) from exc
 
 
 def run_snn(
@@ -682,6 +729,11 @@ async def simulate(
                 status_code=503,
                 detail="Upstream classification was cancelled; please retry.",
             ) from exc
+        except ClassificationTimeoutError as exc:
+            raise HTTPException(
+                status_code=504,
+                detail=_classification_timeout_detail(exc),
+            ) from exc
         except RuntimeError as exc:
             message = str(exc)
             if "OPENROUTER_API_KEY is not set" in message:
@@ -730,6 +782,11 @@ async def simulate(
                     leader_future.cancel()
 
         if classification_exc is not None:
+            if isinstance(classification_exc, ClassificationTimeoutError):
+                raise HTTPException(
+                    status_code=504,
+                    detail=_classification_timeout_detail(classification_exc),
+                ) from classification_exc
             if isinstance(classification_exc, RuntimeError):
                 message = str(classification_exc)
                 if "OPENROUTER_API_KEY is not set" in message:
