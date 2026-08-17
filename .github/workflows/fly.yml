@@ -1,0 +1,44 @@
+name: Fly Deploy
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - "requirements.txt"
+      - "Dockerfile"
+      - "fly.toml"
+      - ".github/workflows/fly.yml"
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy backend to Fly.io
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    concurrency:
+      group: fly-production
+      cancel-in-progress: true
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Fail early if the Fly token is missing
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          if [ -z "${FLY_API_TOKEN//[[:space:]]/}" ]; then
+            echo "FLY_API_TOKEN secret is missing or blank." >&2
+            echo "Add it under Settings > Secrets and variables > Actions." >&2
+            exit 1
+          fi
+
+      - name: Setup flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy app
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: flyctl deploy --remote-only --config fly.toml
