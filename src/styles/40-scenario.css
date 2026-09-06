@@ -147,3 +147,15 @@ textarea.sc-input {
 /* compact settings facts */
 .sc-facts { margin: 8px 0 4px; padding-left: 18px; font-size: 12.5px; }
 .sc-facts li { margin-bottom: 3px; }
+
+/* ---- lesioned steps ---- */
+/* The step stays in the list and says what is wrong with it. Dropping it would show a chain that
+   still works, which is exactly the thing a lesion stops being true. */
+.sc-steps li[data-broken] { border-color: rgba(255,107,122,.35); background: rgba(255,107,122,0.06); }
+.sc-steps li[data-broken] .sc-step-n { background: rgba(255,107,122,.28); color: #ffc2c9; }
+.sc-steps li[data-broken].active { border-color: var(--danger); }
+.sc-step-broken {
+  display: block; font-size: 11px; line-height: 1.35; color: #ffa3ad;
+  padding-left: 26px; margin-top: 1px;
+}
+#explain-body .note.sc-lesion-note { border-left-color: var(--danger); }

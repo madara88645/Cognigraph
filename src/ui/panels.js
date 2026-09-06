@@ -28,6 +28,8 @@ export function initUI(app, switchMode) {
 function onKey(e) {
   if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT')) return;
   if (e.key === 'Escape') { closeDrawer(); hidePopover(); if (window.innerWidth >= 760) setPanelCollapsed(false); return; }
+  // the active mode gets first refusal (Learn uses 1-4 for answers, Pathways uses arrows/space)
+  if (appRef.mode && appRef.mode.onKey && appRef.mode.onKey(e, appRef)) { e.preventDefault(); return; }
   if (e.key === '1') return switchModeFn('pathways');
   if (e.key === '2') return switchModeFn('atlas');
   if (e.key === '3') return switchModeFn('neurons');
@@ -35,7 +37,6 @@ function onKey(e) {
   if (e.key === '5') return switchModeFn('learn');
   if (e.key === '?') return openDrawer();
   if (e.key === 'r' || e.key === 'R') return appRef.scene.resetView();
-  if (appRef.mode && appRef.mode.onKey && appRef.mode.onKey(e, appRef)) e.preventDefault();
 }
 
 export function setModeChrome(id, mode) {

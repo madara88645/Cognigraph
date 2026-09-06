@@ -11,7 +11,7 @@
 //     checked — nothing here can tell a right claim from a wrong one. llmScreenText() is the single
 //     exception, and it only flags diagnostic wording so the UI can add a note.
 import { REGIONS } from '../data/regions.js';
-import { LLM_MODULATORS, LLM_BASELINE } from './classify-local.js';
+import { LLM_MODULATORS, LLM_BASELINE, llmMarkLesionedSteps, llmLesionedInSteps } from './classify-local.js';
 
 export const LLM_ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
 export const LLM_KEY_STORAGE = 'cg.openrouter.key';
@@ -99,11 +99,15 @@ export function llmRegionCatalogue() {
  * modulator) to this app's schema (28 region ids, an ordered sequence, six modulator values), keeping
  * its cortisol acute-vs-chronic regime rule and its "educational, never medical" constraints.
  */
-export function llmSystemPrompt() {
+export function llmSystemPrompt(lesions) {
+  const lesioned = (Array.isArray(lesions) ? lesions : []).filter((id) => typeof id === 'string' && id);
+  const lesionLine = lesioned.length
+    ? `\n\nLESIONS — the reader has switched these regions off in the Atlas. These regions are lesioned and cannot contribute: ${lesioned.join(', ')}; route the sequence around them where plausible and say so in the rationale.`
+    : '';
   return `You are a cognitive neuroscientist writing for CogniGraph, an educational 3D brain simulation. The user describes a moment from ordinary life. You reply with ONE JSON object that turns it into a plausible teaching narrative: which brain regions are likely engaged, in what order, plus a neuromodulator profile.
 
 ALLOWED REGION IDS — use only these, spelled exactly. Any other id is discarded by the app.
-${llmRegionCatalogue()}
+${llmRegionCatalogue()}${lesionLine}
 
 OUTPUT — strict JSON, no markdown fences, no prose outside the object, no extra keys:
 {"title":"short name for this moment","steps":[{"region_ids":["v1"],"approx_ms":55,"what_happens":"...","why_it_matters":"..."}],"neuromodulators":{"dopamine":0.3,"acetylcholine":0.3,"noradrenaline":0.3,"serotonin":0.5,"gaba":0.5,"cortisol":0.2},"intensity":0.5,"rationale":"...","confidence":0.5}
@@ -200,9 +204,13 @@ export function llmScreenText(str) {
 /**
  * Turn whatever the model produced into a ScenarioResult, or say why it could not be used.
  * Never throws. `raw` may be an object, a JSON string, a fenced block, or garbage.
+ * @param {*} raw
+ * @param {object} [opts] {lesions: string[]} — a lesioned id that survives into the reply is flagged
+ *                        `broken` rather than dropped: the model was told to route around it, and the
+ *                        reader should see when it did not.
  * @returns {object} {ok:true, source:'llm', ...} or {ok:false, reason}
  */
-export function validateScenarioResult(raw) {
+export function validateScenarioResult(raw, opts = {}) {
   const obj = llmExtractJson(raw);
   if (!obj) return { ok: false, reason: 'The model did not return usable JSON.' };
 
@@ -255,11 +263,15 @@ export function validateScenarioResult(raw) {
   });
   if (llmScreenText(rationale).flagged) fields.push('rationale');
 
+  const lesions = Array.isArray(opts.lesions) ? opts.lesions : [];
+  const marked = llmMarkLesionedSteps(steps, lesions);
+
   return {
     ok: true,
     source: 'llm',
     title: llmText(obj.title, LLM_MAX_TITLE) || 'Your scenario',
-    steps,
+    steps: marked,
+    lesioned: llmLesionedInSteps(marked, lesions),
     neuromodulators,
     intensity: llmRound2(llmClampUnit(llmNum(obj.intensity, 0.5))),
     rationale,
@@ -293,13 +305,14 @@ function llmHttpReason(status) {
  * Resolves to a ScenarioResult ({ok:true, source:'llm', model}) or {ok:false, reason} — never rejects.
  *
  * @param {string} text        the user's description
- * @param {object} opts        {key, model, fetchImpl, signal}
+ * @param {object} opts        {key, model, fetchImpl, signal, lesions}
  */
 export async function classifyWithOpenRouter(text, opts = {}) {
   const key = String(opts.key == null ? '' : opts.key).trim();
   const model = String(opts.model || LLM_DEFAULT_MODEL).trim() || LLM_DEFAULT_MODEL;
   const prompt = String(text == null ? '' : text).trim().slice(0, LLM_MAX_PROMPT_CHARS);
   const doFetch = opts.fetchImpl || (typeof fetch === 'function' ? fetch : null);
+  const lesions = Array.isArray(opts.lesions) ? opts.lesions.filter((id) => typeof id === 'string' && id) : [];
 
   if (!key) return { ok: false, reason: 'No OpenRouter key. Add one in Scenario settings, or keep using the local heuristic.' };
   if (!prompt) return { ok: false, reason: 'Nothing to classify — describe a moment first.' };
@@ -316,7 +329,7 @@ export async function classifyWithOpenRouter(text, opts = {}) {
   const body = {
     model,
     messages: [
-      { role: 'system', content: llmSystemPrompt() },
+      { role: 'system', content: llmSystemPrompt(lesions) },
       { role: 'user', content: prompt },
     ],
     response_format: { type: 'json_object' },
@@ -358,7 +371,7 @@ export async function classifyWithOpenRouter(text, opts = {}) {
     return { ok: false, reason: apiErr ? 'OpenRouter: ' + llmText(apiErr, 200) : 'OpenRouter returned no message content.' };
   }
 
-  const result = validateScenarioResult(content);
+  const result = validateScenarioResult(content, { lesions });
   if (!result.ok) return result;
   result.model = model;
   return result;

@@ -5,6 +5,7 @@ import { NEURON_PRESETS, NEUROMOD_DEFS } from '../data/neuro.js';
 import { NEUROMOD_UI, neuroConfidenceBadge, registerHowTabs } from '../data/howitworks.js';
 import { createNetwork, nsimStep, nsimSanitize, resetNetwork, nsimBufferCap, nsimTrim, NSIM_DEFAULTS, NSIM_RANGES } from './neurons-core.js';
 import { explain, setSidePanel, showNeuronPlots, toast } from '../ui/panels.js';
+import { askMount } from '../ui/ask.js';
 
 const NS_ACCENT = 0xf5b74a;
 const NS_COL_E = '#f5b74a';       // excitatory: amber (mode accent)
@@ -16,6 +17,20 @@ const NS_TICKS_PER_SEC = 120;     // at speed 1x: 120 simulated ms per real seco
 const NS_KEEP_MS = NS_WINDOW_MS * 1.2;   // slack the rolling buffers keep beyond the drawn window
 const NS_SPIKES_PER_MS = 3;       // assumed population ceiling (150 cells at ~20 Hz mean) for the spike buffer
 const NS_TALL_VIEWPORT = 900;     // px of viewport height above which the secondary plots open by default
+
+/* The 3D population disc is an inset, not part of the anatomy: it is anchored in SCREEN space at the
+   bottom left of the stage (clear of the side panel, and never over the brainstem) and drawn in front
+   of everything. Sizes are fractions of the viewport, so they hold at any window size. */
+const NS_DISC_DIST = 1.15;        // world units in front of the camera (the brain sits ~4.5 away)
+const NS_DISC_FRAC = 0.08;        // disc DIAMETER as a fraction of viewport height
+const NS_DISC_DOT = 1.35;         // dot size relative to a straight scale-down, so they stay visible
+const NS_DISC_GAP = 64;           // px to the right of the side panel's edge
+const NS_DISC_Y = 0.78;           // down the stage, 0 = top
+
+/* Hypothesis card: 3 s of simulated time on each side of the profile change. */
+const NS_HYP_MS = 3000;
+const NS_HYP_MIN_SPAN = 1200;     // usable history before the change; below this we measure a fresh baseline
+const NS_HYP_FLAT = 0.06;         // |score| under this predicts "about the same" rather than a direction
 
 const ns = {
   net: null,
@@ -35,6 +50,9 @@ const ns = {
   ro: null,                               // ResizeObserver on the plots container
   statusEl: null, statusAcc: 0,
   lastExplainKey: '',
+  applied: null,                          // {beforeParams, before, after, profile} from the last Scenario hand-off
+  hyp: null,                              // live hypothesis card (see nsSetHypothesis)
+  discNdc: null,                          // cached screen anchor for the population disc
 };
 
 /* ---------- helpers ---------- */
@@ -143,6 +161,7 @@ function nsRenderPanel() {
     <div class="panel-sub">150 spiking point neurons, live.</div>
     <p class="note ns-disclaimer"><strong>A generic toy network, not a brain</strong> — nothing here is
       thinking, feeling or remembering.</p>
+    <div class="ns-hyp" id="ns-hyp" hidden></div>
 
     <div class="ns-status" id="ns-status">warming up…</div>
     <div class="ns-transport">
@@ -184,6 +203,7 @@ function nsRenderPanel() {
     </details>`);
 
   ns.statusEl = nsEl('ns-status');
+  nsPaintHypothesis();
   nsWirePanel(body);
 }
 
@@ -199,10 +219,11 @@ function nsWirePanel(body) {
   nsOn(nsEl('ns-reset'), 'click', () => {
     resetNetwork(ns.net);
     nsClearBuffers();
+    nsHypCancel('the network was reset');
     toast('Network reset to rest.');
   });
-  nsOn(nsEl('ns-presetE'), 'change', (e) => { p.presetE = e.target.value; nsExplainPreset('E', e.target.value); });
-  nsOn(nsEl('ns-presetI'), 'change', (e) => { p.presetI = e.target.value; nsExplainPreset('I', e.target.value); });
+  nsOn(nsEl('ns-presetE'), 'change', (e) => { p.presetE = e.target.value; nsHypCancel('the cell type changed'); nsExplainPreset('E', e.target.value); });
+  nsOn(nsEl('ns-presetI'), 'change', (e) => { p.presetI = e.target.value; nsHypCancel('the cell type changed'); nsExplainPreset('I', e.target.value); });
 
   const bindSlider = (id, key, unit, after) => {
     nsOn(nsEl(id), 'input', (e) => {
@@ -223,6 +244,7 @@ function nsWirePanel(body) {
       if (!isFinite(v)) return;
       if (m.key === 'ach') { p.achD = v; p.achEE = v; } else { p[m.key] = v; }
       nsSetVal('ns-' + m.key, Math.round(v * 100) / 100);
+      nsHypCancel('a slider moved mid-measurement');
       nsExplainMod(m);
     });
   }
@@ -255,7 +277,7 @@ function nsExplainIntro() {
   ns.lastExplainKey = 'intro';
   explain({
     title: 'A small spiking network',
-    badge: 'phenomenological model',
+    badge: 'simplified model',
     badgeClass: 'mid',
     html: `
       <p>150 point neurons — 120 excitatory, 30 inhibitory — wired at random and left to run on the
@@ -411,6 +433,7 @@ function nsSetupPlots() {
 function nsRelayoutPlots() {
   nsSetupPlots();
   nsUpdatePlotFade();
+  ns.discNdc = null;                        // the stage changed size: re-measure the inset's anchor
 }
 
 /** Fade the bottom edge only while there is clipped content below, so it reads as "more below". */
@@ -626,19 +649,47 @@ function nsClearBuffers() {
 /* ---------- 3D overlay ---------- */
 
 /**
- * Where to hang the population: a tilted disc just below whatever brain the scene actually built,
- * measured at runtime so it fits the real model rather than a hard-coded size.
+ * Where the population sits: an inset in the bottom-left of the stage, anchored in SCREEN space.
+ *
+ * It used to be a disc parked under the brain in world space, which put 150 glowing dots straight
+ * through the brainstem and over the disclaimer. It is not anatomy and pretending otherwise cost more
+ * than it bought, so it is now a small panel that keeps its place while the camera moves: clear of the
+ * side panel on the left, low enough to stay out of the brain, and drawn in front of everything.
+ *
+ * @returns {{x:number, y:number}} normalised device coordinates (-1..1, y up)
  */
-function nsBrainExtent(THREE, scene, exclude) {
-  const fallback = { half: 1.2, bottom: -1.2, front: 0.3 };
+function nsDiscAnchor() {
+  const stage = nsEl('stage');
+  const W = (stage && stage.clientWidth) || window.innerWidth || 1440;
+  const H = (stage && stage.clientHeight) || window.innerHeight || 900;
+  const panel = document.getElementById('side-panel');
+  let left = 12;
   try {
-    const box = new THREE.Box3();
-    scene.scene.traverse((o) => { if (o.isMesh && o !== exclude) box.expandByObject(o); });
-    if (box.isEmpty()) return fallback;
-    const half = Math.max(box.max.x, -box.min.x, box.max.z, -box.min.z);
-    if (!isFinite(half) || half <= 0.1 || half > 500) return fallback;
-    return { half, bottom: box.min.y, front: box.max.z };
-  } catch (err) { return fallback; }
+    if (panel && !panel.classList.contains('collapsed')) left = panel.getBoundingClientRect().right;
+  } catch (err) { /* fall back to the gutter */ }
+  const x = Math.min(left + NS_DISC_GAP, W * 0.42);
+  const y = H * NS_DISC_Y;
+  return { x: (x / W) * 2 - 1, y: 1 - (y / H) * 2 };
+}
+
+/** Keep the inset at its screen anchor, face-on to the camera, one fixed distance in front of it. */
+function nsAnchorOverlay(app) {
+  const mesh = ns.overlay;
+  const scene = app && app.scene;
+  if (!mesh || !scene || !scene.camera || !scene.THREE) return;
+  const cam = scene.camera;
+  if (!ns.discNdc) ns.discNdc = nsDiscAnchor();
+  const v = new scene.THREE.Vector3(ns.discNdc.x, ns.discNdc.y, 0.5);
+  v.unproject(cam);
+  v.sub(cam.position).normalize().multiplyScalar(NS_DISC_DIST).add(cam.position);
+  mesh.position.copy(v);
+  mesh.quaternion.copy(cam.quaternion);
+}
+
+/** The scene's vertical field of view in radians (40 degrees today; read it rather than assume it). */
+function nsCameraFovRad(scene) {
+  const fov = scene && scene.camera ? scene.camera.fov : 0;
+  return (typeof fov === 'number' && fov > 1 && fov < 179) ? (fov * Math.PI) / 180 : 0;
 }
 
 function nsBuildOverlay(app) {
@@ -647,14 +698,19 @@ function nsBuildOverlay(app) {
   const THREE = scene.THREE;
   const net = ns.net;
   const geo = new THREE.SphereGeometry(0.05, 8, 6);
-  const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.95, depthWrite: false });
+  const mat = new THREE.MeshBasicMaterial({
+    color: 0xffffff, transparent: true, opacity: 0.95,
+    depthWrite: false, depthTest: false, fog: false,   // an inset in front of the scene, not inside it
+  });
   const mesh = new THREE.InstancedMesh(geo, mat, net.N);
   mesh.frustumCulled = false;
+  mesh.renderOrder = 999;
   const dummy = new THREE.Object3D();
   const col = new THREE.Color();
-  const fit = nsBrainExtent(THREE, scene, mesh);
-  const R = fit.half * 0.26;                      // disc radius, in the mesh's own XY plane
-  const scale = (R * 0.05) / 0.05;                // geometry is a 0.05-radius sphere
+  // Radius that renders as NS_DISC_FRAC of the viewport height at NS_DISC_DIST, whatever the window is.
+  const halfFov = (nsCameraFovRad(scene) || 0.698) / 2;
+  const R = NS_DISC_FRAC * NS_DISC_DIST * Math.tan(halfFov);
+  const scale = R * NS_DISC_DOT;                  // geometry is a 0.05-radius sphere
   let e = 0, inh = 0;
   for (let i = 0; i < net.N; i++) {
     const exc = net.isExc[i] === 1;
@@ -675,11 +731,10 @@ function nsBuildOverlay(app) {
     mesh.setMatrixAt(i, dummy.matrix);
     mesh.setColorAt(i, col.set(exc ? NS_COL_E : NS_COL_I).multiplyScalar(0.18));
   }
-  mesh.position.set(0, fit.bottom + R * 0.07, 0);
-  mesh.rotation.x = -0.6;                         // tilt the disc toward the default camera
   mesh.instanceMatrix.needsUpdate = true;
   if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   scene.addOverlay(mesh);
+  ns.discNdc = nsDiscAnchor();
   ns.overlay = mesh;
   ns.act = new Float32Array(net.N);
   ns.colE = new THREE.Color(NS_COL_E);
@@ -719,6 +774,201 @@ function nsUpdateStatus() {
   ns.statusEl.title = st.hint;
 }
 
+/* ---------- hypothesis card (predicted vs observed) ---------- */
+
+/**
+ * The rule table. Each row says which way a parameter pushes the excitatory and inhibitory rates,
+ * and how to say that in one sentence. These are the directions THIS simulation is wired for — read
+ * nsimStep for the arithmetic — not claims about real neuromodulators.
+ *
+ * `span` is the parameter's own range, so a change is scored as a fraction of what the slider can do.
+ */
+const NS_HYP_RULES = [
+  {
+    key: 'gainNE', label: 'noradrenaline', span: 1, e: 1.0, i: 0.7,
+    up: 'raises the gain on every input (and trims the noise), so firing should rise',
+    down: 'lowers the gain on every input, so firing should fall',
+  },
+  {
+    key: 'gaba', label: 'GABA tone', span: 2, e: -1.2, i: -0.9,
+    up: 'scales every inhibitory synapse up, so both rates should fall',
+    down: 'weakens every inhibitory synapse, so both rates should rise',
+  },
+  {
+    key: 'achD', label: 'acetylcholine', span: 1, e: 0.4, i: 0.25,
+    up: 'trims spike-frequency adaptation, so excitatory cells should fire a little more',
+    down: 'restores adaptation, so excitatory cells should fire a little less',
+  },
+  {
+    key: 'cortisol', label: 'cortisol', span: 1, e: 0.6, i: 0.45,
+    up: 'adds noise on top of the drive, so firing should get higher and rougher',
+    down: 'takes that extra noise away, so firing should settle',
+  },
+  {
+    key: 'da', label: 'dopamine', span: 1, e: 0.35, i: 0.2,
+    up: 'depolarises its target subgroup, so part of the excitatory population should speed up',
+    down: 'stops depolarising its target subgroup',
+  },
+  {
+    key: 'sero', label: 'serotonin', span: 1, e: 0.15, i: 0.4,
+    up: 'shifts the E/I set point toward driving inhibitory cells',
+    down: 'shifts the E/I set point away from inhibitory cells',
+  },
+];
+
+/**
+ * The params the integrator should use right now — the pre-change ones while a baseline is running.
+ * Speed rides along from the live params: it is a viewing control and changes nothing being compared,
+ * so a frozen speed slider would look broken for no gain.
+ */
+function nsActiveParams() {
+  if (ns.hyp && ns.hyp.phase === 'pre' && ns.hyp.beforeParams) {
+    return { ...ns.hyp.beforeParams, speed: ns.params.speed };
+  }
+  return ns.params;
+}
+
+function nsArrow(score) {
+  if (score > NS_HYP_FLAT) return '\u2191';
+  if (score < -NS_HYP_FLAT) return '\u2193';
+  return '\u2192';
+}
+
+/**
+ * Predicted direction for the two population rates, from the parameter change alone.
+ * @returns {{e:number, i:number, why:string}} scores (sign = direction) and the one-line reason
+ */
+function nsPredict(before, after) {
+  let e = 0, i = 0, top = null, topWeight = 0;
+  for (const rule of NS_HYP_RULES) {
+    const d = ((after[rule.key] || 0) - (before[rule.key] || 0)) / rule.span;
+    if (!isFinite(d) || Math.abs(d) < 0.01) continue;
+    e += rule.e * d;
+    i += rule.i * d;
+    const w = Math.abs(rule.e * d) + Math.abs(rule.i * d);
+    if (w > topWeight) { topWeight = w; top = { rule, up: d > 0 }; }
+  }
+  const why = top
+    ? top.rule.label + ' went ' + (top.up ? 'up' : 'down') + ', which ' + (top.up ? top.rule.up : top.rule.down) + '.'
+    : 'Nothing moved far enough to predict a change.';
+  return { e, i, why };
+}
+
+/** Mean binned rates inside a simulated-time window, or null when there are no samples in it. */
+function nsMeanRates(from, to) {
+  let e = 0, i = 0, n = 0, first = null, last = null;
+  for (let k = 0; k < ns.rtT.length; k++) {
+    const t = ns.rtT[k];
+    if (t < from || t > to) continue;
+    e += ns.rtE[k]; i += ns.rtI[k]; n++;
+    if (first === null) first = t;
+    last = t;
+  }
+  return n ? { e: e / n, i: i / n, n, span: last - first } : null;
+}
+
+/** "+18 %" when there is enough baseline to divide by, plain Hz when there is not. */
+function nsChangeText(name, base, obs) {
+  if (base >= 0.5) {
+    const pct = Math.round(((obs - base) / base) * 100);
+    return name + ' ' + (pct >= 0 ? '+' : '\u2212') + Math.abs(pct) + ' %';
+  }
+  return name + ' ' + base.toFixed(1) + '\u2192' + obs.toFixed(1) + ' Hz';
+}
+
+function nsHypProgressText() {
+  const h = ns.hyp;
+  if (!h || !ns.net) return '';
+  const done = Math.max(0, Math.min(NS_HYP_MS, ns.net.t - h.t0));
+  const s = (done / 1000).toFixed(1);
+  if (h.phase === 'pre') return 'Baseline first: ' + s + ' s of 3 s at the previous settings.';
+  if (h.phase === 'post') return 'Watching: ' + s + ' s of 3 s with this profile.';
+  return '';
+}
+
+function nsPaintHypothesis() {
+  const el = nsEl('ns-hyp');
+  const h = ns.hyp;
+  if (!el) return;
+  if (!h) { el.hidden = true; el.innerHTML = ''; return; }
+  const pred = 'E ' + nsArrow(h.pred.e) + ' I ' + nsArrow(h.pred.i);
+  let observed;
+  if (h.cancelled) observed = '<span class="ns-hyp-pending">cancelled — ' + nsEsc(h.cancelled) + '</span>';
+  else if (h.obs && h.base) observed = nsEsc(nsChangeText('E', h.base.e, h.obs.e) + ' ' + nsChangeText('I', h.base.i, h.obs.i));
+  else observed = '<span class="ns-hyp-pending">measuring\u2026</span>';
+
+  el.hidden = false;
+  el.innerHTML = `
+    <div class="ns-hyp-head">
+      <span class="ns-hyp-kicker">Hypothesis</span>
+      <span class="badge mid">A toy check, not confirmation</span>
+    </div>
+    <div class="ns-hyp-title">${nsEsc(h.title)}</div>
+    <div class="ns-hyp-line"><b>Prediction:</b> ${nsEsc(pred)} \u00b7 <b>Observed:</b> ${observed}</div>
+    <div class="ns-hyp-why">${nsEsc(h.pred.why)}</div>
+    <div class="ns-hyp-progress" id="ns-hyp-progress">${nsEsc(nsHypProgressText())}</div>`;
+}
+
+/** Drop the measurement when the network stops being the one the prediction was made about. */
+function nsHypCancel(reason) {
+  if (!ns.hyp || ns.hyp.phase === 'done') return;
+  ns.hyp.phase = 'done';
+  ns.hyp.cancelled = reason;
+  nsPaintHypothesis();
+}
+
+/** Advance the two measurement windows. Called once a frame; does nothing unless one is running. */
+function nsHypTick() {
+  const h = ns.hyp;
+  if (!h || h.phase === 'done' || !ns.net) return;
+  const t = ns.net.t;
+  if (h.phase === 'pre') {
+    if (t < h.t0 + NS_HYP_MS) return;
+    h.base = nsMeanRates(h.t0, t) || { e: ns.rateE, i: ns.rateI, n: 1, span: 0 };
+    h.phase = 'post';
+    h.t0 = t;
+    nsPaintHypothesis();
+    return;
+  }
+  if (t >= h.t0 + NS_HYP_MS) {
+    h.obs = nsMeanRates(h.t0, t) || { e: ns.rateE, i: ns.rateI, n: 1, span: 0 };
+    h.phase = 'done';
+    nsPaintHypothesis();
+  }
+}
+
+/**
+ * Show what the last applied profile is expected to do, then what it actually did.
+ *
+ * Prediction comes from the parameter change and the rule table above — stated before the network is
+ * watched, because a prediction written after the fact is not one. Observation is the mean population
+ * rate over 3 s of simulated time on each side of the change. If there is no usable history before the
+ * change (the usual case when Scenario has just switched modes), the previous parameters are held for
+ * one 3 s window first and the card says so.
+ *
+ * @param {{title:string, profile:object}} card
+ * @returns {boolean} whether a card was started
+ */
+export function nsSetHypothesis(card) {
+  if (!card || !ns.net || !ns.applied) return false;
+  const { before, after, beforeParams } = ns.applied;
+  const t = ns.net.t;
+  const history = nsMeanRates(t - NS_HYP_MS, t);
+  const usable = history && history.span >= NS_HYP_MIN_SPAN;
+  ns.hyp = {
+    title: card.title || 'Scenario profile',
+    pred: nsPredict(before, after),
+    base: usable ? history : null,
+    obs: null,
+    beforeParams,
+    phase: usable ? 'post' : 'pre',
+    t0: t,
+    cancelled: '',
+  };
+  nsPaintHypothesis();
+  return true;
+}
+
 /* ---------- profile hand-off from Scenario mode ---------- */
 
 /**
@@ -740,8 +990,25 @@ const NS_PROFILE_MAP = {
  * @param {object} profile {dopamine, acetylcholine, noradrenaline, serotonin, gaba, cortisol}
  * @returns {boolean} whether anything was applied
  */
+/** Publish the six slider positions as 0..1 modulator levels on app.modulators (baseline = main.js defaults). Pathways reads them for timing. */
+function nsPublishModulators(app) {
+  if (!app || !app.modulators || !ns.params) return;
+  const P = ns.params, M = app.modulators;
+  const up = (v, base) => base + nsClamp(v, 0, 1) * (1 - base);           // sliders whose default is 0
+  const around = (v, def, max, base) => (v < def ? base * (v / def) : base + ((v - def) / (max - def)) * (1 - base));
+  M.dopamine = up(P.da, 0.25);
+  M.acetylcholine = up(P.achD, 0.3);
+  M.noradrenaline = around(P.gainNE, 0.5, 1, 0.3);
+  M.serotonin = nsClamp(P.sero, 0, 1);
+  M.gaba = around(P.gaba, 1, 2, 0.5);
+  M.cortisol = up(P.cortisol, 0.2);
+}
+
 export function nsApplyModulators(profile) {
   if (!profile || typeof profile !== 'object' || !ns.params) return false;
+  // Snapshot first: the hypothesis card compares the network before and after this call, so the
+  // previous parameters have to survive the assignment that is about to happen.
+  const beforeParams = { ...ns.params };
   const applied = [];
   for (const name of Object.keys(NS_PROFILE_MAP)) {
     const raw = profile[name];
@@ -757,6 +1024,10 @@ export function nsApplyModulators(profile) {
     applied.push({ name, v, profile: Math.round(nsClamp(n, 0, 1) * 100) / 100 });
   }
   if (!applied.length) return false;
+
+  const keys = ['gainNE', 'achD', 'da', 'sero', 'gaba', 'cortisol'];
+  const pick = (src) => keys.reduce((o, k) => { o[k] = src[k]; return o; }, {});
+  ns.applied = { beforeParams, before: pick(beforeParams), after: pick(ns.params), profile };
 
   const rows = applied.map((a) => `<dt>${nsEsc(a.name)}</dt><dd class="mono">${a.profile.toFixed(2)} → slider ${a.v}</dd>`).join('');
   explain({
@@ -796,6 +1067,8 @@ export const NeuronsMode = {
     nsClearBuffers();
     nsUpdatePlotFade();
     nsBuildOverlay(app);
+    nsAnchorOverlay(app);
+    if (typeof askMount === 'function') askMount(app);
     nsExplainIntro();
     app.neurons = ns.net;                 // debug/verification handle: NeuroScope.neurons
     if (typeof ns.net.debug !== 'function') {
@@ -825,6 +1098,7 @@ export const NeuronsMode = {
   },
 
   exit(app) {
+    nsHypCancel('you left the mode mid-measurement');   // the network stops advancing while away
     nsOffAll();
     if (ns.ro) { ns.ro.disconnect(); ns.ro = null; }
     const box = nsEl('neuron-plots');
@@ -840,6 +1114,7 @@ export const NeuronsMode = {
   },
 
   update(dt, app) {
+    nsPublishModulators(app);
     const net = ns.net;
     if (!net) return;
 
@@ -848,7 +1123,7 @@ export const NeuronsMode = {
       // same frame, so up to NS_MAX_TICKS_PER_FRAME redundant clamp passes were being done for nothing.
       // nsimStep still sanitises anything it is handed that is not marked, so this is an optimisation
       // and not a new contract.
-      const p = nsimSanitize(ns.params);
+      const p = nsimSanitize(nsActiveParams());
       ns.tickAcc += dt * NS_TICKS_PER_SEC * p.speed;
       let ticks = Math.min(NS_MAX_TICKS_PER_FRAME, Math.floor(ns.tickAcc));
       ns.tickAcc -= ticks;
@@ -880,11 +1155,19 @@ export const NeuronsMode = {
     }
 
     nsUpdateOverlay(dt);
+    nsAnchorOverlay(app);
+    nsHypTick();
     if (document.hidden || (nsEl('neuron-plots') && nsEl('neuron-plots').hidden)) return;
     nsDrawStrips();
     nsDrawPhase();
     ns.statusAcc += dt;
-    if (ns.statusAcc > 0.25) { ns.statusAcc = 0; nsUpdateStatus(); }
+    if (ns.statusAcc > 0.25) {
+      ns.statusAcc = 0;
+      nsUpdateStatus();
+      ns.discNdc = nsDiscAnchor();          // the anchor follows the side panel, which can collapse
+      const prog = nsEl('ns-hyp-progress');
+      if (prog && ns.hyp && ns.hyp.phase !== 'done') prog.textContent = nsHypProgressText();
+    }
   },
 
   onPick() {},

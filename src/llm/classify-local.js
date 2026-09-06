@@ -388,14 +388,48 @@ export function llmDetectSensitive(text) {
   return { crisis, medical: medCues.length > 0, cues };
 }
 
+/* ---------- lesions ---------- */
+
+/**
+ * Mark, never remove. A step that runs through a lesioned region is still part of the story the
+ * heuristic tells — the honest thing is to show it and say it is broken, not to quietly delete it and
+ * leave a sequence that looks like it works.
+ *
+ * The neuromodulator profile is deliberately untouched: nothing in this app models what a lesion does
+ * to a modulatory system, and inventing a shift would be a claim, not a simplification.
+ *
+ * @param {Array} steps    ScenarioResult steps
+ * @param {Array<string>} lesions  lesioned region ids (app.lesions)
+ * @returns {Array} the same steps, with `broken:true` and `broken_ids` on the affected ones
+ */
+export function llmMarkLesionedSteps(steps, lesions) {
+  const list = Array.isArray(steps) ? steps : [];
+  const set = new Set((Array.isArray(lesions) ? lesions : []).filter((x) => typeof x === 'string' && x));
+  if (!set.size) return list;
+  return list.map((s) => {
+    const ids = Array.isArray(s.region_ids) ? s.region_ids.filter((id) => set.has(id)) : [];
+    return ids.length ? Object.assign({}, s, { broken: true, broken_ids: ids }) : s;
+  });
+}
+
+/** Which lesioned ids actually turn up in a sequence (for the "these are lesioned" line). */
+export function llmLesionedInSteps(steps, lesions) {
+  const out = [];
+  for (const s of llmMarkLesionedSteps(steps, lesions)) {
+    for (const id of (s.broken_ids || [])) if (out.indexOf(id) < 0) out.push(id);
+  }
+  return out;
+}
+
 /* ---------- public API ---------- */
 
 /**
  * Classify a free-text moment with keywords only.
  * @param {string} text
+ * @param {object} [opts] {lesions: string[]} — region ids lesioned in Atlas
  * @returns {object} ScenarioResult with source 'local'. Always ok:true — it has no way to fail.
  */
-export function classifyLocal(text) {
+export function classifyLocal(text, opts = {}) {
   const raw = String(text == null ? '' : text);
   const norm = llmNorm(raw);
   const empty = norm.trim().length === 0;
@@ -437,12 +471,16 @@ export function classifyLocal(text) {
 
   const rationale = llmRationale({ empty, usePathway, best, matched, dominant, cueWords, steps });
 
+  const lesions = Array.isArray(opts.lesions) ? opts.lesions : [];
+  const marked = llmMarkLesionedSteps(steps, lesions);
+
   return {
     ok: true,
     source: 'local',
     title,
     pathway_id: pathwayId,
-    steps,
+    steps: marked,
+    lesioned: llmLesionedInSteps(marked, lesions),
     neuromodulators: profile,
     intensity,
     rationale,

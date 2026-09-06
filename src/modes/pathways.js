@@ -2,7 +2,9 @@
 // with the evidence for each step and the pathway's caveats always on screen.
 import { PATHWAYS } from '../data/pathways.js';
 import { REGIONS } from '../data/regions.js';
+import { MOD_BADGE_LABEL, modTiming, modWorstBadge } from '../data/modulation.js';
 import { registerHowTabs } from '../data/howitworks.js';
+import { labCloseStroop, labIsOpen, labLoadMeasures, labMeasureUsable, labOpenStroop } from '../lab/stroop.js';
 import { explain, setSidePanel, showTimeline, hoverLabel, toast } from '../ui/panels.js';
 
 const PW_ACCENT = 0x5ee1d6;
@@ -13,6 +15,16 @@ const PW_LAST_STEP_S = 1.6;
 const PW_FLY_DISTANCE = 5.5;   // frame the step with its neighbourhood; the scene's own default is tight
 const PW_MIN_MARK_PX = 24;     // no two timeline dots may sit closer than this
 const PW_LABEL_MIN_PX = 56;    // below this the markers stay bare dots rather than crowding labels
+
+/** How each evidence tier is shown: badge class + the words on the badge. */
+const PW_TIER = {
+  human_direct: { cls: 'ok', label: 'Human recording' },
+  animal_inferred: { cls: 'mid', label: 'Animal model' },
+  estimated: { cls: 'low', label: 'Estimated' },
+};
+
+/** Pathways whose steps are close enough to the Stroop task to sit beside a personal measurement. */
+const PW_MEASURE_PATHWAYS = ['attention_shift', 'making_decision'];
 
 const pw = {
   pathway: null,      // the selected PATHWAYS entry
@@ -75,17 +87,190 @@ function pwStepLabel(step) {
 
 function pwIsSchematic(p) { return !p || p.timeline === 'schematic'; }
 
-function pwMsText(p, step) {
-  return pwIsSchematic(p) ? 'schematic order' : '~' + step.approx_ms + ' ms';
+/* ---------- modulator-weighted timing ---------- */
+
+/**
+ * What the Neurons sliders do to this step's latency, or null when nothing scales it: schematic
+ * pathways (their numbers are an animation order), a borrowed transient pathway, or no rule in play.
+ */
+function pwTiming(p, i) {
+  if (!p || pwIsSchematic(p) || pw.transient) return null;
+  const mods = pw.app && pw.app.modulators;
+  if (!mods) return null;
+  const t = modTiming(p.id, i, p.steps[i].approx_ms, mods);
+  return t.active.length ? t : null;
 }
 
-/** Seconds to hold one step on screen: derived from the gap to the next step, clamped. */
+/**
+ * Every step's effective latency, in order. Steps are scaled one by one, so two neighbours with
+ * different sensitivities could otherwise swap places; a running floor keeps the sequence a sequence,
+ * because a later step arriving earlier than an earlier one would be a claim about the brain, not a
+ * knob effect.
+ */
+function pwEffMsSeq(p) {
+  let prev = -Infinity;
+  return p.steps.map((s, i) => {
+    const t = pwTiming(p, i);
+    let ms = (t && t.changed) ? t.ms : s.approx_ms;
+    if (ms < prev) ms = prev;
+    prev = ms;
+    return ms;
+  });
+}
+
+/** Milliseconds actually used for the readout and for playback pacing. */
+function pwEffMs(p, i) { return pwEffMsSeq(p)[i]; }
+
+function pwAnyScaled(p) {
+  if (!p || pwIsSchematic(p)) return false;
+  return pwEffMsSeq(p).some((ms, i) => ms !== p.steps[i].approx_ms);
+}
+
+function pwMsText(p, step, i) {
+  if (pwIsSchematic(p)) return 'schematic order';
+  const ms = (typeof i === 'number') ? pwEffMs(p, i) : step.approx_ms;
+  return '~' + ms + ' ms';
+}
+
+/** Seconds to hold one step on screen: derived from the (scaled) gap to the next step, clamped. */
 function pwStepDuration(p, i) {
   if (pwIsSchematic(p)) return PW_SCHEMATIC_S;
-  const cur = p.steps[i], next = p.steps[i + 1];
-  if (!next) return PW_LAST_STEP_S;
-  const gap = Math.max(0, next.approx_ms - cur.approx_ms);
+  if (!p.steps[i + 1]) return PW_LAST_STEP_S;
+  const gap = Math.max(0, pwEffMs(p, i + 1) - pwEffMs(p, i));
   return Math.min(PW_MAX_STEP_S, Math.max(PW_MIN_STEP_S, gap / 130));
+}
+
+/* ---------- lesions: which steps the replay can no longer promise ---------- */
+
+function pwLesionSet() {
+  const s = pw.app && pw.app.lesions;
+  return (s && typeof s.has === 'function' && s.size) ? s : null;
+}
+
+/** The regions of this step that are currently lesioned in Atlas. */
+function pwBrokenIn(step) {
+  const les = pwLesionSet();
+  if (!les) return [];
+  return step.region_ids.filter((id) => les.has(id));
+}
+
+/**
+ * broken = a step whose own region is lesioned. dimmed = a later step that either shares a region
+ * with a broken one or is the pathway's last step: once something upstream is gone, the sequence
+ * cannot land where the timeline says it lands.
+ */
+function pwBreakMap(p) {
+  const broken = new Set(), dimmed = new Set();
+  if (!p || !pwLesionSet()) return { broken, dimmed };
+  const brokenIds = new Set();
+  p.steps.forEach((s, i) => {
+    const hit = pwBrokenIn(s);
+    if (hit.length) { broken.add(i); for (const id of hit) brokenIds.add(id); }
+  });
+  if (!broken.size) return { broken, dimmed };
+  let first = Infinity;
+  broken.forEach((i) => { if (i < first) first = i; });
+  p.steps.forEach((s, i) => {
+    if (i <= first || broken.has(i)) return;
+    if (s.region_ids.some((id) => brokenIds.has(id)) || i === p.steps.length - 1) dimmed.add(i);
+  });
+  return { broken, dimmed };
+}
+
+/**
+ * Split prose into sentences. The step card shows one or two of them and folds the rest away, so the
+ * card never grows taller than the panel it lives in.
+ *
+ * Lossless on purpose: the pieces put back together are the original text, so nothing a caveat says
+ * can go missing between the visible part and the folded one. A full stop only ends a sentence when
+ * whitespace (or the end of the string) follows it — otherwise "1.5 seconds" would be two sentences,
+ * and the first half of the number would be dropped.
+ */
+function pwSentences(text) {
+  const t = String(text || '').trim();
+  if (!t) return [];
+  const out = [];
+  let start = 0;
+  for (let i = 0; i < t.length; i++) {
+    if ('.!?'.indexOf(t[i]) < 0) continue;
+    let j = i + 1;
+    while (j < t.length && '.!?\'")]'.indexOf(t[j]) >= 0) j++;   // "…?!" and closing quotes belong to it
+    if (j < t.length && !/\s/.test(t[j])) { i = j - 1; continue; }
+    out.push(t.slice(start, j).trim());
+    start = j;
+    i = j - 1;
+  }
+  const tail = t.slice(start).trim();
+  if (tail) out.push(tail);
+  return out;
+}
+
+/**
+ * The pathway caveat, as it appears at the foot of a step card: two sentences in the note itself and
+ * the remainder behind a disclosure, so the note stays the same height whatever pathway is open.
+ */
+function pwCaveatHtml(text) {
+  const all = pwSentences(text);
+  const head = all.slice(0, 2).join(' ');
+  const tail = all.slice(2);
+  return `<div class="note pw-caveat">${pwEsc(head)}${tail.length ? `
+    <details class="pw-more pw-caveat-more">
+      <summary>The rest of the caveat</summary>
+      ${tail.map((line) => `<p>${pwEsc(line)}</p>`).join('')}
+    </details>` : ''}</div>`;
+}
+
+/** One line saying what the rest of the sequence would look like with this region gone. */
+function pwDownstreamLine(p, i, names) {
+  const later = [];
+  pwBreakMap(p).dimmed.forEach((k) => { if (k > i) later.push(k + 1); });
+  later.sort((a, b) => a - b);
+  if (!later.length) return 'The later steps still run, but whatever this region contributes is missing from them.';
+  const one = later.length === 1;
+  const list = one
+    ? 'step ' + later[0] + ' is'
+    : 'steps ' + later.slice(0, -1).join(', ') + ' and ' + later[later.length - 1] + ' are';
+  const tail = one
+    ? 'it leans on the same region, or it is where the sequence was meant to arrive'
+    : 'they lean on the same region, or they are where the sequence was meant to arrive';
+  return `With ${names} out, ${list} dimmed on the timeline: ${tail}.`;
+}
+
+/** Repair every lesion from inside Pathways (Atlas owns the set; this only empties it). */
+function pwResetLesions() {
+  const app = pw.app;
+  if (!app || !app.lesions) return;
+  app.lesions.clear();
+  if (app.scene && typeof app.scene.clearLesions === 'function') {
+    try { app.scene.clearLesions(); } catch (err) { /* a scene without lesion support must not break the button */ }
+  }
+  pwRenderPanel();
+  pwBuildTimeline();
+  pwPaintPlayhead(pw.duration > 0 ? pw.elapsed / pw.duration : 0);
+  if (pw.pathway && !pw.external) pwExplainStep();
+  toast('All lesions repaired');
+}
+
+/* ---------- evidence tier + personal measurement ---------- */
+
+function pwTierBadge(step) {
+  const t = PW_TIER[step && step.evidence_tier] || PW_TIER.estimated;
+  return `<span class="badge ${t.cls} pw-tier" title="${pwEsc(step && step.tier_reason || '')}">${t.label}</span>`;
+}
+
+function pwMeasurement() {
+  const m = pw.app && pw.app.measure && pw.app.measure.stroop;
+  return labMeasureUsable(m) ? m : null;
+}
+
+/** "Your timing" line, only on the two pathways the Stroop task actually speaks to. */
+function pwMeasureHtml(p) {
+  if (!p || PW_MEASURE_PATHWAYS.indexOf(p.id) < 0) return '';
+  const m = pwMeasurement();
+  if (!m) return '';
+  return `<div class="pw-yours">Your Stroop interference: <span class="mono">${Math.round(m.interference)} ms</span> (n=${m.n}).</div>
+    <div class="note pw-soft">That is a reaction-time cost from a colour-word task, not a stage latency — shown for
+      interest, not for comparison with the ms above. One session on one keyboard, and not diagnostic.</div>`;
 }
 
 /** Marker position along the track, 0..1 — true latency spacing, or even for schematic pathways. */
@@ -138,28 +323,53 @@ function pwRenderPanel() {
   let steps = '';
   if (pw.pathway) {
     const p = pw.pathway;
+    const { broken, dimmed } = pwBreakMap(p);
+    const n = pwLesionSet() ? pwLesionSet().size : 0;
+    const chip = n ? `<div class="pw-lesion-chip">
+        <span class="badge danger">${n} region${n === 1 ? '' : 's'} lesioned in Atlas</span>
+        <span class="muted">·</span>
+        <button class="text-btn pw-lesion-reset" type="button">Reset</button>
+      </div>` : '';
     steps = `
       <h3>Steps — ${pwEsc(p.title)}</h3>
+      ${chip}
       <div class="list" id="pw-steps">${p.steps.map((s, i) => `
-        <div class="list-item pw-step${i === pw.index ? ' active' : ''}" data-step="${i}" role="button" tabindex="0">
+        <div class="list-item pw-step${i === pw.index ? ' active' : ''}${broken.has(i) ? ' pw-step-broken' : ''}${dimmed.has(i) ? ' pw-step-dimmed' : ''}" data-step="${i}" role="button" tabindex="0">
           <span class="pw-step-n mono">${i + 1}</span>
           <span class="pw-item-text">
             <span>${pwEsc(pwStepLabel(s))}</span>
-            <span class="muted mono">${pwEsc(pwMsText(p, s))}</span>
+            <span class="muted mono">${pwEsc(pwMsText(p, s, i))}</span>
           </span>
         </div>`).join('')}
       </div>
-      <p class="note">${pwIsSchematic(p)
+      <p class="note pw-caveat">${pwIsSchematic(p)
         ? 'The order is real; the numbers are not. This timeline is schematic.'
         : 'Latencies are group averages, not constants. Each step names its evidence.'}</p>`;
   }
+
+  const m = pwMeasurement();
+  const measure = `
+    <h3>Your own timing</h3>
+    <button class="text-btn pw-measure" type="button">Measure yourself</button>
+    <p class="muted pw-measure-note">${m
+      ? `Last Stroop run: <span class="mono">${Math.round(m.interference)} ms</span> interference over ${m.n} trials.`
+      : 'A 24-trial Stroop task, about a minute. It runs and stays on this device.'}</p>`;
 
   const body = setSidePanel(`
     <div class="panel-title">Pathways</div>
     <div class="panel-sub">Eight everyday moments, replayed hub by hub.</div>
     <h3>Scenarios</h3>
     <div class="list" id="pw-list">${items}</div>
-    ${steps}`);
+    ${steps}
+    ${measure}`);
+
+  const reset = body.querySelector('.pw-lesion-reset');
+  if (reset) reset.addEventListener('click', pwResetLesions);
+  const measureBtn = body.querySelector('.pw-measure');
+  if (measureBtn) measureBtn.addEventListener('click', () => {
+    pw.playing = false; pwSyncTransport();
+    labOpenStroop(pw.app, () => { pwRenderPanel(); if (pw.pathway) pwExplainStep(); });
+  });
 
   body.querySelectorAll('.pw-item').forEach((el) => {
     const go = () => pwSelect(el.dataset.pw);
@@ -203,13 +413,17 @@ function pwBuildTimeline() {
   const withLabels = trackPx > 0 && minGapPx >= PW_LABEL_MIN_PX;   // otherwise: bare dots, no crowding
 
   track.classList.toggle('tl-labelled', withLabels);
+  const { broken, dimmed } = pwBreakMap(pw.pathway);
   pw.pathway.steps.forEach((s, i) => {
     const pos = pw.pos[i];
     const m = document.createElement('button');
-    m.className = 'tl-marker';
+    const tier = PW_TIER[s.evidence_tier] ? s.evidence_tier : 'estimated';
+    m.className = 'tl-marker tl-tier-' + tier + (broken.has(i) ? ' tl-broken' : '') + (dimmed.has(i) ? ' tl-dimmed' : '');
     m.type = 'button';
     m.style.left = (pos * 100) + '%';
-    m.title = `Step ${i + 1}: ${pwStepLabel(s)} (${pwMsText(pw.pathway, s)})`;
+    m.title = `Step ${i + 1}: ${pwStepLabel(s)} (${pwMsText(pw.pathway, s, i)}) · ${PW_TIER[tier].label}`
+      + (s.tier_reason ? ' — ' + s.tier_reason : '')
+      + (broken.has(i) ? ' · lesioned, this step is broken' : (dimmed.has(i) ? ' · downstream of a lesion' : ''));
     m.setAttribute('aria-label', m.title);
     if (withLabels) {
       const cap = document.createElement('span');
@@ -229,7 +443,18 @@ function pwBuildTimeline() {
   head.className = 'tl-playhead';
   track.appendChild(head);
   pw.playhead = head;
+  pwTimelineNote(pwAnyScaled(pw.pathway) ? 'Timing scaled by your Neurons sliders (direction only)' : '');
   pwPaintPlayhead(0);
+}
+
+/** One muted line attached to the timeline bar; pass '' to remove it. */
+function pwTimelineNote(text) {
+  const bar = pwEl('timeline');
+  if (!bar) return;
+  let el = bar.querySelector('.pw-tl-note');
+  if (!text) { if (el) el.remove(); return; }
+  if (!el) { el = document.createElement('div'); el.className = 'pw-tl-note muted'; bar.appendChild(el); }
+  el.textContent = text;
 }
 
 function pwPaintPlayhead(frac) {
@@ -304,18 +529,70 @@ function pwPulseInto(i) {
 function pwExplainStep() {
   const p = pw.pathway;
   if (!p) return;
-  const s = p.steps[pw.index];
+  const i = pw.index;
+  const s = p.steps[i];
   const schematic = pwIsSchematic(p);
   // The title names every region in the step (the side-panel list is where the label gets truncated),
   // so the card does not need a separate "lit up" line under the prose.
   const names = s.region_ids.map(pwShortName).join(' + ');
-  const title = `Step ${pw.index + 1} of ${p.steps.length} · ${names} · ${schematic ? 'schematic order' : '~' + s.approx_ms + ' ms'}`;
+  const title = `Step ${i + 1} of ${p.steps.length} · ${names} · ${pwMsText(p, s, i)}`;
+
+  /* --- lesioned? the step still plays, but it says what is missing --- */
+  const brokenIds = pwBrokenIn(s);
+  let brokenHtml = '';
+  if (brokenIds.length) {
+    const brokenNames = brokenIds.map((id) => { const r = pwRegion(id); return r ? r.name : id; }).join(' and ');
+    // Two sentences on the card by default: the bold lead and the first thing the deficit does.
+    // Everything else — the rest of the lesion text and what it costs downstream — folds away.
+    const effects = [];
+    for (const id of brokenIds) {
+      const r = pwRegion(id);
+      if (r) for (const line of pwSentences(r.lesion_effects).slice(0, 2)) effects.push(line);
+    }
+    const lead = effects.length ? effects[0] : '';
+    const rest = effects.slice(1);
+    brokenHtml = `<div class="note pw-broken">
+      <strong>Broken here: ${pwEsc(brokenNames)}.</strong> ${pwEsc(lead)}
+      <details class="pw-more pw-broken-more">
+        <summary>What it costs the rest of the sequence</summary>
+        ${rest.map((line) => `<p>${pwEsc(line)}</p>`).join('')}
+        <p>${pwEsc(pwDownstreamLine(p, i, brokenNames))}</p>
+      </details>
+    </div>`;
+  }
+
+  /* --- modulator-weighted timing --- */
+  const t = pwTiming(p, i);
+  const eff = pwEffMs(p, i);
+  let timingHtml = '';
+  if (t && eff !== s.approx_ms) {
+    const worst = modWorstBadge(t.active.map((a) => a.rule));
+    const who = t.active.map((a) => `${a.rule.modulator} ${a.level}`).join(', ');
+    // The card carries two badges at most (the header one and the evidence tier), so the confidence
+    // of the scaling rule lives in this line's tooltip and, in full, in the disclosure under it.
+    const tip = `${MOD_BADGE_LABEL[worst]} — direction only; the millisecond size of these effects is not established.`;
+    timingHtml = `
+      <div class="pw-timing" title="${pwEsc(tip)}">
+        <span>Timing: <span class="mono">~${s.approx_ms} ms</span> → <span class="mono">~${eff} ms</span> · ${pwEsc(who)}</span>
+        <span class="pw-timing-conf">${pwEsc(MOD_BADGE_LABEL[worst].toLowerCase())}</span>
+      </div>
+      <details class="pw-more">
+        <summary>Why this moves</summary>
+        ${t.active.map((a) => `<p class="muted">${pwEsc(a.rule.why)}</p>`).join('')}
+        <p class="muted">Direction only. The sign of these effects is textbook; the millisecond size is not.</p>
+      </details>`;
+  }
+
   explain({
     title,
-    badge: schematic ? 'schematic timeline' : 'approximate timing',
-    badgeClass: schematic ? 'mid' : '',
+    badge: brokenIds.length ? 'Illustrative disconnection' : (schematic ? 'schematic timeline' : 'approximate timing'),
+    badgeClass: brokenIds.length ? 'danger' : (schematic ? 'mid' : ''),
     html: `
+      <div class="pw-meta">${pwTierBadge(s)}<span class="mono pw-ms">${pwEsc(pwMsText(p, s, i))}</span></div>
       <p class="pw-lede">${pwEsc(s.what_happens)}</p>
+      ${brokenHtml}
+      ${timingHtml}
+      ${pwMeasureHtml(p)}
       ${s.why_it_matters ? `<details class="pw-more">
         <summary>Why it matters</summary>
         <p>${pwEsc(s.why_it_matters)}</p>
@@ -323,8 +600,9 @@ function pwExplainStep() {
       ${s.evidence_or_method ? `<details class="pw-more">
         <summary>How we know</summary>
         <p class="muted">${pwEsc(s.evidence_or_method)}</p>
+        <p class="muted"><strong>${PW_TIER[s.evidence_tier] ? PW_TIER[s.evidence_tier].label : 'Estimated'}:</strong> ${pwEsc(s.tier_reason || '')}</p>
       </details>` : ''}
-      <div class="note">${pwEsc(p.accuracy_caveats)}</div>`,
+      ${pwCaveatHtml(p.accuracy_caveats)}`,
   });
 }
 
@@ -348,7 +626,8 @@ function pwGoTo(i, opts = {}) {
   else pwExplainStep();
   pwMarkPanelStep();
   pwPaintPlayhead(0);
-  pwReadout(pwIsSchematic(p) ? 'schematic' : '~' + p.steps[next].approx_ms + ' ms');
+  const scaled = !pwIsSchematic(p) && pwEffMs(p, next) !== p.steps[next].approx_ms;
+  pwReadout(pwIsSchematic(p) ? 'schematic' : pwMsText(p, p.steps[next], next) + (scaled ? ' · scaled' : ''));
 }
 
 function pwStepBy(delta) {
@@ -374,9 +653,20 @@ function pwIntro() {
       step opens with one sentence, with the reasoning and the evidence behind it.</p>
       <p class="muted"><span class="mono">←</span> <span class="mono">→</span> step ·
       <span class="mono">space</span> plays · click a timeline marker to jump.</p>
-      <div class="note">Teaching sequences, not recordings: a lit region is a major hub, not the whole
-      story, and the millisecond values are group averages. Two of the eight are far too slow for
-      milliseconds and are marked schematic.</div>`,
+      <details class="pw-more">
+        <summary>What the badges on each step mean</summary>
+        <p><span class="badge ok">Human recording</span> a named human ERP, MEG or intracranial result backs
+        the region and roughly the timing.</p>
+        <p><span class="badge mid">Animal model</span> the main support is monkey or rodent work, and the
+        human number is inferred from it.</p>
+        <p><span class="badge low">Estimated</span> the step is real but its millisecond value is
+        extrapolated, or the pathway is schematic.</p>
+      </details>
+      <p class="muted">Lesion a region in Atlas and the steps that use it are marked broken here. Move the
+      Neurons sliders and the step timings scale with them, direction only.</p>
+      ${pwCaveatHtml('Teaching sequences, not recordings: a lit region is a major hub, not the whole story, and '
+        + 'the millisecond values are group averages. Two of the eight are far too slow for milliseconds and are '
+        + 'marked schematic.')}`,
   });
 }
 
@@ -471,6 +761,7 @@ export function pwStopExternal() {
   pw.index = pw.stashed ? pw.stashed.index : 0;
   pw.stashed = null;
   pwOffAll();
+  pwTimelineNote('');
   showTimeline(false);
   const track = pwEl('timeline-track');
   if (track) track.innerHTML = '';
@@ -493,6 +784,7 @@ export const PathwaysMode = {
     pw.transient = false;
     pw.stashed = null;         // pw.pathway is authoritative in this mode; a stash here would be stale
     registerHowTabs();
+    labLoadMeasures(app);      // a Stroop result from an earlier visit belongs on the step cards
     showTimeline(true);
     pwRenderPanel();
     pwSyncTransport();
@@ -506,8 +798,10 @@ export const PathwaysMode = {
     pw.external = null;
     if (pw.transient) { pw.transient = false; pw.pathway = null; pw.index = 0; }
     pw.stashed = null;
+    if (labIsOpen()) labCloseStroop();
     pwOffAll();
     hoverLabel(null);
+    pwTimelineNote('');
     showTimeline(false);
     const track = pwEl('timeline-track');
     if (track) track.innerHTML = '';
@@ -546,6 +840,13 @@ export const PathwaysMode = {
   },
 
   onKey(e) {
+    // While the Stroop overlay is up it owns the keyboard completely. Claiming every key here is what
+    // actually stops the mode switcher: panels.js asks the active mode first and returns the moment a
+    // mode says it handled the key, so '2' can no longer drop the reader into Atlas mid-trial. (The
+    // overlay's own capture listener stops real key events earlier; this covers the rest, including
+    // events dispatched straight at window, where a capture listener has no head start.) Escape never
+    // reaches here — panels.js takes it first — so the overlay can still be closed.
+    if (labIsOpen()) return true;
     if (e.key === 'ArrowLeft') { pw.playing = false; pwSyncTransport(); pwStepBy(-1); return true; }
     if (e.key === 'ArrowRight') { pw.playing = false; pwSyncTransport(); pwStepBy(1); return true; }
     if (e.key === ' ' || e.key === 'Spacebar') { pwTogglePlay(); return true; }

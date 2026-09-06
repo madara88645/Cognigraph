@@ -1,0 +1,71 @@
+/* Learn mode (Worker Q): queue + boxes in the side panel, the question card inside #explain-body.
+   Accent is --accent-learn (green) via #app[data-mode="learn"]. Nothing here counts down or keeps a
+   streak, so there is no colour that means "you are behind". */
+
+/* ---- side panel ---- */
+.lr-queue {
+  display: flex; align-items: baseline; gap: 8px;
+  padding: 10px 12px; margin-bottom: 10px; border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.04); border: 1px solid var(--line);
+}
+.lr-queue-n { font-size: 20px; color: var(--accent); font-family: var(--mono); }
+.lr-queue-label { font-size: 12.5px; color: var(--ink-2); }
+.lr-actions { display: flex; gap: 8px; margin-bottom: 4px; }
+.lr-progress { font-size: 12px; color: var(--ink-2); letter-spacing: .01em; }
+.lr-toggle { font-size: 13px; color: var(--ink-2); }
+.lr-toggle input[disabled] { opacity: .4; }
+
+/* ---- question card (inside #explain-body) ---- */
+.lr-prompt { font-size: 14.5px; line-height: 1.45; color: var(--ink); margin-bottom: 10px; }
+.lr-options { display: flex; flex-direction: column; gap: 5px; }
+.lr-opt {
+  display: flex; align-items: flex-start; gap: 9px; width: 100%; text-align: left;
+  border: 1px solid var(--line); background: rgba(255,255,255,0.035); color: var(--ink-2);
+  font: 13px/1.4 var(--font); padding: 8px 11px; border-radius: var(--radius-sm); cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s;
+}
+.lr-opt:hover:not([disabled]) { background: rgba(255,255,255,0.09); color: var(--ink); border-color: var(--accent); }
+.lr-opt:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.lr-opt[disabled] { cursor: default; }
+.lr-key {
+  flex: none; width: 17px; height: 17px; margin-top: 1px; border-radius: 5px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.08); color: var(--ink-3); font-size: 10px;
+}
+.lr-opt-text { flex: 1; }
+.lr-opt.lr-right { border-color: var(--accent-learn); background: rgba(126,214,154,0.12); color: var(--ink); }
+.lr-opt.lr-right .lr-key { background: var(--accent-learn); color: #0b0c10; }
+.lr-opt.lr-wrong { border-color: rgba(255,107,122,.5); background: rgba(255,107,122,0.1); color: var(--ink); }
+.lr-opt.lr-wrong .lr-key { background: var(--danger); color: #0b0c10; }
+.lr-opt.lr-dim { opacity: .5; }
+
+.lr-verdict { margin: 10px 0 6px; font-size: 13px; color: var(--ink); }
+.lr-verdict .muted { margin-left: 6px; }
+.lr-verdict-right { color: var(--accent-learn); }
+.lr-verdict-wrong { color: #ffa3ad; }
+
+.lr-source {
+  border-left: 2px solid var(--line); padding: 6px 0 2px 12px; margin: 8px 0 4px;
+}
+.lr-source-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.lr-source-title { font-weight: 600; color: var(--ink); font-size: 13px; }
+.lr-source p { font-size: 12.5px; color: var(--ink-2); margin: 0 0 5px; }
+
+.lr-next-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.lr-hint { font-size: 11.5px; }
+
+/* closed disclosure on the intro card, same shape as every other one in the app */
+.lr-fold { margin: 8px 0 0; }
+.lr-fold > summary {
+  cursor: pointer; list-style: none; color: var(--ink-3);
+  font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; padding: 2px 0;
+}
+.lr-fold > summary::-webkit-details-marker { display: none; }
+.lr-fold > summary::after { content: " ›"; }
+.lr-fold[open] > summary::after { content: " ⌄"; }
+.lr-fold > summary:hover { color: var(--accent); }
+.lr-fold p { font-size: 13px; margin: 4px 0 6px; }
+
+/* The card is four options plus a source record, so Learn gets a taller Explain panel. */
+#app[data-mode="learn"] #explain-panel { max-height: 62vh; }
+@media (max-height: 700px) { #app[data-mode="learn"] #explain-panel { max-height: 56vh; } }

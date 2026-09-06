@@ -13,6 +13,7 @@
   --accent-learn: #7ed69a;
   --accent: var(--accent-atlas);
   --danger: #ff6b7a;
+  --danger-ink: #ffc2c8;
   --radius: 14px;
   --radius-sm: 9px;
   --shadow: 0 10px 40px rgba(0,0,0,0.45);
@@ -63,7 +64,9 @@ a { color: var(--accent); }
 .brand-mark { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 14px var(--accent); align-self: center; transition: background .3s, box-shadow .3s; }
 .brand-name { font-family: var(--display); font-weight: 500; font-size: 17px; }
 .brand-sub { color: var(--ink-3); font-size: 12px; }
-#mode-switcher { display: flex; gap: 4px; padding: 4px; border-radius: 999px; background: rgba(255,255,255,0.04); border: 1px solid var(--line); }
+#mode-switcher { display: flex; gap: 4px; padding: 4px; border-radius: 999px; background: rgba(255,255,255,0.04); border: 1px solid var(--line); max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+#mode-switcher::-webkit-scrollbar { display: none; }
+.mode-pill { flex: none; }
 .mode-pill { border: 0; background: transparent; color: var(--ink-2); font: 500 13px var(--font); padding: 6px 16px; border-radius: 999px; cursor: pointer; transition: background .2s, color .2s; }
 .mode-pill:hover { color: var(--ink); }
 .mode-pill.active { background: var(--accent); color: #0b0c10; }
@@ -96,6 +99,8 @@ select { background: rgba(255,255,255,0.06); color: var(--ink); border: 1px soli
   padding: 18px 22px 20px; overflow-y: auto; z-index: 15;
 }
 .explain-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.explain-head-right { display: flex; align-items: center; gap: 8px; }
+#explain-ask { padding: 3px 10px; font-size: 11.5px; }
 .explain-kicker { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
 #explain-title { font-family: var(--display); font-weight: 300; font-size: 24px; letter-spacing: 0; line-height: 1.15; margin-bottom: 8px; text-wrap: balance; }
 #explain-body { color: var(--ink-2); font-size: 14px; max-width: 62ch; }
@@ -111,7 +116,8 @@ select { background: rgba(255,255,255,0.06); color: var(--ink); border: 1px soli
 .badge { display: inline-block; font: 500 11px var(--font); padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--ink-2); background: rgba(255,255,255,0.04); }
 .badge.ok { border-color: rgba(94,225,214,.4); color: #9eeee7; }
 .badge.mid { border-color: rgba(245,183,74,.4); color: #f8cf8a; }
-.badge.low { border-color: rgba(255,107,122,.4); color: #ffa3ad; }
+.badge.low { border-color: rgba(185,192,212,.35); color: #c3c9db; }           /* estimated / heuristic: neutral slate, not an error */
+.badge.danger { border-color: rgba(255,107,122,.45); color: var(--danger-ink); }  /* broken / ungrounded: the only red badge */
 
 /* ---- glossary terms ---- */
 .term { border-bottom: 1px dotted var(--accent); cursor: help; color: var(--ink); }
@@ -186,7 +192,9 @@ input[type=range] { accent-color: var(--accent); width: 120px; }
 /* narrow: side panel becomes an overlay (starts collapsed, ☰ opens it); explain panel spans the bottom */
 @media (max-width: 760px) {
   :root { --panel-w: min(340px, calc(100vw - 24px)); --explain-w: calc(100vw - 24px); }
-  #topbar { grid-template-columns: auto 1fr auto; gap: 8px; padding: 0 10px; }
+  #topbar { grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; padding: 0 10px; }
+  #mode-switcher { justify-self: stretch; }
+  .mode-pill { padding: 6px 12px; font-size: 12.5px; }
   .quality span { display: none; }
   #side-panel { z-index: 22; bottom: 14px; max-height: calc(100vh - var(--topbar-h) - 40px); }
   #explain-panel { left: 12px; right: 12px; width: auto; bottom: 64px; max-height: 34vh; }

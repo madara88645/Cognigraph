@@ -1,7 +1,10 @@
 // The local heuristic must be pure, deterministic, and honest about how little it knows.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { classifyLocal, llmDetectSensitive, llmDominantModulator, LLM_MODULATORS, LLM_BASELINE } from '../src/llm/classify-local.js';
+import {
+  classifyLocal, llmDetectSensitive, llmDominantModulator, llmMarkLesionedSteps, llmLesionedInSteps,
+  LLM_MODULATORS, LLM_BASELINE,
+} from '../src/llm/classify-local.js';
 import { PATHWAYS } from '../src/data/pathways.js';
 import { REGIONS } from '../src/data/regions.js';
 
@@ -244,4 +247,57 @@ test('llmDetectSensitive is a pure function of the text, never throwing', () => 
     assert.ok(Array.isArray(r.cues));
   }
   assert.deepEqual(llmDetectSensitive('I want to die'), llmDetectSensitive('I want to die'));
+});
+
+/* ---------- lesions ---------- */
+
+test('a lesioned region marks its step as broken instead of removing it', () => {
+  const text = 'A friend waves at me across a crowded room and I recognise her at once.';
+  const clean = classifyLocal(text);
+  const lesioned = classifyLocal(text, { lesions: ['ffa'] });
+
+  assert.equal(lesioned.steps.length, clean.steps.length, 'the sequence keeps every step');
+  const hit = lesioned.steps.filter((s) => s.broken);
+  assert.ok(hit.length > 0, 'the FFA step is flagged');
+  for (const s of hit) {
+    assert.deepEqual(s.broken_ids, ['ffa']);
+    assert.ok(s.region_ids.indexOf('ffa') >= 0);
+  }
+  assert.deepEqual(lesioned.lesioned, ['ffa']);
+  assert.deepEqual(
+    lesioned.steps.map((s) => s.region_ids), clean.steps.map((s) => s.region_ids),
+    'and nothing is rerouted: this engine has no way to know a detour',
+  );
+});
+
+test('lesions never move the neuromodulator profile, the title or the confidence', () => {
+  const text = 'Struggling to remember answers during a high-stakes final exam.';
+  const clean = classifyLocal(text);
+  const lesioned = classifyLocal(text, { lesions: ['hippocampus', 'dlpfc', 'amygdala'] });
+  assert.deepEqual(lesioned.neuromodulators, clean.neuromodulators);
+  assert.equal(lesioned.intensity, clean.intensity);
+  assert.equal(lesioned.confidence, clean.confidence);
+  assert.equal(lesioned.title, clean.title);
+});
+
+test('an empty, absent or irrelevant lesion list changes nothing at all', () => {
+  const text = 'Reading a long paragraph in a quiet room.';
+  const base = JSON.stringify(classifyLocal(text));
+  assert.equal(JSON.stringify(classifyLocal(text, {})), base);
+  assert.equal(JSON.stringify(classifyLocal(text, { lesions: [] })), base);
+  assert.equal(JSON.stringify(classifyLocal(text, { lesions: null })), base);
+  const unrelated = classifyLocal(text, { lesions: ['not_a_region'] });
+  assert.deepEqual(unrelated.lesioned, []);
+  assert.equal(unrelated.steps.some((s) => s.broken), false);
+});
+
+test('the marking helpers are pure and cope with junk', () => {
+  const steps = [{ region_ids: ['v1'] }, { region_ids: ['ffa', 'hippocampus'] }];
+  const marked = llmMarkLesionedSteps(steps, ['hippocampus']);
+  assert.equal(steps[1].broken, undefined, 'the input steps are not modified');
+  assert.equal(marked[0].broken, undefined);
+  assert.deepEqual(marked[1].broken_ids, ['hippocampus']);
+  assert.deepEqual(llmLesionedInSteps(steps, ['hippocampus', 'v1']), ['v1', 'hippocampus']);
+  assert.deepEqual(llmMarkLesionedSteps(null, ['v1']), []);
+  assert.deepEqual(llmLesionedInSteps(steps, null), []);
 });

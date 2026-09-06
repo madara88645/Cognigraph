@@ -35,16 +35,15 @@
 .pw-more > summary:hover { color: var(--accent); }
 .pw-more p { margin: 2px 0 6px; font-size: 13px; }
 #app[data-mode="pathways"] #explain-body p { margin-bottom: 8px; }
-/* The pathway caveat stays last in reading order but pins to the bottom of the scrollport, so it
-   never leaves the screen while the step prose scrolls behind it. Two sentences fit without a
-   scrollbar of its own. */
-#app[data-mode="pathways"] #explain-body .note {
-  position: sticky; bottom: 0; z-index: 1;
+/* The pathway caveat is last in reading order and flows there. It used to be sticky, which meant a
+   translucent bar sitting on top of whatever the reader had just scrolled to; two sentences at the
+   foot of the card cost nothing and hide nothing. Anything past those two folds away. */
+#app[data-mode="pathways"] #explain-body .note.pw-caveat {
   margin: 10px 0 0; padding: 8px 10px;
   background: rgba(22, 25, 36, 0.96);
-  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
-  box-shadow: 0 -10px 16px rgba(10, 11, 15, 0.5);
 }
+.pw-caveat-more, .pw-broken-more { margin: 4px 0 0; }
+.pw-caveat-more > summary, .pw-broken-more > summary { padding-top: 0; }
 
 /* timeline -------------------------------------------------------------------- */
 #timeline-track { overflow: visible; }
@@ -76,3 +75,62 @@
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none;
 }
 .tl-marker.done .tl-cap, .tl-marker:hover .tl-cap { color: var(--ink-2); }
+
+
+/* step card: tier badge, broken-step note, modulated timing, personal measurement --------------- */
+.pw-meta { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; }
+.pw-meta .pw-ms { color: var(--ink-3); }
+.pw-tier { cursor: help; }
+
+/* A broken step is the one place Pathways uses the danger colour: the sequence on screen is no
+   longer the sequence the evidence describes. */
+#app[data-mode="pathways"] #explain-body .note.pw-broken {
+  border-left-color: var(--danger);
+  background: rgba(255, 107, 122, 0.08);
+  color: var(--ink-2);
+}
+.pw-broken strong { color: var(--danger-ink); }
+.pw-broken .pw-more p { color: var(--ink-3); }
+
+.pw-timing {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  font-size: 12.5px; color: var(--ink-2); margin: 6px 0 2px;
+}
+.pw-timing .mono { color: var(--ink); }
+/* Not a badge: the step card is capped at two of those (the header one and the evidence tier), and the
+   confidence of a scaling rule is a footnote to the number, not a third label competing with them. */
+.pw-timing-conf { color: var(--ink-3); font-size: 11px; cursor: help; }
+
+.pw-yours { font-size: 12.5px; color: var(--ink-2); margin: 8px 0 0; }
+.pw-yours .mono { color: var(--accent); }
+#app[data-mode="pathways"] #explain-body .note.pw-soft { border-left-color: var(--line); margin-top: 4px; }
+
+/* side panel: lesion summary chip, measure button ------------------------------------------------ */
+.pw-lesion-chip { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; flex-wrap: wrap; }
+.pw-lesion-chip .text-btn { padding: 3px 10px; }
+.pw-step-broken .pw-step-n { border-color: var(--danger); color: var(--danger-ink); }
+.pw-step-broken .pw-item-text > span:first-child { text-decoration: line-through; text-decoration-color: rgba(255,107,122,.7); }
+.pw-step-dimmed { opacity: .55; }
+.pw-measure-note { margin-top: 6px; }
+
+/* timeline: evidence tier, broken + downstream markers, the scaling note ------------------------- */
+.tl-marker.tl-tier-human_direct { border-color: rgba(94,225,214,.55); }
+.tl-marker.tl-tier-animal_inferred { border-color: rgba(245,183,74,.55); }
+.tl-marker.tl-tier-estimated { border-color: rgba(255,107,122,.45); border-style: dashed; }
+
+/* a lesioned step keeps its dot (the pulse still arrives) but is struck through */
+.tl-marker.tl-broken { border-color: var(--danger); background: rgba(255,107,122,.22); }
+.tl-marker.tl-broken.done { background: var(--danger); }
+.tl-marker.tl-broken::after {
+  content: ""; position: absolute; left: 50%; top: 50%; width: 17px; height: 2px;
+  transform: translate(-50%, -50%) rotate(-45deg);
+  background: var(--danger); border-radius: 1px; pointer-events: none;
+}
+.tl-marker.tl-broken .tl-cap { color: var(--danger-ink); text-decoration: line-through; }
+.tl-marker.tl-dimmed { opacity: .45; }
+.tl-marker.tl-dimmed .tl-cap { text-decoration: line-through; text-decoration-color: var(--line); }
+
+.pw-tl-note {
+  position: absolute; left: 14px; bottom: calc(100% + 6px);
+  font-size: 11px; line-height: 1.2; white-space: nowrap; pointer-events: none;
+}

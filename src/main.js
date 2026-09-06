@@ -31,9 +31,10 @@ async function boot() {
   initUI(app, switchMode);
   if (typeof initGlossary === 'function') initGlossary(app);
   // drawer tabs are registered at boot so the ? button shows all of them before any mode has been visited
-  for (const fn of ['atlasRegisterRenderingTab', 'registerHowTabs', 'scRegisterSettings']) {
-    try { if (typeof globalThis[fn] === 'function') globalThis[fn](); } catch (e) { console.warn('drawer tab registration failed:', fn, e); }
-  }
+  // (all files share one module scope after the build, so plain identifiers resolve; typeof guards keep stubs harmless)
+  try { if (typeof atlasRegisterRenderingTab === 'function') atlasRegisterRenderingTab(); } catch (e) { console.warn('rendering tab', e); }
+  try { if (typeof registerHowTabs === 'function') registerHowTabs(); } catch (e) { console.warn('how tabs', e); }
+  try { if (typeof scRegisterSettings === 'function') scRegisterSettings(); } catch (e) { console.warn('settings tab', e); }
 
   app.scene.onPick((id, pos) => app.mode && app.mode.onPick && app.mode.onPick(id, app, pos));
   app.scene.onHover((id, pos) => app.mode && app.mode.onHover && app.mode.onHover(id, app, pos));

@@ -80,3 +80,54 @@ test('no HTML entities or raw markup leaked into the pathway copy', () => {
   assert.ok(!/&(amp|quot|lt|gt|nbsp|#\d+);/.test(all), 'HTML entity found in pathway text');
   assert.ok(!/<[a-z/][^>]*>/.test(all), 'raw HTML tag found in pathway text');
 });
+
+/* ---- Phase 3: evidence tier per step ---- */
+
+const TIERS = ['human_direct', 'animal_inferred', 'estimated'];
+
+test('every step declares a valid evidence tier with a short reason', () => {
+  for (const p of PATHWAYS) {
+    for (const [i, s] of p.steps.entries()) {
+      assert.ok(TIERS.includes(s.evidence_tier), `${p.id} step ${i}: bad evidence_tier ${s.evidence_tier}`);
+      assert.ok(s.tier_reason && s.tier_reason.length > 15, `${p.id} step ${i}: missing tier_reason`);
+      const words = s.tier_reason.trim().split(/\s+/).length;
+      assert.ok(words <= 15, `${p.id} step ${i}: tier_reason is ${words} words, the card has room for 15`);
+    }
+  }
+});
+
+test('schematic pathways cannot claim a measured tier — every step is estimated', () => {
+  for (const p of PATHWAYS.filter((x) => x.timeline === 'schematic')) {
+    for (const [i, s] of p.steps.entries()) {
+      assert.equal(s.evidence_tier, 'estimated', `${p.id} step ${i}: a schematic step cannot be ${s.evidence_tier}`);
+    }
+  }
+});
+
+test('a step whose own evidence text says the timing is estimated is not tiered as a human recording', () => {
+  for (const p of PATHWAYS) {
+    for (const [i, s] of p.steps.entries()) {
+      if (/\b(estimated here|not directly measurable|not precisely established|is inferred)\b/i.test(s.evidence_or_method)) {
+        assert.notEqual(s.evidence_tier, 'human_direct',
+          `${p.id} step ${i}: its own evidence line hedges the timing, so it cannot be human_direct`);
+      }
+    }
+  }
+});
+
+test('the animal-inferred steps are the ones whose evidence really rests on animal work', () => {
+  const animal = [];
+  for (const p of PATHWAYS) for (const [i, s] of p.steps.entries()) if (s.evidence_tier === 'animal_inferred') animal.push([p.id, i, s]);
+  assert.ok(animal.length >= 4, `only ${animal.length} steps tiered animal_inferred`);
+  for (const [id, i, s] of animal) {
+    assert.match(s.evidence_or_method, /macaque|monkey|rodent|primate|animal/i,
+      `${id} step ${i}: tiered animal_inferred but its evidence names no animal work`);
+  }
+});
+
+test('at least one step per ms pathway is backed by a direct human recording', () => {
+  for (const p of PATHWAYS.filter((x) => x.timeline === 'ms')) {
+    assert.ok(p.steps.some((s) => s.evidence_tier === 'human_direct'),
+      `${p.id}: no step is tiered human_direct, which would make the whole ms timeline unsupported`);
+  }
+});

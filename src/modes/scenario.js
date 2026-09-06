@@ -11,9 +11,11 @@
 import { REGIONS } from '../data/regions.js';
 import { registerHowTabs } from '../data/howitworks.js';
 import { classifyLocal, llmDetectSensitive, LLM_MODULATORS, LLM_BASELINE } from '../llm/classify-local.js';
+import { askScenarioRecord } from '../llm/ask.js';
+import { askSetContext, askMount, askRefresh } from '../ui/ask.js';
 import { classifyWithOpenRouter, llmStoredKey, llmSetStoredKey, llmStoredModel, llmSetStoredModel, llmMaskKey, LLM_MODELS } from '../llm/openrouter.js';
 import { PathwaysMode, pwPlayExternal, pwStopExternal } from './pathways.js';
-import { nsApplyModulators } from './neurons-ui.js';
+import { nsApplyModulators, nsSetHypothesis } from './neurons-ui.js';
 import { explain, setSidePanel, registerDrawerTab, openDrawer, toast, showTimeline, hoverLabel } from '../ui/panels.js';
 
 const SC_ACCENT = 0xf28b74;
@@ -230,21 +232,45 @@ function scFirstSentence(text) {
   return (first.length >= 20 || !t) ? first : t;
 }
 
+/**
+ * One line per broken step, in the step's own row. The step is kept, not removed: a sequence with a
+ * hole in it is the honest picture of what a lesion does to a story, and deleting the step would show
+ * a chain that still works.
+ */
+function scBrokenHtml(s) {
+  const ids = Array.isArray(s.broken_ids) ? s.broken_ids : [];
+  if (!s.broken || !ids.length) return '';
+  const names = ids.map(scShortName).join(' and ');
+  const verb = ids.length === 1 ? 'is' : 'are';
+  return `<span class="sc-step-broken">Broken: ${scEsc(names)} ${verb} lesioned in Atlas</span>`;
+}
+
 function scStepsHtml(result) {
   return `<ol class="sc-steps" id="sc-steps">` + result.steps.map((s, i) => {
     const names = s.region_ids.map(scShortName).join(' + ');
     const ms = (typeof s.approx_ms === 'number') ? '~' + s.approx_ms + ' ms' : 'order only';
     const what = scFirstSentence(s.what_happens);
     const full = [s.what_happens, s.why_it_matters].filter(Boolean).join('\n\n');
-    return `<li data-i="${i}"${i === 0 ? ' class="active"' : ''} title="${scEsc(full)}" role="button" tabindex="0">
+    return `<li data-i="${i}"${i === 0 ? ' class="active"' : ''}${s.broken ? ' data-broken="1"' : ''} title="${scEsc(full)}" role="button" tabindex="0">
       <span class="sc-step-head">
         <span class="sc-step-n mono">${i + 1}</span>
         <span class="sc-step-regions">${scEsc(names)}</span>
         <span class="sc-step-ms mono">${scEsc(ms)}</span>
       </span>
+      ${scBrokenHtml(s)}
       <span class="sc-step-what">${scEsc(what)}</span>
     </li>`;
   }).join('') + `</ol>`;
+}
+
+/** The one-line summary above the list when the Atlas has regions switched off. */
+function scLesionNoteHtml(result) {
+  const ids = Array.isArray(result.lesioned) ? result.lesioned : [];
+  if (!ids.length) return '';
+  const n = result.steps.filter((s) => s.broken).length;
+  return `<div class="note sc-lesion-note">${n === 1 ? 'One step runs' : n + ' steps run'} through
+    ${scEsc(ids.map(scShortName).join(', '))}, which ${ids.length === 1 ? 'is' : 'are'} lesioned in Atlas.
+    The steps are kept and marked; the neuromodulator profile is not adjusted, because nothing here models that.</div>`;
 }
 
 /**
@@ -304,6 +330,7 @@ function scShowResult(result, note) {
         <button class="text-btn primary" id="sc-replay" type="button">Replay on the brain</button>
         <button class="text-btn" id="sc-neurons" type="button">Send to Neurons</button>
       </div>
+      ${scLesionNoteHtml(result)}
       ${scStepsHtml(result)}
       <h4 class="sc-h4">Neuromodulator profile</h4>
       ${scBars(result.neuromodulators)}
@@ -320,6 +347,10 @@ function scShowResult(result, note) {
         ? 'A language model wrote this: a plausible narrative, not a reading of anyone\'s brain. Only the region ids were checked.'
         : 'Keyword matching, not understanding: it notices words and picks the nearest built-in pathway.'}</div>`,
   });
+
+  if (typeof askSetContext === 'function') {
+    askSetContext({ label: result.title || 'This scenario', records: [askScenarioRecord(result)].filter(Boolean) });
+  }
 
   scOn(scEl('sc-replay'), 'click', scReplay);
   scOn(scEl('sc-neurons'), 'click', scToNeurons);
@@ -385,7 +416,11 @@ function scToNeurons() {
   if (!pill) { toast('Neurons mode is not available.'); return; }
   pill.click();
   setTimeout(() => {
-    if (!nsApplyModulators(profile)) toast('Neurons mode was not ready for the profile.');
+    if (!nsApplyModulators(profile)) { toast('Neurons mode was not ready for the profile.'); return; }
+    // The prediction has to be stated before the network is watched, or it is not a prediction.
+    if (typeof nsSetHypothesis === 'function') {
+      nsSetHypothesis({ title: sc.result.title || 'Your scenario', profile });
+    }
   }, 0);
 }
 
@@ -455,10 +490,12 @@ async function scRun(text) {
 
   const key = llmStoredKey();
   const model = llmStoredModel();
+  // Both engines see the same list, so a lesion changes the answer the same way whichever one runs.
+  const lesions = Array.from((sc.app && sc.app.lesions) || []);
 
   if (!key) {
     scSetStatus('local');
-    scShowResult(classifyLocal(t), 'Keyword heuristic — no key stored. Add one in Settings for the language model.');
+    scShowResult(classifyLocal(t, { lesions }), 'Keyword heuristic — no key stored. Add one in Settings for the language model.');
     return;
   }
 
@@ -470,7 +507,7 @@ async function scRun(text) {
 
   let res;
   try {
-    res = await classifyWithOpenRouter(t, { key, model, signal: ctl ? ctl.signal : undefined });
+    res = await classifyWithOpenRouter(t, { key, model, lesions, signal: ctl ? ctl.signal : undefined });
   } catch (err) {
     res = { ok: false, reason: 'Unexpected error while calling OpenRouter.' };
   }
@@ -488,7 +525,7 @@ async function scRun(text) {
   const blocked = !aborted && (!!(res && res.blocked) || (scSandboxed() && res && !res.status));
   const message = scFailureMessage(blocked ? Object.assign({}, res, { blocked: true }) : res);
   scSetStatus('fallback', { model, reason: (res && res.reason) ? res.reason : 'unknown error' });
-  scShowResult(classifyLocal(t), message);
+  scShowResult(classifyLocal(t, { lesions }), message);
   toast('LLM call failed — showing the local heuristic.');
 }
 
@@ -523,11 +560,22 @@ function scSettingsHtml() {
       <span>Model id</span>
       <select id="sc-model">${custom}${options}</select>
     </label>
-    <p class="muted">Ids pass through as-is; a retired id returns 404 and the heuristic takes over.</p>`;
+    <p class="muted">Ids pass through as-is; a retired id returns 404 and the heuristic takes over.</p>
+
+    <h3>Ask about this</h3>
+    <p class="muted">${key
+      ? 'The Ask box is open at the bottom right. It answers only from the record you have selected, and cites it.'
+      : 'Locked without a key: the Ask box answers questions about the selected record, and needs the same key as above.'}</p>`;
 }
 
+/**
+ * Also the app's boot hook for the Ask panel: main.js calls this by name at startup (it is one of the
+ * three registration functions in its list), and it is the only place in this worker's files that runs
+ * before any mode is entered. Ask has to exist in Atlas and Pathways too, and neither is ours.
+ */
 function scRegisterSettings() {
   if (typeof registerDrawerTab === 'function') registerDrawerTab(SC_SETTINGS_TAB, SC_SETTINGS_LABEL, scSettingsHtml());
+  try { if (typeof askMount === 'function') askMount(); } catch (err) { /* the panel is optional chrome */ }
 }
 
 function scOpenSettings() {
@@ -555,6 +603,7 @@ function scWireSettingsOnce() {
       scRegisterSettings();
       openDrawer(SC_SETTINGS_TAB);
       scPaintStatus();
+      if (typeof askRefresh === 'function') askRefresh();   // the Ask box appears with the key
       return;
     }
     if (t.closest('#sc-key-clear')) {
@@ -563,6 +612,7 @@ function scWireSettingsOnce() {
       scRegisterSettings();
       openDrawer(SC_SETTINGS_TAB);
       scPaintStatus();
+      if (typeof askRefresh === 'function') askRefresh();
     }
   });
   document.addEventListener('change', (e) => {
@@ -587,7 +637,9 @@ export const ScenarioMode = {
     scRegisterSettings();
     scWireSettingsOnce();
     scRenderPanel();
-    if (sc.result) scShowResult(sc.result); else scIntro();
+    if (typeof askMount === 'function') askMount(app);
+    if (sc.result) scShowResult(sc.result);
+    else { scIntro(); if (typeof askSetContext === 'function') askSetContext(null); }
   },
 
   exit(app) {

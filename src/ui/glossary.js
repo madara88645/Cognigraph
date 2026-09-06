@@ -5,8 +5,12 @@
 // existing .term span (or anything marked data-nolink), idempotent, at most 2 links per term per call.
 import { GLOSSARY } from '../data/glossary.js';
 import { openDrawer } from './panels.js';
+import { askMount } from './ask.js';
 
 const GL_MAX_PER_TERM = 2;
+/** Terms opened in the popover, so Learn can put them at the front of the queue. Local, per browser. */
+export const GL_SEEN_STORAGE = 'cg.glossary.seen';
+const GL_SEEN_MAX = 200;
 const GL_SKIP_TAGS = { script: 1, style: 1, textarea: 1 };
 const GL_VOID_TAGS = { br: 1, hr: 1, img: 1, input: 1, meta: 1, link: 1, source: 1, wbr: 1, col: 1, area: 1 };
 let glIndex = null;
@@ -139,6 +143,41 @@ export function glossaryLookup(term) {
   return idx.byTerm.get(glKey(term)) || glLookupAlias(idx, term) || null;
 }
 
+/* ---------- "terms you looked up" log ---------- */
+
+function glStore() {
+  try { return (typeof localStorage !== 'undefined') ? localStorage : null; } catch (err) { return null; }
+}
+
+/**
+ * Note that this browser opened a term. It is a count and a timestamp per term, nothing else — no
+ * page, no session, no order of reading — and it never leaves the machine. Learn mode reads it to
+ * offer the terms you actually looked up before the ones you never did.
+ * @returns {boolean} whether it was written
+ */
+export function glLogSeen(term) {
+  const s = glStore();
+  const key = String(term == null ? '' : term).trim();
+  if (!s || !key) return false;
+  try {
+    let obj = {};
+    const raw = s.getItem(GL_SEEN_STORAGE);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) obj = parsed;
+    }
+    const prev = (obj[key] && typeof obj[key] === 'object') ? obj[key] : {};
+    obj[key] = { n: (Number(prev.n) || 0) + 1, at: Date.now() };
+    const keys = Object.keys(obj);
+    if (keys.length > GL_SEEN_MAX) {
+      keys.sort((a, b) => (Number(obj[a].at) || 0) - (Number(obj[b].at) || 0));
+      for (const k of keys.slice(0, keys.length - GL_SEEN_MAX)) delete obj[k];
+    }
+    s.setItem(GL_SEEN_STORAGE, JSON.stringify(obj));
+    return true;
+  } catch (err) { return false; }
+}
+
 /* ---------- popover ---------- */
 
 function glHide() {
@@ -153,6 +192,7 @@ function glShow(el) {
   const rec = glossaryLookup(term);
   document.getElementById('gp-term').textContent = rec ? rec.term : term;
   document.getElementById('gp-def').textContent = rec ? rec.definition : 'No definition recorded for this term yet.';
+  if (rec) glLogSeen(rec.term);
   pop.hidden = false;
   pop.style.left = '0px'; pop.style.top = '0px';
 
@@ -170,6 +210,12 @@ export function initGlossary(app) {
   if (glInited) return;
   glInited = true;
   glGetIndex();
+
+  // Boot hook for the Ask panel, which has to exist in Atlas and Pathways too — neither of which is
+  // this worker's file. main.js has a registration loop for exactly this, but it looks its functions up
+  // on globalThis, and a bundled `<script type="module">` puts nothing there, so it never fires.
+  // initGlossary is imported and called directly, so it does. (Reported to the orchestrator.)
+  try { if (typeof askMount === 'function') askMount(app); } catch (err) { /* optional chrome */ }
 
   document.addEventListener('click', (e) => {
     const pop = document.getElementById('glossary-popover');

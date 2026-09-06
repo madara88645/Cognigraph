@@ -355,3 +355,55 @@ test('the request asks for enough tokens to carry six steps plus a rationale', (
       `max_tokens ${f.calls[0].body.max_tokens}: six steps of prose were being truncated at 900`);
   });
 });
+
+/* ---------- lesions ---------- */
+
+test('the system prompt names the lesioned regions and asks the model to route around them', () => {
+  const plain = llmSystemPrompt();
+  assert.equal(plain.indexOf('lesioned'), -1, 'no lesion line when nothing is lesioned');
+
+  const p = llmSystemPrompt(['ffa', 'hippocampus']);
+  assert.ok(p.indexOf('These regions are lesioned and cannot contribute: ffa, hippocampus') > 0, p.slice(0, 400));
+  assert.ok(p.indexOf('route the sequence around them where plausible and say so in the rationale') > 0);
+  assert.ok(p.indexOf(llmRegionCatalogue()) > 0, 'the region catalogue is still there in full');
+  assert.equal(llmSystemPrompt([]).indexOf('lesioned'), -1);
+  assert.equal(llmSystemPrompt('nonsense').indexOf('lesioned'), -1, 'a non-array is ignored, not crashed on');
+});
+
+test('a lesioned region the model used anyway comes back flagged, not dropped', () => {
+  const out = validateScenarioResult(GOOD, { lesions: ['ffa'] });
+  assert.equal(out.ok, true);
+  assert.equal(out.steps.length, GOOD.steps.length, 'the step is kept');
+  const broken = out.steps.filter((s) => s.broken);
+  assert.equal(broken.length, 1);
+  assert.deepEqual(broken[0].region_ids, ['ffa']);
+  assert.deepEqual(broken[0].broken_ids, ['ffa']);
+  assert.deepEqual(out.lesioned, ['ffa']);
+  assert.equal(out.dropped.region_ids, 0, 'a lesion is not a validation failure');
+});
+
+test('a reply that did route around the lesion carries no broken flags', () => {
+  const out = validateScenarioResult(GOOD, { lesions: ['cerebellum'] });
+  assert.equal(out.steps.some((s) => s.broken), false);
+  assert.deepEqual(out.lesioned, []);
+});
+
+test('lesions travel from the caller into both the prompt and the validated result', async () => {
+  const f = mockFetch(okReply(JSON.stringify(GOOD)));
+  const out = await classifyWithOpenRouter('a friend in a crowd', {
+    key: KEY, fetchImpl: f, lesions: ['ffa', 'not_a_region_id'],
+  });
+  const system = f.calls[0].body.messages[0].content;
+  assert.ok(system.indexOf('These regions are lesioned and cannot contribute: ffa, not_a_region_id') > 0);
+  assert.equal(out.ok, true);
+  assert.deepEqual(out.lesioned, ['ffa']);
+  assert.equal(out.steps.filter((s) => s.broken).length, 1);
+});
+
+test('no lesion list at all leaves every existing result untouched', () => {
+  const a = validateScenarioResult(GOOD);
+  const b = validateScenarioResult(GOOD, {});
+  assert.deepEqual(a, b);
+  assert.equal(a.steps.some((s) => s.broken), false);
+  assert.deepEqual(a.lesioned, []);
+});

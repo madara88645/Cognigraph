@@ -234,7 +234,7 @@ function atlasLesionCard(r, app) {
       `<p class="muted">${app.lesions.size} region${app.lesions.size === 1 ? '' : 's'} currently lesioned. Click again to repair.</p>`,
     ].join(''),
     badge: 'lesioned',
-    badgeClass: 'low',
+    badgeClass: 'danger',
   });
 }
 
