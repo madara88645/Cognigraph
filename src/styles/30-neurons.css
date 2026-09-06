@@ -1,0 +1,161 @@
+/* ==== Neurons mode (Worker B) — controls, slider explanations, plot legends ====
+   Also styles the "How this simulation works" tabs authored in src/data/howitworks.js. */
+
+/* live status ---------------------------------------------------------------- */
+.ns-status {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  padding: 7px 10px; margin-bottom: 8px; border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.04); border: 1px solid var(--line); font-size: 12px; color: var(--ink-2);
+}
+.ns-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+.ns-dot-e { background: var(--accent-neurons); }
+.ns-dot-i { background: #6aa6ff; }
+.ns-dot-i { margin-left: 6px; }
+.ns-state { margin-left: auto; color: var(--ink-3); letter-spacing: .04em; text-transform: uppercase; font-size: 10.5px; }
+
+.ns-transport { display: flex; gap: 6px; margin-bottom: 4px; }
+.ns-disclaimer { margin-top: 0; }
+
+.ns-selects { display: flex; flex-direction: column; gap: 8px; }
+.ns-selects label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--ink-3); }
+.ns-selects select { width: 100%; box-sizing: border-box; }
+
+/* collapsible side-panel groups ------------------------------------------------ */
+/* The panel is long (13 sliders + 6 cards), so the six modulator cards live in one group that can
+   be folded away; Cell types and Drive stay visible, Advanced (a,b,c,d) stays closed. */
+.ns-group { margin: 16px 0 4px; }
+.ns-group > summary {
+  cursor: pointer; list-style: none;
+  font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3);
+  display: flex; align-items: center; gap: 6px; padding: 2px 0;
+}
+.ns-group > summary::-webkit-details-marker { display: none; }
+.ns-group > summary::before { content: "▸"; font-size: 9px; transition: transform .15s; }
+.ns-group[open] > summary::before { transform: rotate(90deg); }
+.ns-group > summary:hover { color: var(--ink-2); }
+.ns-group-note { margin: 6px 0 8px; }
+
+/* neuromodulator cards (compact: slider + one line + a "why" disclosure) -------- */
+.ns-mod {
+  border: 1px solid var(--line); border-radius: var(--radius-sm);
+  padding: 7px 10px 6px; margin-bottom: 6px; background: rgba(255,255,255,0.025);
+}
+.ns-mod-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ns-mod-name { font-weight: 500; font-size: 13px; color: var(--ink); }
+.ns-mod .badge { font-size: 10px; padding: 1px 7px; white-space: nowrap; }
+.ns-mod .slider-row { padding: 2px 0 3px; }
+.ns-mod .slider-row .label { color: var(--ink-3); font-size: 11px; letter-spacing: .04em; text-transform: uppercase; }
+.ns-short {
+  margin: 0; font-size: 11.5px; line-height: 1.4; color: var(--ink-3);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.ns-why > summary {
+  cursor: pointer; list-style: none; font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--ink-3); padding: 4px 0 1px; opacity: .8;
+}
+.ns-why > summary::-webkit-details-marker { display: none; }
+.ns-why > summary::after { content: " ›"; }
+.ns-why[open] > summary::after { content: " ⌄"; }
+.ns-why > summary:hover { color: var(--accent); opacity: 1; }
+.ns-two { font-size: 11.5px; line-height: 1.45; color: var(--ink-3); }
+.ns-two p { margin: 0 0 4px; }
+.ns-lead { color: var(--ink-2); font-weight: 500; }
+#explain-body .ns-lead { color: var(--accent); }
+
+/* the panel scrolls a long way in this mode: hint at it without adding chrome */
+#app[data-mode="neurons"] #side-panel-body {
+  -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 18px), rgba(0,0,0,0.15) 100%);
+  mask-image: linear-gradient(180deg, #000 calc(100% - 18px), rgba(0,0,0,0.15) 100%);
+}
+
+.ns-adv { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 10px; }
+.ns-adv summary { cursor: pointer; font-size: 12px; color: var(--ink-2); }
+.ns-adv summary:hover { color: var(--ink); }
+.ns-adv .toggle-row { font-size: 12px; color: var(--ink-2); }
+
+/* plot stack ------------------------------------------------------------------ */
+/* The container's position and bounds are the skeleton's; everything here is inside it.
+   Label and legend share one row and every canvas is 64px, so raster + trace always fit. */
+.plot { position: relative; }
+.ns-plot-head { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.ns-plot-head .plot-label { flex: none; }
+#app[data-mode="neurons"] #neuron-plots { gap: 7px; }
+#app[data-mode="neurons"] #neuron-plots .plot { gap: 3px; }
+#app[data-mode="neurons"] #neuron-plots canvas { height: 64px; }
+/* The container is bottom-bound by the skeleton and is usually a little taller than the two
+   always-visible plots need. Let those two share the slack instead of leaving dead space, with a
+   64px floor so the whole stack still fits once the "more plots" group is opened. */
+#app[data-mode="neurons"] #neuron-plots > div.plot { flex: 1 1 auto; }  /* min-height:auto keeps the 64px floor */
+#app[data-mode="neurons"] #neuron-plots > div.plot > canvas { flex: 1 1 64px; height: auto; min-height: 64px; max-height: 150px; }
+/* the two secondary canvases are a little shorter so the whole open stack fits a 900px viewport */
+#app[data-mode="neurons"] #neuron-plots #plot-rate { height: 58px; }
+#app[data-mode="neurons"] #neuron-plots #plot-phase { height: 78px; }
+#app[data-mode="neurons"] #neuron-plots .ns-more { flex: 0 0 auto; gap: 6px; }
+#app[data-mode="neurons"] #neuron-plots .ns-more > summary { cursor: pointer; padding: 1px 0; }
+#app[data-mode="neurons"] #neuron-plots .ns-more > summary:hover { color: var(--ink-2); }
+#app[data-mode="neurons"] #neuron-plots .ns-more[open] > summary { margin-bottom: 2px; }
+/* clipped content below reads as "more below" rather than as a cut-off plot */
+#app[data-mode="neurons"] #neuron-plots.ns-fade {
+  -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 26px), rgba(0,0,0,0.06) 100%);
+  mask-image: linear-gradient(180deg, #000 calc(100% - 26px), rgba(0,0,0,0.06) 100%);
+}
+.ns-legend {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 10.5px; color: var(--ink-3); margin: 0;
+  flex: 1 1 auto; min-width: 0; justify-content: flex-end;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ns-legend .key { display: inline-flex; align-items: center; gap: 4px; }
+.ns-legend .swatch { width: 9px; height: 2px; border-radius: 1px; background: var(--ink-3); }
+.ns-legend .swatch.e { background: var(--accent-neurons); }
+.ns-legend .swatch.i { background: #6aa6ff; }
+.ns-legend .swatch.n { background: rgba(232,234,240,0.35); }
+.ns-legend .sep { color: var(--ink-3); opacity: .5; }
+
+/* ==== "How this simulation works" drawer content ==== */
+.how-mod { border-left: 2px solid var(--line); padding: 2px 0 2px 12px; margin: 12px 0; }
+.how-mod-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.how-mod p { margin: 0 0 5px; font-size: 12.5px; }
+.how-mod .muted { font-size: 11.5px; }
+.how-pitfalls { padding-left: 18px; margin: 8px 0 0; }
+.how-pitfalls li { margin-bottom: 6px; font-size: 12.5px; }
+/* Everything that is only for the curious sits in one of these, closed. */
+.how-fold { margin: 6px 0 10px; }
+.how-fold > summary {
+  cursor: pointer; list-style: none; color: var(--ink-3);
+  font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; padding: 2px 0;
+}
+.how-fold > summary::-webkit-details-marker { display: none; }
+.how-fold > summary::after { content: " ›"; }
+.how-fold[open] > summary::after { content: " ⌄"; }
+.how-fold > summary:hover { color: var(--accent); }
+.how-fold > p, .how-fold > ul { font-size: 12.5px; }
+#how-body ul { padding-left: 18px; }
+#how-body li { margin-bottom: 6px; }
+#how-body p { margin: 0 0 9px; }
+
+.gl-list { margin: 10px 0 0; }
+.gl-entry { padding: 8px 0; border-top: 1px solid var(--line); }
+.gl-entry dt { font-weight: 500; color: var(--ink); font-size: 13px; margin-bottom: 2px; }
+.gl-entry dd { margin: 0; font-size: 12.5px; color: var(--ink-2); }
+
+/* ==== hypothesis card (predicted vs observed, top of the side panel) ==== */
+/* Deliberately quiet: it is a toy check, and the badge says so. No green/red verdict colouring — a
+   match here would not mean the prediction was right about anything outside this simulation. */
+.ns-hyp {
+  border: 1px solid var(--line); border-left: 2px solid var(--accent);
+  border-radius: var(--radius-sm); background: rgba(255,255,255,0.035);
+  padding: 8px 11px 9px; margin-bottom: 10px;
+}
+.ns-hyp-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 3px; }
+.ns-hyp-kicker { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
+.ns-hyp .badge { font-size: 9.5px; padding: 1px 7px; white-space: nowrap; }
+.ns-hyp-title {
+  font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 3px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ns-hyp-line { font-size: 12px; color: var(--ink-2); line-height: 1.4; }
+.ns-hyp-line b { color: var(--ink-3); font-weight: 500; }
+.ns-hyp-pending { color: var(--ink-3); font-style: italic; }
+.ns-hyp-why { font-size: 11.5px; line-height: 1.4; color: var(--ink-3); margin-top: 4px; }
+.ns-hyp-progress:not(:empty) { font-size: 10.5px; color: var(--ink-3); margin-top: 4px; opacity: .85; }
