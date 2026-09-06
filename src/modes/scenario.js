@@ -105,11 +105,6 @@ function scRenderPanel() {
   const body = setSidePanel(`
     <div class="panel-title">Scenario</div>
     <div class="panel-sub">Describe a moment. The brain replays a plausible version of it.</div>
-    <p class="sc-pitch">Type anything that happens to a person, and this mode turns it into an ordered
-      sequence of brain regions with a neuromodulator profile, played back exactly like a built-in
-      pathway. Either engine's answer is a <strong>plausible narrative, not evidence</strong> — a free
-      keyword match (English only), or a language model if you add your own OpenRouter key.</p>
-
     <textarea id="sc-input" class="search sc-input" rows="3" maxlength="${SC_MAX_INPUT}"
       placeholder="e.g. I walked into the exam hall and my mind went blank."></textarea>
     <div class="sc-runrow">
@@ -231,7 +226,7 @@ function scStepsHtml(result) {
       </span>
       <span class="sc-step-what">${scEsc(s.what_happens)}</span>
       ${s.why_it_matters ? `<span class="sc-step-why muted" title="${scEsc(s.why_it_matters)}">${scEsc(s.why_it_matters)}</span>` : ''}
-      <span class="sc-step-regions-full muted">${scEsc(s.region_ids.map(scRegionName).join(', '))}</span>
+
     </li>`;
   }).join('') + `</ol>`;
 }
@@ -325,12 +320,8 @@ function scIntro() {
       the eight built-in pathways and a small lexicon, and tells you which words it matched. With your own
       OpenRouter key it asks a <strong>language model</strong> instead, then throws away anything the model
       invented that this app cannot verify — unknown region ids, out-of-range numbers, missing fields.</p>
-      <div class="note">Neither engine knows anything about you or about brains. One is string matching;
-      the other is a text model that has read a lot of neuroscience writing and will happily produce a
-      confident sequence for a sentence about nothing at all. Both outputs carry a red badge for that
-      reason, and the confidence number is the model's own guess about itself.</div>
-      <p class="muted">Nothing is sent anywhere unless you paste a key into Settings. Then, and only then,
-      one request goes to openrouter.ai with your text in it.</p>`,
+      <div class="note">Not evidence. One engine matches keywords, the other is a text model guessing; the
+      confidence number is the engine's own guess about itself.</div>`,
   });
 }
 
@@ -441,8 +432,7 @@ async function scRun(text) {
 
   if (!key) {
     scSetStatus('local');
-    scShowResult(classifyLocal(t), 'No OpenRouter key stored, so this is the built-in keyword heuristic. '
-      + 'Add your own key in Settings to ask a language model instead.');
+    scShowResult(classifyLocal(t), 'Keyword heuristic (no key). Add a key in Settings for the language model.');
     return;
   }
 
@@ -485,10 +475,8 @@ function scSettingsHtml() {
   const options = LLM_MODELS.map((m) => `<option value="${scEsc(m.id)}"${m.id === model ? ' selected' : ''}>${scEsc(m.label)}</option>`).join('');
   const custom = LLM_MODELS.some((m) => m.id === model) ? '' : `<option value="${scEsc(model)}" selected>${scEsc(model)} (stored)</option>`;
   return `
-    <h3>Your OpenRouter key</h3>
-    <p>Scenario mode works with no key at all — that is the local heuristic. Paste a key here and it will
-    ask a language model instead. Keys are free to create at <span class="mono">openrouter.ai</span>; a run
-    of this size costs a fraction of a cent on the default model.</p>
+    <h3>OpenRouter key</h3>
+    <p class="muted">Optional. Without a key, Scenario uses the built-in keyword heuristic.</p>
     <label class="sc-field">
       <span>API key</span>
       <input type="password" id="sc-key" class="search" autocomplete="off" spellcheck="false"
@@ -499,30 +487,18 @@ function scSettingsHtml() {
       <button class="text-btn" id="sc-key-clear" type="button">Clear key</button>
       <span class="muted" id="sc-key-status">${key ? 'Stored: ' + scEsc(llmMaskKey(key)) : 'No key stored.'}</span>
     </div>
-    <div class="note"><strong>Stored only in this browser.</strong> The key lives in this page's
-    <span class="mono">localStorage</span> under <span class="mono">cg.openrouter.key</span>, is read only when you
-    press Run, and is <strong>sent only to openrouter.ai</strong> in the Authorization header of a single
-    POST. It is never logged, never put in a URL, never sent to any other host, and this app has no server
-    of its own to send it to. Clearing it here removes it from the browser. On a shared computer, clear it
-    when you are done.</div>
+    <ul class="sc-facts muted">
+      <li>Stored only in this browser (localStorage). No server of its own.</li>
+      <li>Sent only to openrouter.ai, once per Run, with your sentence.</li>
+      <li>Shared computer? Clear it when you are done.</li>
+    </ul>
 
     <h3>Model</h3>
     <label class="sc-field">
       <span>Model id</span>
       <select id="sc-model">${custom}${options}</select>
     </label>
-    <p class="muted">Model ids are passed to OpenRouter as plain strings — this app does not validate them,
-    so a retired id comes back as an HTTP 404 and the local heuristic takes over. The default is the
-    cheapest of the four that reliably honours JSON mode.</p>
-
-    <h3>What gets sent</h3>
-    <p>One POST to <span class="mono">https://openrouter.ai/api/v1/chat/completions</span> containing: the
-    system prompt (the 28 region ids and the output rules), the sentence you typed, the model id, and JSON
-    mode. Nothing about your browsing, no identifiers, no other text from the page. It is the only network
-    request this application makes at any point.</p>
-    <p class="muted">If the request is blocked — an Artifact sandbox, a strict content-security policy, no
-    network — Scenario says so in the status line and falls back to the local heuristic rather than
-    silently doing nothing.</p>`;
+    <p class="muted">Ids are passed through as-is; a retired id returns 404 and the heuristic takes over.</p>`;
 }
 
 function scRegisterSettings() {

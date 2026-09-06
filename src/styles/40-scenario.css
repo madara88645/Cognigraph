@@ -132,3 +132,7 @@ textarea.sc-input {
    52vh default. The timeline sits below it at bottom:14px/height:44px, which this must not reach. */
 #app[data-mode="scenario"] #explain-panel { max-height: 60vh; }
 @media (max-height: 700px) { #app[data-mode="scenario"] #explain-panel { max-height: 52vh; } }
+
+/* compact settings facts */
+.sc-facts { margin: 8px 0 4px; padding-left: 18px; font-size: 12.5px; }
+.sc-facts li { margin-bottom: 3px; }

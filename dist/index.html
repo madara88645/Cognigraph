@@ -631,6 +631,10 @@ textarea.sc-input {
 #app[data-mode="scenario"] #explain-panel { max-height: 60vh; }
 @media (max-height: 700px) { #app[data-mode="scenario"] #explain-panel { max-height: 52vh; } }
 
+/* compact settings facts */
+.sc-facts { margin: 8px 0 4px; padding-left: 18px; font-size: 12.5px; }
+.sc-facts li { margin-bottom: 3px; }
+
 </style>
 <div id="app" data-mode="pathways">
   <header id="topbar" class="glass">
@@ -1209,80 +1213,24 @@ function howGlossary() {
 function howScenario() {
   return `
     <h3>Two engines, one button</h3>
-    <p>Scenario mode takes a sentence and returns an ordered list of brain regions plus six
-    neuromodulator values. There are two completely different things behind that button, and the mode
-    always tells you which one ran.</p>
-
-    <h3>1. The local heuristic (no key, no network)</h3>
-    <p>This is <strong>string matching</strong>, and nothing more. Your text is lowercased and split into
-    words. Those words are checked against two hand-written lists: a set of cues for each of the eight
-    built-in Pathways (so "snake", "startled", "panic" point at the fear sequence), and a lexicon that
-    moves neuromodulator values (so "deadline" and "exam" raise cortisol, "campfire" and "friends" raise
-    serotonin, "algorithm" and "engrossed" raise acetylcholine). Words your text shares with a pathway's
-    own description add a little more.</p>
-    <p>If one pathway scores well enough, its steps are replayed <em>as written</em> — they are the same
-    curated, cited steps you see in Pathways mode. If nothing scores well enough, you get a deliberately
-    bland sensory → thalamus → parietal → prefrontal sketch with one step inserted for whichever
-    modulator the lexicon flagged, and a confidence at or below 0.3.</p>
-    <p>It cannot understand a sentence. Sarcasm, negation ("I was <em>not</em> nervous"), metaphor and
-    anything outside its word lists all land wrong, and it will still hand you a tidy-looking answer. The
-    rationale line always lists the exact words it matched, so you can see when it has misfired.</p>
-    <p><strong>The word lists are English only.</strong> A description in any other language matches
-    nothing, so it falls through to the bland default sketch with a low confidence — that is the heuristic
-    working as designed, not an opinion about the sentence. The LLM path has no such limit.</p>
-
-    <h3>Two things it will not run at all</h3>
-    <p>Before either engine sees your text, it is checked against a short list of phrases (English and
-    Turkish) for two cases. If it reads as being about <strong>self-harm or suicide</strong>, or as a
-    request to <strong>diagnose or medicate</strong> ("do I have ADHD", "diagnose my depression"), the mode
-    stops: it shows a short explanation, the status line says "Not run", and no request is made — the API
-    key is not even read. Both checks are plain keyword matching, so they will occasionally stop something
-    harmless; that is the direction chosen on purpose.</p>
-
-    <h3>2. The language model (your own key)</h3>
-    <p>If you store an OpenRouter key, the same button sends your sentence to a model with a system prompt
-    that lists this app's 28 region ids, demands strict JSON, asks for 3–6 ordered steps, six 0–1
-    modulator values, a hedged plain-English rationale and an honest confidence — and repeats the old
-    CogniGraph rule that cortisol at or below 0.5 means acute arousal while above 0.5 means chronic load.
-    Temperature is 0.3 and JSON mode is on.</p>
-    <p>The <strong>structure</strong> of what comes back is hardened. Region ids that are not among the 28
-    are dropped; steps left with no regions are dropped; every number is clamped to its range; missing
-    fields get defaults; text is truncated; only the first six steps are kept; a reply that is not JSON at
-    all (or is JSON wrapped in code fences, or wrapped in chatter) is either recovered or rejected
-    outright. If anything fails the mode falls back to the local heuristic and <em>says so in the status
-    line</em> — it never quietly substitutes one engine for the other.</p>
-    <p>The <strong>content</strong> is not checked. Nothing in this app can tell a correct claim from a
-    confident wrong one: if the model puts the right region ids in the wrong order, or attaches a
-    latency no experiment supports, it passes every check above and is shown to you as written. The one
-    content rule is a light <em>wording</em> screen over the prose — phrases like "diagnosed with",
-    "you should take" or "your condition" — and all it does is add a note saying the answer has drifted
-    toward diagnosis. It does not edit the text and it is not a fact-check.</p>
-
-    <h3>What the output is not</h3>
-    <p>It is a <strong>plausible narrative</strong>. The language model has read a great deal of
-    neuroscience writing and will produce a confident, well-formed sequence for a sentence about nothing
-    at all; it is not consulting a study, it is not measuring you, and the millisecond values it offers are
-    recalled approximations at best. The confidence number is the model's guess about itself, which is not
-    the same as being right. Every result carries a red badge for exactly this reason, and the rationale is
-    shown to you word for word rather than being summarised, so you can judge it yourself.</p>
-    <p>The regions are still this app's simplified hubs, so even a perfect answer inherits every caveat in
-    the other tabs.</p>
-
-    <h3>Your key</h3>
-    <p>The key you paste lives in this browser's <code>localStorage</code> under
-    <code>cg.openrouter.key</code> (the model id under <code>cg.openrouter.model</code>). It is read only
-    when you press Run, and it is sent only to <code>openrouter.ai</code>, in the Authorization header of a
-    single POST. It is never logged, never placed in a URL, and never sent to any other host — this
-    application has no server of its own to send it to. "Clear key" removes it from the browser. On a
-    shared machine, clear it when you are done.</p>
-    <p>That POST is the <strong>only</strong> network request this application ever makes. With no key
-    stored, Scenario mode — like the rest of the app — talks to nothing.</p>
-
-    <h3>Where it will not work</h3>
-    <p>In a sandboxed embed (an Artifact frame, or any page with a strict content-security policy) the
-    request is blocked before it leaves the page. Scenario detects that and says so rather than hanging:
-    open the hosted version or the local HTML file to use the LLM path. The local heuristic works
-    everywhere, including fully offline.</p>`;
+    <ul>
+      <li><strong>Keyword heuristic</strong> (no key, no network): string matching against the eight
+      Pathways and a small emotion/arousal lexicon. English only. The rationale lists the words it matched.</li>
+      <li><strong>Language model</strong> (your OpenRouter key): one request with the 28 region ids,
+      strict JSON, 3–6 ordered steps, six 0–1 modulator values, a hedged rationale and a confidence.</li>
+    </ul>
+    <h3>What is checked</h3>
+    <ul>
+      <li>Structure: unknown region ids dropped, numbers clamped, text truncated, broken JSON recovered or rejected.</li>
+      <li>Wording: diagnostic or advice-like phrasing gets an extra warning.</li>
+      <li>Not checked: whether the content is true. Every result is labelled <em>not evidence</em>.</li>
+    </ul>
+    <h3>What never runs</h3>
+    <p>Text about self-harm, suicide, or a request to diagnose or medicate (English or Turkish) stops the
+    mode with a short card. Nothing is sent, the key is not even read.</p>
+    <h3>What gets sent</h3>
+    <p>One POST to openrouter.ai: the system prompt, your sentence, the model id. Nothing else, ever.
+    If the request is blocked (sandbox, no network) the status line says so and the heuristic runs.</p>`;
 }
 
 /** The five drawer tabs owned by Worker B. `html` is built on access (see the note at the top). */
@@ -7217,11 +7165,6 @@ function scRenderPanel() {
   const body = setSidePanel(`
     <div class="panel-title">Scenario</div>
     <div class="panel-sub">Describe a moment. The brain replays a plausible version of it.</div>
-    <p class="sc-pitch">Type anything that happens to a person, and this mode turns it into an ordered
-      sequence of brain regions with a neuromodulator profile, played back exactly like a built-in
-      pathway. Either engine's answer is a <strong>plausible narrative, not evidence</strong> — a free
-      keyword match (English only), or a language model if you add your own OpenRouter key.</p>
-
     <textarea id="sc-input" class="search sc-input" rows="3" maxlength="${SC_MAX_INPUT}"
       placeholder="e.g. I walked into the exam hall and my mind went blank."></textarea>
     <div class="sc-runrow">
@@ -7343,7 +7286,7 @@ function scStepsHtml(result) {
       </span>
       <span class="sc-step-what">${scEsc(s.what_happens)}</span>
       ${s.why_it_matters ? `<span class="sc-step-why muted" title="${scEsc(s.why_it_matters)}">${scEsc(s.why_it_matters)}</span>` : ''}
-      <span class="sc-step-regions-full muted">${scEsc(s.region_ids.map(scRegionName).join(', '))}</span>
+
     </li>`;
   }).join('') + `</ol>`;
 }
@@ -7437,12 +7380,8 @@ function scIntro() {
       the eight built-in pathways and a small lexicon, and tells you which words it matched. With your own
       OpenRouter key it asks a <strong>language model</strong> instead, then throws away anything the model
       invented that this app cannot verify — unknown region ids, out-of-range numbers, missing fields.</p>
-      <div class="note">Neither engine knows anything about you or about brains. One is string matching;
-      the other is a text model that has read a lot of neuroscience writing and will happily produce a
-      confident sequence for a sentence about nothing at all. Both outputs carry a red badge for that
-      reason, and the confidence number is the model's own guess about itself.</div>
-      <p class="muted">Nothing is sent anywhere unless you paste a key into Settings. Then, and only then,
-      one request goes to openrouter.ai with your text in it.</p>`,
+      <div class="note">Not evidence. One engine matches keywords, the other is a text model guessing; the
+      confidence number is the engine's own guess about itself.</div>`,
   });
 }
 
@@ -7553,8 +7492,7 @@ async function scRun(text) {
 
   if (!key) {
     scSetStatus('local');
-    scShowResult(classifyLocal(t), 'No OpenRouter key stored, so this is the built-in keyword heuristic. '
-      + 'Add your own key in Settings to ask a language model instead.');
+    scShowResult(classifyLocal(t), 'Keyword heuristic (no key). Add a key in Settings for the language model.');
     return;
   }
 
@@ -7597,10 +7535,8 @@ function scSettingsHtml() {
   const options = LLM_MODELS.map((m) => `<option value="${scEsc(m.id)}"${m.id === model ? ' selected' : ''}>${scEsc(m.label)}</option>`).join('');
   const custom = LLM_MODELS.some((m) => m.id === model) ? '' : `<option value="${scEsc(model)}" selected>${scEsc(model)} (stored)</option>`;
   return `
-    <h3>Your OpenRouter key</h3>
-    <p>Scenario mode works with no key at all — that is the local heuristic. Paste a key here and it will
-    ask a language model instead. Keys are free to create at <span class="mono">openrouter.ai</span>; a run
-    of this size costs a fraction of a cent on the default model.</p>
+    <h3>OpenRouter key</h3>
+    <p class="muted">Optional. Without a key, Scenario uses the built-in keyword heuristic.</p>
     <label class="sc-field">
       <span>API key</span>
       <input type="password" id="sc-key" class="search" autocomplete="off" spellcheck="false"
@@ -7611,30 +7547,18 @@ function scSettingsHtml() {
       <button class="text-btn" id="sc-key-clear" type="button">Clear key</button>
       <span class="muted" id="sc-key-status">${key ? 'Stored: ' + scEsc(llmMaskKey(key)) : 'No key stored.'}</span>
     </div>
-    <div class="note"><strong>Stored only in this browser.</strong> The key lives in this page's
-    <span class="mono">localStorage</span> under <span class="mono">cg.openrouter.key</span>, is read only when you
-    press Run, and is <strong>sent only to openrouter.ai</strong> in the Authorization header of a single
-    POST. It is never logged, never put in a URL, never sent to any other host, and this app has no server
-    of its own to send it to. Clearing it here removes it from the browser. On a shared computer, clear it
-    when you are done.</div>
+    <ul class="sc-facts muted">
+      <li>Stored only in this browser (localStorage). No server of its own.</li>
+      <li>Sent only to openrouter.ai, once per Run, with your sentence.</li>
+      <li>Shared computer? Clear it when you are done.</li>
+    </ul>
 
     <h3>Model</h3>
     <label class="sc-field">
       <span>Model id</span>
       <select id="sc-model">${custom}${options}</select>
     </label>
-    <p class="muted">Model ids are passed to OpenRouter as plain strings — this app does not validate them,
-    so a retired id comes back as an HTTP 404 and the local heuristic takes over. The default is the
-    cheapest of the four that reliably honours JSON mode.</p>
-
-    <h3>What gets sent</h3>
-    <p>One POST to <span class="mono">https://openrouter.ai/api/v1/chat/completions</span> containing: the
-    system prompt (the 28 region ids and the output rules), the sentence you typed, the model id, and JSON
-    mode. Nothing about your browsing, no identifiers, no other text from the page. It is the only network
-    request this application makes at any point.</p>
-    <p class="muted">If the request is blocked — an Artifact sandbox, a strict content-security policy, no
-    network — Scenario says so in the status line and falls back to the local heuristic rather than
-    silently doing nothing.</p>`;
+    <p class="muted">Ids are passed through as-is; a retired id returns 404 and the heuristic takes over.</p>`;
 }
 
 function scRegisterSettings() {

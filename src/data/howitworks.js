@@ -215,80 +215,24 @@ function howGlossary() {
 function howScenario() {
   return `
     <h3>Two engines, one button</h3>
-    <p>Scenario mode takes a sentence and returns an ordered list of brain regions plus six
-    neuromodulator values. There are two completely different things behind that button, and the mode
-    always tells you which one ran.</p>
-
-    <h3>1. The local heuristic (no key, no network)</h3>
-    <p>This is <strong>string matching</strong>, and nothing more. Your text is lowercased and split into
-    words. Those words are checked against two hand-written lists: a set of cues for each of the eight
-    built-in Pathways (so "snake", "startled", "panic" point at the fear sequence), and a lexicon that
-    moves neuromodulator values (so "deadline" and "exam" raise cortisol, "campfire" and "friends" raise
-    serotonin, "algorithm" and "engrossed" raise acetylcholine). Words your text shares with a pathway's
-    own description add a little more.</p>
-    <p>If one pathway scores well enough, its steps are replayed <em>as written</em> — they are the same
-    curated, cited steps you see in Pathways mode. If nothing scores well enough, you get a deliberately
-    bland sensory → thalamus → parietal → prefrontal sketch with one step inserted for whichever
-    modulator the lexicon flagged, and a confidence at or below 0.3.</p>
-    <p>It cannot understand a sentence. Sarcasm, negation ("I was <em>not</em> nervous"), metaphor and
-    anything outside its word lists all land wrong, and it will still hand you a tidy-looking answer. The
-    rationale line always lists the exact words it matched, so you can see when it has misfired.</p>
-    <p><strong>The word lists are English only.</strong> A description in any other language matches
-    nothing, so it falls through to the bland default sketch with a low confidence — that is the heuristic
-    working as designed, not an opinion about the sentence. The LLM path has no such limit.</p>
-
-    <h3>Two things it will not run at all</h3>
-    <p>Before either engine sees your text, it is checked against a short list of phrases (English and
-    Turkish) for two cases. If it reads as being about <strong>self-harm or suicide</strong>, or as a
-    request to <strong>diagnose or medicate</strong> ("do I have ADHD", "diagnose my depression"), the mode
-    stops: it shows a short explanation, the status line says "Not run", and no request is made — the API
-    key is not even read. Both checks are plain keyword matching, so they will occasionally stop something
-    harmless; that is the direction chosen on purpose.</p>
-
-    <h3>2. The language model (your own key)</h3>
-    <p>If you store an OpenRouter key, the same button sends your sentence to a model with a system prompt
-    that lists this app's 28 region ids, demands strict JSON, asks for 3–6 ordered steps, six 0–1
-    modulator values, a hedged plain-English rationale and an honest confidence — and repeats the old
-    CogniGraph rule that cortisol at or below 0.5 means acute arousal while above 0.5 means chronic load.
-    Temperature is 0.3 and JSON mode is on.</p>
-    <p>The <strong>structure</strong> of what comes back is hardened. Region ids that are not among the 28
-    are dropped; steps left with no regions are dropped; every number is clamped to its range; missing
-    fields get defaults; text is truncated; only the first six steps are kept; a reply that is not JSON at
-    all (or is JSON wrapped in code fences, or wrapped in chatter) is either recovered or rejected
-    outright. If anything fails the mode falls back to the local heuristic and <em>says so in the status
-    line</em> — it never quietly substitutes one engine for the other.</p>
-    <p>The <strong>content</strong> is not checked. Nothing in this app can tell a correct claim from a
-    confident wrong one: if the model puts the right region ids in the wrong order, or attaches a
-    latency no experiment supports, it passes every check above and is shown to you as written. The one
-    content rule is a light <em>wording</em> screen over the prose — phrases like "diagnosed with",
-    "you should take" or "your condition" — and all it does is add a note saying the answer has drifted
-    toward diagnosis. It does not edit the text and it is not a fact-check.</p>
-
-    <h3>What the output is not</h3>
-    <p>It is a <strong>plausible narrative</strong>. The language model has read a great deal of
-    neuroscience writing and will produce a confident, well-formed sequence for a sentence about nothing
-    at all; it is not consulting a study, it is not measuring you, and the millisecond values it offers are
-    recalled approximations at best. The confidence number is the model's guess about itself, which is not
-    the same as being right. Every result carries a red badge for exactly this reason, and the rationale is
-    shown to you word for word rather than being summarised, so you can judge it yourself.</p>
-    <p>The regions are still this app's simplified hubs, so even a perfect answer inherits every caveat in
-    the other tabs.</p>
-
-    <h3>Your key</h3>
-    <p>The key you paste lives in this browser's <code>localStorage</code> under
-    <code>cg.openrouter.key</code> (the model id under <code>cg.openrouter.model</code>). It is read only
-    when you press Run, and it is sent only to <code>openrouter.ai</code>, in the Authorization header of a
-    single POST. It is never logged, never placed in a URL, and never sent to any other host — this
-    application has no server of its own to send it to. "Clear key" removes it from the browser. On a
-    shared machine, clear it when you are done.</p>
-    <p>That POST is the <strong>only</strong> network request this application ever makes. With no key
-    stored, Scenario mode — like the rest of the app — talks to nothing.</p>
-
-    <h3>Where it will not work</h3>
-    <p>In a sandboxed embed (an Artifact frame, or any page with a strict content-security policy) the
-    request is blocked before it leaves the page. Scenario detects that and says so rather than hanging:
-    open the hosted version or the local HTML file to use the LLM path. The local heuristic works
-    everywhere, including fully offline.</p>`;
+    <ul>
+      <li><strong>Keyword heuristic</strong> (no key, no network): string matching against the eight
+      Pathways and a small emotion/arousal lexicon. English only. The rationale lists the words it matched.</li>
+      <li><strong>Language model</strong> (your OpenRouter key): one request with the 28 region ids,
+      strict JSON, 3–6 ordered steps, six 0–1 modulator values, a hedged rationale and a confidence.</li>
+    </ul>
+    <h3>What is checked</h3>
+    <ul>
+      <li>Structure: unknown region ids dropped, numbers clamped, text truncated, broken JSON recovered or rejected.</li>
+      <li>Wording: diagnostic or advice-like phrasing gets an extra warning.</li>
+      <li>Not checked: whether the content is true. Every result is labelled <em>not evidence</em>.</li>
+    </ul>
+    <h3>What never runs</h3>
+    <p>Text about self-harm, suicide, or a request to diagnose or medicate (English or Turkish) stops the
+    mode with a short card. Nothing is sent, the key is not even read.</p>
+    <h3>What gets sent</h3>
+    <p>One POST to openrouter.ai: the system prompt, your sentence, the model id. Nothing else, ever.
+    If the request is blocked (sandbox, no network) the status line says so and the heuristic runs.</p>`;
 }
 
 /** The five drawer tabs owned by Worker B. `html` is built on access (see the note at the top). */
