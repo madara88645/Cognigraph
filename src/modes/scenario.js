@@ -1,0 +1,619 @@
+// Scenario mode (Worker B): describe a moment in plain English, get a region-by-region replay and a
+// neuromodulator profile back.
+//
+// Two engines behind one button. With no key it is `classifyLocal()` — a keyword heuristic that is
+// honest about being one. With the user's own OpenRouter key it asks a model, hardens whatever comes
+// back, and falls back to the heuristic out loud on any failure. Playback borrows the Pathways
+// sequencer via pwPlayExternal(); "Send to Neurons" hands the profile to nsApplyModulators().
+//
+// The key never leaves localStorage except in the Authorization header of the one POST to
+// openrouter.ai, and that POST is the only network call this app ever makes.
+import { REGIONS } from '../data/regions.js';
+import { registerHowTabs } from '../data/howitworks.js';
+import { classifyLocal, llmDetectSensitive, LLM_MODULATORS, LLM_BASELINE } from '../llm/classify-local.js';
+import { classifyWithOpenRouter, llmStoredKey, llmSetStoredKey, llmStoredModel, llmSetStoredModel, llmMaskKey, LLM_MODELS } from '../llm/openrouter.js';
+import { PathwaysMode, pwPlayExternal, pwStopExternal } from './pathways.js';
+import { nsApplyModulators } from './neurons-ui.js';
+import { explain, setSidePanel, registerDrawerTab, openDrawer, toast, showTimeline, hoverLabel } from '../ui/panels.js';
+
+const SC_ACCENT = 0xf28b74;
+const SC_TIMEOUT_MS = 20000;
+const SC_MAX_INPUT = 1200;
+const SC_SETTINGS_TAB = 'scenario-settings';
+const SC_SETTINGS_LABEL = 'Settings';   // the drawer has 8 tabs; a two-word label wraps them to 3 rows
+const SC_MAX_STEPS = 6;                 // mirrors LLM_MAX_STEPS in openrouter.js, for the copy only
+
+/** The six preset moments the first CogniGraph shipped with, brought back as one-click examples. */
+const SC_PRESETS = [
+  { id: 'exam', emoji: '🎓', label: 'Academic Exam Stress', text: 'Struggling to remember answers during a high-stakes final exam under extreme time pressure.' },
+  { id: 'focus', emoji: '💻', label: 'Deep Focus Study Session', text: 'Engrossed in writing a complex software algorithm, completely in the zone and ignoring distractions.' },
+  { id: 'creative', emoji: '🎨', label: 'Creative Brainstorming', text: 'Generating a flood of novel ideas for a new sci-fi story, jumping from concept to concept.' },
+  { id: 'speaking', emoji: '🎤', label: 'Public Speaking Anxiety', text: 'Stepping onto a stage in front of a thousand people, feeling a sudden surge of stage fright.' },
+  { id: 'gaming', emoji: '🎮', label: 'Competitive Gaming Focus', text: 'Playing a fast-paced multiplayer match, tracking multiple opponents and making split-second tactical decisions.' },
+  { id: 'campfire', emoji: '🔥', label: 'Social Campfire', text: 'Engaging in warm, relaxed storytelling with close friends around a campfire.' },
+];
+
+const SC_MOD_LABELS = {
+  dopamine: 'Dopamine', acetylcholine: 'Acetylcholine', noradrenaline: 'Noradrenaline',
+  serotonin: 'Serotonin', gaba: 'GABA tone', cortisol: 'Cortisol / stress',
+};
+
+const SC_CAVEATS = 'This sequence was assembled for one typed sentence, not measured. Treat the order '
+  + 'as a teaching sketch and any millisecond value as borrowed from group averages in lab paradigms.';
+
+const sc = {
+  app: null,
+  result: null,       // last ScenarioResult shown
+  lastText: '',
+  note: '',           // the line under the result explaining how it was produced
+  status: null,       // {kind, model, reason}
+  ctl: null,          // AbortController of the in-flight request
+  timer: 0,
+  replaying: false,
+  listeners: [],
+  wired: false,       // settings delegation is installed once and left in place
+};
+
+/* ---------- small helpers ---------- */
+
+function scEl(id) { return document.getElementById(id); }
+
+function scEsc(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function scOn(el, type, fn) {
+  if (!el) return;
+  el.addEventListener(type, fn);
+  sc.listeners.push({ el, type, fn });
+}
+
+function scOffAll() {
+  for (const l of sc.listeners) l.el.removeEventListener(l.type, l.fn);
+  sc.listeners.length = 0;
+}
+
+function scRegionName(id) {
+  const r = REGIONS.find((x) => x.id === id);
+  return r ? r.name : id;
+}
+
+function scShortName(id) {
+  const r = REGIONS.find((x) => x.id === id);
+  if (!r) return id;
+  const paren = r.name.match(/\(([^()]{1,12})\)\s*$/);
+  return paren ? paren[1] : r.name.replace(/ Cortex$/, '');
+}
+
+/** True when the page is running inside a sandbox we already know blocks outbound fetch. */
+function scSandboxed() {
+  try {
+    if (typeof location === 'undefined' || !location) return false;
+    const h = String(location.hostname || '');
+    return h === 'claude.ai' || h.endsWith('.claude.ai') || h.endsWith('claudeusercontent.com');
+  } catch (err) { return false; }
+}
+
+/* ---------- side panel ---------- */
+
+function scRenderPanel() {
+  const chips = SC_PRESETS.map((p) => `
+    <button class="sc-chip" type="button" data-preset="${scEsc(p.id)}" title="${scEsc(p.text)}">
+      <span class="sc-chip-emoji" aria-hidden="true">${p.emoji}</span>${scEsc(p.label)}
+    </button>`).join('');
+
+  const body = setSidePanel(`
+    <div class="panel-title">Scenario</div>
+    <div class="panel-sub">Describe a moment. The brain replays a plausible version of it.</div>
+    <p class="sc-pitch">Type anything that happens to a person, and this mode turns it into an ordered
+      sequence of brain regions with a neuromodulator profile, played back exactly like a built-in
+      pathway. Either engine's answer is a <strong>plausible narrative, not evidence</strong> — a free
+      keyword match (English only), or a language model if you add your own OpenRouter key.</p>
+
+    <textarea id="sc-input" class="search sc-input" rows="3" maxlength="${SC_MAX_INPUT}"
+      placeholder="e.g. I walked into the exam hall and my mind went blank."></textarea>
+    <div class="sc-runrow">
+      <button class="text-btn primary" id="sc-run" type="button">Run</button>
+      <span class="sc-hint mono">⌘/Ctrl + ↵</span>
+    </div>
+    <div class="sc-status" id="sc-status"></div>
+
+    <h3>Examples</h3>
+    <div class="sc-chips">${chips}</div>
+
+    <h3>Language model</h3>
+    <div class="sc-settings-row">
+      <button class="text-btn" id="sc-settings" type="button">Settings</button>
+      <span class="muted" id="sc-keystate"></span>
+    </div>`);
+
+  const input = scEl('sc-input');
+  if (input) {
+    input.value = sc.lastText || '';
+    scOn(input, 'keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'Enter' || e.key === 'NumpadEnter')) {
+        e.preventDefault();
+        scRun(input.value);
+      }
+      e.stopPropagation();   // 1-4 and space belong to the textarea while it has focus
+    });
+  }
+  scOn(scEl('sc-run'), 'click', () => scRun(scEl('sc-input') ? scEl('sc-input').value : ''));
+  scOn(scEl('sc-settings'), 'click', () => scOpenSettings());
+  body.querySelectorAll('.sc-chip').forEach((el) => {
+    scOn(el, 'click', () => {
+      const p = SC_PRESETS.find((x) => x.id === el.dataset.preset);
+      if (!p) return;
+      const box = scEl('sc-input');
+      if (box) box.value = p.text;
+      sc.lastText = p.text;
+      scRun(p.text);
+    });
+  });
+
+  scPaintStatus();
+}
+
+/** The one line under the Run button that always says which engine produced (or will produce) a result. */
+function scPaintStatus() {
+  const el = scEl('sc-status');
+  const keyEl = scEl('sc-keystate');
+  const key = llmStoredKey();
+  const model = llmStoredModel();
+  if (keyEl) keyEl.textContent = key ? 'key ' + llmMaskKey(key) : 'no key stored';
+  if (!el) return;
+
+  const st = sc.status || { kind: key ? 'ready-llm' : 'ready-local' };
+  const model_ = st.model || model;
+  if (st.kind === 'running') {
+    el.className = 'sc-status sc-running';
+    el.innerHTML = `<span class="sc-spinner" aria-hidden="true"></span>Asking <span class="mono">${scEsc(model_)}</span>… <span class="muted">up to 20 s</span>`;
+    return;
+  }
+  if (st.kind === 'llm') {
+    el.className = 'sc-status sc-ok';
+    el.innerHTML = `<span class="sc-dot"></span>OpenRouter · <span class="mono">${scEsc(model_)}</span>`;
+    return;
+  }
+  if (st.kind === 'fallback') {
+    el.className = 'sc-status sc-warn';
+    el.innerHTML = `<span class="sc-dot"></span>Local heuristic — the LLM call did not go through. <span class="muted">${scEsc(st.reason || '')}</span>`;
+    return;
+  }
+  if (st.kind === 'not-run') {
+    el.className = 'sc-status sc-warn';
+    el.innerHTML = `<span class="sc-dot"></span>Not run. <span class="muted">Nothing was sent anywhere.</span>`;
+    return;
+  }
+  if (st.kind === 'local') {
+    el.className = 'sc-status';
+    el.innerHTML = `<span class="sc-dot"></span>Local heuristic · no key needed`;
+    return;
+  }
+  if (st.kind === 'ready-llm') {
+    el.className = 'sc-status';
+    el.innerHTML = `<span class="sc-dot"></span>Ready · OpenRouter · <span class="mono">${scEsc(model_)}</span>`;
+    return;
+  }
+  el.className = 'sc-status';
+  el.innerHTML = `<span class="sc-dot"></span>Local heuristic. <span class="muted">An OpenRouter key in Settings unlocks the LLM path.</span>`;
+}
+
+function scSetStatus(kind, extra) {
+  sc.status = Object.assign({ kind }, extra || {});
+  scPaintStatus();
+}
+
+/* ---------- result card ---------- */
+
+function scBars(profile) {
+  return `<div class="sc-bars">` + LLM_MODULATORS.map((k) => {
+    const v = typeof profile[k] === 'number' ? profile[k] : LLM_BASELINE[k];
+    const base = LLM_BASELINE[k];
+    const above = v >= base;
+    return `<div class="sc-bar${above ? '' : ' sc-bar-down'}">
+      <span class="sc-bar-name">${scEsc(SC_MOD_LABELS[k] || k)}</span>
+      <span class="sc-bar-track"><i style="width:${Math.round(v * 100)}%"></i><b style="left:${Math.round(base * 100)}%"></b></span>
+      <span class="sc-bar-val mono">${v.toFixed(2)}</span>
+    </div>`;
+  }).join('') + `</div>`;
+}
+
+function scStepsHtml(result) {
+  return `<ol class="sc-steps" id="sc-steps">` + result.steps.map((s, i) => {
+    const names = s.region_ids.map(scShortName).join(' + ');
+    const ms = (typeof s.approx_ms === 'number') ? '~' + s.approx_ms + ' ms' : 'order only';
+    return `<li data-i="${i}">
+      <span class="sc-step-head">
+        <span class="sc-step-n mono">${i + 1}</span>
+        <span class="sc-step-regions">${scEsc(names)}</span>
+        <span class="sc-step-ms mono">${scEsc(ms)}</span>
+      </span>
+      <span class="sc-step-what">${scEsc(s.what_happens)}</span>
+      ${s.why_it_matters ? `<span class="sc-step-why muted" title="${scEsc(s.why_it_matters)}">${scEsc(s.why_it_matters)}</span>` : ''}
+      <span class="sc-step-regions-full muted">${scEsc(s.region_ids.map(scRegionName).join(', '))}</span>
+    </li>`;
+  }).join('') + `</ol>`;
+}
+
+/**
+ * A replay owns the timeline, the highlights and the onPick routing, and all three point at the
+ * pathway that was playing. Anything that replaces the result must stop it first, or the timeline
+ * keeps scrubbing the previous scenario while the card shows a new one.
+ */
+function scStopReplay() {
+  if (!sc.replaying) return;
+  pwStopExternal();
+  sc.replaying = false;
+}
+
+/**
+ * What the hardening layer changed, said precisely. Hitting the six-step cap is this app's rule and
+ * nothing is wrong with the reply; a malformed step is the model's fault. The old copy called both
+ * "unusable", which read as if the model had failed whenever a long answer came back.
+ */
+function scDroppedHtml(d) {
+  if (!d) return '';
+  const parts = [];
+  if (d.region_ids) parts.push('removed ' + d.region_ids + ' unrecognised region id' + (d.region_ids === 1 ? '' : 's'));
+  if (d.capped) parts.push('kept the first ' + SC_MAX_STEPS + ' steps');
+  if (d.malformed) parts.push('removed ' + d.malformed + ' malformed step' + (d.malformed === 1 ? '' : 's'));
+  if (!parts.length) return '';
+  const list = parts.length === 1 ? parts[0]
+    : parts.slice(0, -1).join(', ') + ' and ' + parts[parts.length - 1];
+  return `<p class="muted">Hardening ${scEsc(list)} from the model's reply.</p>`;
+}
+
+function scShowResult(result, note) {
+  scStopReplay();
+  sc.result = result;
+  if (typeof note === 'string') sc.note = note;
+  const llm = result.source === 'llm';
+  const conf = typeof result.confidence === 'number' ? result.confidence.toFixed(2) : '—';
+  const intensity = typeof result.intensity === 'number' ? result.intensity.toFixed(2) : '—';
+  const meta = [
+    llm ? 'OpenRouter' : 'Local heuristic',
+    result.model ? result.model : null,
+    'confidence ' + conf,
+    'intensity ' + intensity,
+  ].filter(Boolean).map(scEsc).join(' · ');
+  const dropped = scDroppedHtml(result.dropped);
+  const screened = (result.screened && result.screened.flagged)
+    ? `<div class="note">The model's wording drifted toward diagnosis or advice. CogniGraph does not
+       diagnose; read this as a story about mechanisms only.</div>`
+    : '';
+
+  explain({
+    title: result.title || 'Your scenario',
+    badge: llm ? 'LLM-generated, not evidence' : 'Local heuristic, not evidence',
+    badgeClass: 'low',
+    html: `
+      ${sc.lastText ? `<p class="sc-quote">${scEsc(sc.lastText)}</p>` : ''}
+      ${sc.note ? `<p class="sc-note-line muted">${scEsc(sc.note)}</p>` : ''}
+      <div class="sc-actions">
+        <button class="text-btn primary" id="sc-replay" type="button">Replay on the brain</button>
+        <button class="text-btn" id="sc-neurons" type="button">Send to Neurons</button>
+      </div>
+      ${scStepsHtml(result)}
+      <h4 class="sc-h4">Neuromodulator profile</h4>
+      ${scBars(result.neuromodulators)}
+      <p class="muted sc-bar-legend">The tick on each bar is that system's resting value in this app, so a
+        bar past its tick means "more in play than usual", not a concentration.</p>
+      <h4 class="sc-h4">${llm ? 'What the model said, verbatim' : 'How the heuristic got here'}</h4>
+      <p class="sc-rationale">${scEsc(result.rationale || '(no rationale returned)')}</p>
+      ${dropped}
+      ${screened}
+      <div class="note">${llm
+        ? 'A language model wrote this. It is a plausible-sounding narrative assembled from text, not a reading of anyone\'s brain and not a citation of any study. Region ids were checked against this app\'s 28; everything else — the order, the latencies, the profile — is the model\'s claim, shown to you unedited so you can judge it.'
+        : 'This came from keyword matching against eight built-in pathways and a small word list. It cannot understand your sentence; it can only notice words in it. Treat it as a starting point for looking around the model, not as an answer.'}</div>
+      <p class="muted sc-meta">${meta}</p>`,
+  });
+
+  scOn(scEl('sc-replay'), 'click', scReplay);
+  scOn(scEl('sc-neurons'), 'click', scToNeurons);
+}
+
+function scIntro() {
+  explain({
+    title: 'Turn a moment into a sequence',
+    badge: 'plausible narrative, not evidence',
+    badgeClass: 'low',
+    html: `
+      <p>Type a moment on the left — or pick one of the six examples — and this mode turns it into an
+      ordered list of regions with a neuromodulator profile, then replays it on the brain.</p>
+      <p>With no API key it runs a <strong>local keyword heuristic</strong>: it matches your words against
+      the eight built-in pathways and a small lexicon, and tells you which words it matched. With your own
+      OpenRouter key it asks a <strong>language model</strong> instead, then throws away anything the model
+      invented that this app cannot verify — unknown region ids, out-of-range numbers, missing fields.</p>
+      <div class="note">Neither engine knows anything about you or about brains. One is string matching;
+      the other is a text model that has read a lot of neuroscience writing and will happily produce a
+      confident sequence for a sentence about nothing at all. Both outputs carry a red badge for that
+      reason, and the confidence number is the model's own guess about itself.</div>
+      <p class="muted">Nothing is sent anywhere unless you paste a key into Settings. Then, and only then,
+      one request goes to openrouter.ai with your text in it.</p>`,
+  });
+}
+
+/** Mark the step the replay is currently on, inside the result card. */
+function scMarkStep(i) {
+  const list = scEl('sc-steps');
+  if (!list) return;
+  list.querySelectorAll('li').forEach((el) => {
+    el.classList.toggle('active', parseInt(el.dataset.i, 10) === i);
+  });
+}
+
+/* ---------- actions ---------- */
+
+function scReplay() {
+  if (!sc.result || !sc.result.steps || !sc.result.steps.length) { toast('Nothing to replay yet.'); return; }
+  const played = pwPlayExternal({
+    id: 'scenario-run',
+    title: sc.result.title,
+    scenario_sentence: sc.lastText,
+    steps: sc.result.steps,
+    accuracy_caveats: SC_CAVEATS,
+  }, { app: sc.app, onStep: scMarkStep, color: SC_ACCENT });
+  if (!played) { toast('This result has no usable steps to replay.'); return; }
+  sc.replaying = true;
+  toast(played.timeline === 'ms' ? 'Replaying with the latencies as given.' : 'Replaying — order only, no timings claimed.');
+}
+
+function scToNeurons() {
+  const profile = sc.result && sc.result.neuromodulators;
+  if (!profile) { toast('Run a scenario first.'); return; }
+  const pill = document.querySelector('.mode-pill[data-mode="neurons"]');
+  if (!pill) { toast('Neurons mode is not available.'); return; }
+  pill.click();
+  setTimeout(() => {
+    if (!nsApplyModulators(profile)) toast('Neurons mode was not ready for the profile.');
+  }, 0);
+}
+
+function scAbort() {
+  if (sc.timer) { clearTimeout(sc.timer); sc.timer = 0; }
+  if (sc.ctl) { try { sc.ctl.abort(); } catch (err) { /* already gone */ } sc.ctl = null; }
+}
+
+/**
+ * Turn a failed LLM attempt into one sentence a reader can act on.
+ *
+ * A timeout is checked FIRST. On a claude.ai host the sandbox heuristic below would otherwise claim
+ * every statusless failure was "blocked", so a request that left the page and then ran out of time
+ * was reported as a CSP problem — and the reader would go looking for the wrong fix.
+ */
+function scFailureMessage(res) {
+  if (res && res.aborted) return 'The LLM request timed out after 20 seconds, so the local heuristic ran instead.';
+  if (res && res.blocked) {
+    return 'Scenario’s LLM path is blocked in this sandbox; open the hosted version or the local file. '
+      + 'Local heuristic still works.';
+  }
+  const reason = (res && res.reason) ? res.reason : 'The LLM call failed for an unknown reason.';
+  return reason + ' The local heuristic ran instead.';
+}
+
+/* ---------- sensitive input ---------- */
+
+const SC_REFUSALS = {
+  crisis: {
+    title: 'This isn’t something to simulate',
+    body: 'This reads as being about your own wellbeing rather than a scenario to visualise. CogniGraph '
+      + 'is an educational simulation and can’t help with that. If you’re struggling, please reach out to '
+      + 'someone you trust or a local helpline.',
+  },
+  medical: {
+    title: 'This isn’t something to simulate',
+    body: 'CogniGraph does not diagnose or advise on health. It shows textbook-level mechanisms of '
+      + 'everyday moments; try describing a moment instead.',
+  },
+};
+
+/**
+ * Stop before either engine runs and say why. No pathway, no bars, no badge, and — the point of it —
+ * no network call: this returns before the key is ever read.
+ */
+function scRefuse(kind) {
+  scStopReplay();
+  sc.result = null;
+  sc.note = '';
+  scSetStatus('not-run');
+  if (sc.app && sc.app.scene) sc.app.scene.clearHighlights();
+  const copy = SC_REFUSALS[kind] || SC_REFUSALS.medical;
+  explain({
+    title: copy.title,
+    html: `<p class="sc-refusal">${scEsc(copy.body)}</p>`,
+  });
+}
+
+async function scRun(text) {
+  const t = String(text == null ? '' : text).trim().slice(0, SC_MAX_INPUT);
+  if (!t) { toast('Describe a moment first.'); return; }
+  sc.lastText = t;
+
+  // Before either engine, and before the key is read: some sentences should not be turned into an
+  // animation at all. Both branches return, so nothing is sent anywhere.
+  const sensitive = llmDetectSensitive(t);
+  if (sensitive.crisis) { scAbort(); scRefuse('crisis'); return; }
+  if (sensitive.medical) { scAbort(); scRefuse('medical'); return; }
+
+  const key = llmStoredKey();
+  const model = llmStoredModel();
+
+  if (!key) {
+    scSetStatus('local');
+    scShowResult(classifyLocal(t), 'No OpenRouter key stored, so this is the built-in keyword heuristic. '
+      + 'Add your own key in Settings to ask a language model instead.');
+    return;
+  }
+
+  scAbort();
+  const ctl = (typeof AbortController === 'function') ? new AbortController() : null;
+  sc.ctl = ctl;
+  if (ctl) sc.timer = setTimeout(() => { try { ctl.abort(); } catch (err) { /* ignore */ } }, SC_TIMEOUT_MS);
+  scSetStatus('running', { model });
+
+  let res;
+  try {
+    res = await classifyWithOpenRouter(t, { key, model, signal: ctl ? ctl.signal : undefined });
+  } catch (err) {
+    res = { ok: false, reason: 'Unexpected error while calling OpenRouter.' };
+  }
+  if (sc.ctl !== ctl) return;          // superseded by a newer run, or the mode was left
+  if (sc.timer) { clearTimeout(sc.timer); sc.timer = 0; }
+  sc.ctl = null;
+
+  if (res && res.ok) {
+    scSetStatus('llm', { model: res.model || model });
+    scShowResult(res, 'Written by ' + (res.model || model) + ' through OpenRouter, then filtered: unknown '
+      + 'region ids removed, every number clamped to its range.');
+    return;
+  }
+
+  const aborted = !!(res && res.aborted);
+  const blocked = !aborted && (!!(res && res.blocked) || (scSandboxed() && res && !res.status));
+  const message = scFailureMessage(blocked ? Object.assign({}, res, { blocked: true }) : res);
+  scSetStatus('fallback', { model, reason: (res && res.reason) ? res.reason : 'unknown error' });
+  scShowResult(classifyLocal(t), message);
+  toast('LLM call failed — showing the local heuristic.');
+}
+
+/* ---------- settings drawer tab ---------- */
+
+function scSettingsHtml() {
+  const key = llmStoredKey();
+  const model = llmStoredModel();
+  const options = LLM_MODELS.map((m) => `<option value="${scEsc(m.id)}"${m.id === model ? ' selected' : ''}>${scEsc(m.label)}</option>`).join('');
+  const custom = LLM_MODELS.some((m) => m.id === model) ? '' : `<option value="${scEsc(model)}" selected>${scEsc(model)} (stored)</option>`;
+  return `
+    <h3>Your OpenRouter key</h3>
+    <p>Scenario mode works with no key at all — that is the local heuristic. Paste a key here and it will
+    ask a language model instead. Keys are free to create at <span class="mono">openrouter.ai</span>; a run
+    of this size costs a fraction of a cent on the default model.</p>
+    <label class="sc-field">
+      <span>API key</span>
+      <input type="password" id="sc-key" class="search" autocomplete="off" spellcheck="false"
+        placeholder="${key ? scEsc(llmMaskKey(key)) + ' — type a new key to replace it' : 'sk-or-v1-…'}">
+    </label>
+    <div class="sc-field-actions">
+      <button class="text-btn primary" id="sc-key-save" type="button">Save key</button>
+      <button class="text-btn" id="sc-key-clear" type="button">Clear key</button>
+      <span class="muted" id="sc-key-status">${key ? 'Stored: ' + scEsc(llmMaskKey(key)) : 'No key stored.'}</span>
+    </div>
+    <div class="note"><strong>Stored only in this browser.</strong> The key lives in this page's
+    <span class="mono">localStorage</span> under <span class="mono">cg.openrouter.key</span>, is read only when you
+    press Run, and is <strong>sent only to openrouter.ai</strong> in the Authorization header of a single
+    POST. It is never logged, never put in a URL, never sent to any other host, and this app has no server
+    of its own to send it to. Clearing it here removes it from the browser. On a shared computer, clear it
+    when you are done.</div>
+
+    <h3>Model</h3>
+    <label class="sc-field">
+      <span>Model id</span>
+      <select id="sc-model">${custom}${options}</select>
+    </label>
+    <p class="muted">Model ids are passed to OpenRouter as plain strings — this app does not validate them,
+    so a retired id comes back as an HTTP 404 and the local heuristic takes over. The default is the
+    cheapest of the four that reliably honours JSON mode.</p>
+
+    <h3>What gets sent</h3>
+    <p>One POST to <span class="mono">https://openrouter.ai/api/v1/chat/completions</span> containing: the
+    system prompt (the 28 region ids and the output rules), the sentence you typed, the model id, and JSON
+    mode. Nothing about your browsing, no identifiers, no other text from the page. It is the only network
+    request this application makes at any point.</p>
+    <p class="muted">If the request is blocked — an Artifact sandbox, a strict content-security policy, no
+    network — Scenario says so in the status line and falls back to the local heuristic rather than
+    silently doing nothing.</p>`;
+}
+
+function scRegisterSettings() {
+  if (typeof registerDrawerTab === 'function') registerDrawerTab(SC_SETTINGS_TAB, SC_SETTINGS_LABEL, scSettingsHtml());
+}
+
+function scOpenSettings() {
+  scRegisterSettings();
+  openDrawer(SC_SETTINGS_TAB);
+}
+
+/**
+ * The drawer rewrites its body on every open, so the settings controls are wired by delegation on
+ * document and installed exactly once. Nothing here runs unless one of the four scenario ids is hit.
+ */
+function scWireSettingsOnce() {
+  if (sc.wired) return;
+  sc.wired = true;
+  document.addEventListener('click', (e) => {
+    const t = e.target;
+    if (!t || typeof t.closest !== 'function') return;
+    if (t.closest('#sc-key-save')) {
+      const input = scEl('sc-key');
+      const v = input ? String(input.value || '').trim() : '';
+      if (!v) { toast('Paste a key first, or press Clear key.'); return; }
+      const ok = llmSetStoredKey(v);
+      if (input) input.value = '';
+      toast(ok ? 'Key saved in this browser only.' : 'This browser refused to store the key.');
+      scRegisterSettings();
+      openDrawer(SC_SETTINGS_TAB);
+      scPaintStatus();
+      return;
+    }
+    if (t.closest('#sc-key-clear')) {
+      llmSetStoredKey('');
+      toast('Key cleared from this browser.');
+      scRegisterSettings();
+      openDrawer(SC_SETTINGS_TAB);
+      scPaintStatus();
+    }
+  });
+  document.addEventListener('change', (e) => {
+    if (!e.target || e.target.id !== 'sc-model') return;
+    llmSetStoredModel(e.target.value);
+    toast('Model set to ' + e.target.value + '.');
+    scPaintStatus();
+  });
+}
+
+/* ---------- mode ---------- */
+
+export const ScenarioMode = {
+  id: 'scenario',
+  label: 'Scenario',
+  accent: SC_ACCENT,
+
+  enter(app) {
+    sc.app = app;
+    sc.replaying = false;
+    registerHowTabs();
+    scRegisterSettings();
+    scWireSettingsOnce();
+    scRenderPanel();
+    if (sc.result) scShowResult(sc.result); else scIntro();
+  },
+
+  exit(app) {
+    scAbort();
+    scStopReplay();
+    sc.status = null;
+    showTimeline(false);
+    hoverLabel(null);
+    scOffAll();
+    if (app && app.scene) app.scene.clearHighlights();
+  },
+
+  update(dt, app) {
+    if (sc.replaying) PathwaysMode.update(dt, app);
+  },
+
+  onPick(id, app, pos) {
+    if (sc.replaying) { PathwaysMode.onPick(id, app, pos); return; }
+    if (id) toast(scRegionName(id) + ' — run a scenario to see it in a sequence.');
+  },
+
+  onHover(id, app, pos) {
+    hoverLabel(id ? scRegionName(id) : null, pos);
+  },
+
+  onKey(e, app) {
+    if (sc.replaying && PathwaysMode.onKey) return PathwaysMode.onKey(e, app);
+    return false;
+  },
+};
