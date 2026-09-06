@@ -45,6 +45,7 @@ scene.onPick(cb(id|null, {x,y}))                // click (not drag). id is a REG
 scene.onHover(cb(id|null, {x,y}))               // pointermove; cheap (throttled raycast ok)
 scene.pulse(fromId, toId, {color, duration}) -> Promise   // one traveling particle along a curve between centroids
 scene.addOverlay(obj3d) / scene.removeOverlay(obj3d)      // modes may add custom objects (Neurons uses this)
+scene.setIdleRotate(on)                          // slow camera drift when idle (default on); Pathways turns it off while playing
 scene.update(dt) ; scene.render()               // called every frame by main.js
 ```
 Cortical regions are patches on the hemisphere mesh (per-vertex regionId), not separate meshes; picking must still resolve to a REGIONS id. Regions that are not in the parcellation resolve to `null` (hover shows nothing).
@@ -84,6 +85,15 @@ Worker A may READ data files, never edit them. `tests/data-counts.test.mjs` asse
 - Pathways must export `pwPlayExternal(pathwayLike)` (plays a PATHWAYS-shaped object without adding it to the list); Neurons must export `nsApplyModulators(profile)` (sets the six sliders + params and refreshes the UI).
 - Honesty: results carry `.badge.low` "LLM-generated, not evidence" (or "Local heuristic") in the Explain panel; rationale shown verbatim.
 - In the Artifact sandbox `fetch` to OpenRouter is blocked by CSP: detect the failure and explain that Scenario needs the hosted version or the local file; local heuristic still works there.
+
+## Phase 3 — one connected system (decided 2026-09-06; features chosen by Mehmet)
+Bundle order now: lib, data, llm, lab, learn, brain, ui, modes, main. New pill `learn` (key 5, accent `--accent-learn`), containers `#ask-panel` (bottom-right, hidden) and `#lab-overlay` (full-stage overlay, hidden). `window.switchMode(id)` exists.
+Shared state on `app`: `app.lesions:Set<regionId>` (Atlas writes) · `app.modulators` {dopamine, acetylcholine, noradrenaline, serotonin, gaba, cortisol} 0..1 (Neurons + Scenario write, Pathways reads; defaults in main.js) · `app.measure` (lab writes, e.g. `measure.stroop`).
+| Owner | Files |
+|---|---|
+| Worker P — pathways system | `src/modes/pathways.js`, `src/data/pathways.js` (add `evidence_tier` per step: 'human_direct' \| 'animal_inferred' \| 'estimated', with a one-line `tier_reason`), `src/data/modulation.js` (new: which steps speed up/slow down under which modulator, direction + honesty), `src/lab/stroop.js` (new), `src/styles/20-pathways.css`, `src/styles/70-lab.css`, tests for these |
+| Worker Q — scenario / neurons / learn / ask | `src/modes/scenario.js`, `src/modes/neurons-ui.js`, `src/llm/*.js` (incl. new `ask.js`), `src/learn/*.js` (new: `quiz.js` question generation, `leitner.js` pure scheduler), `src/modes/learn.js`, `src/ui/ask.js` (new), `src/styles/40-scenario.css`, `src/styles/30-neurons.css`, `src/styles/50-learn.css`, `src/styles/60-ask.css`, tests for these |
+Features: (1) lesions break pathway steps with the region's real deficit text; (2) modulators scale step timing with a "direction only" badge; (3) Scenario respects lesions (local + LLM prompt); (4) hypothesis card in Neurons after Send-to-Neurons: predicted vs observed; (5) Stroop task → `app.measure.stroop` shown beside group-average ms; (6) Learn mode: quiz from data + Leitner boxes in localStorage; (7) evidence tier badges on timeline markers and step cards; (8) grounded LLM "Ask about this" (key-gated) citing record ids, ungrounded answers flagged.
 
 ## Verification rules (both workers)
 - `python3 build.py && node --test 'tests/*.test.mjs'` must pass before you report.

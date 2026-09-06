@@ -18,7 +18,12 @@ function parcNorm(x, y, z) {
 export const CORTICAL_PATCHES = [
   // occipital / visual
   { id: 'v1',        center: parcNorm(-0.30, -0.10, -1.00), radius: 0.50 },
-  { id: 'v4',        center: parcNorm( 0.34, -0.74, -0.72), radius: 0.44 },
+  // Lifted and pushed laterally in round 6 (was 0.34, -0.74, -0.72). At the old centre the
+  // whole patch sat INSIDE the cerebellum ellipsoid — measured: its world centroid was
+  // 0.15 world units below the cerebellum's upper surface — so every ray towards it hit the
+  // cerebellum first and v4 was the one region of the twenty-eight you could not click from
+  // any camera angle. It is still ventral occipito-temporal and still anterior to V1.
+  { id: 'v4',        center: parcNorm( 0.52, -0.56, -0.80), radius: 0.44 },
   { id: 'mt_v5',     center: parcNorm( 0.94, -0.20, -0.60), radius: 0.40 },
   // temporal
   { id: 'ffa',       center: parcNorm( 0.42, -0.90, -0.20), radius: 0.40 },

@@ -108,6 +108,11 @@ function nsSliderRow(id, label, value, range, unit) {
     </div>`;
 }
 
+/** One closed disclosure. Everything that is only for the curious goes inside one of these. */
+function nsFold(summary, inner) {
+  return `<details class="ns-why"><summary>${nsEsc(summary)}</summary><div class="ns-two">${inner}</div></details>`;
+}
+
 function nsModBlock(m) {
   const def = nsModDef(m.modulator);
   const badge = neuroConfidenceBadge(def.confidence);
@@ -135,10 +140,9 @@ function nsRenderPanel() {
   const R = NSIM_RANGES;
   const body = setSidePanel(`
     <div class="panel-title">Neurons</div>
-    <div class="panel-sub">150 spiking point neurons, live. Every knob says what it really changes.</div>
-    <p class="note ns-disclaimer">This is <strong>150 point neurons on a fitted model, not a brain</strong>.
-      The population is not wired like any named circuit — it is a generic toy network with a few labelled
-      subgroups so the sliders have somewhere to act. Nothing here is thinking, feeling or remembering.</p>
+    <div class="panel-sub">150 spiking point neurons, live.</div>
+    <p class="note ns-disclaimer"><strong>A generic toy network, not a brain</strong> — nothing here is
+      thinking, feeling or remembering.</p>
 
     <div class="ns-status" id="ns-status">warming up…</div>
     <div class="ns-transport">
@@ -151,31 +155,26 @@ function nsRenderPanel() {
       <label>Excitatory (120)<select id="ns-presetE">${nsPresetOptions(p.presetE)}</select></label>
       <label>Inhibitory (30)<select id="ns-presetI">${nsPresetOptions(p.presetI)}</select></label>
     </div>
-    <p class="muted">Dale's law is enforced: a neuron is excitatory or inhibitory to <em>every</em> target it
-      connects to, never one and then the other. The 80/20 split is a common cortex-wide approximation, not
-      a constant — real ratios vary by region, layer and species.</p>
+    <p class="muted">Dale's law is enforced: a cell is excitatory or inhibitory to <em>every</em> target.</p>
+    ${nsFold('why 80/20', '<p>The 80/20 split is a common cortex-wide approximation, not a constant — real ratios vary by region, layer and species.</p>')}
 
     <h3>Drive</h3>
-    ${nsSliderRow('ns-speed', 'Simulation speed', p.speed, R.speed, '×')}
-    <p class="muted">A viewing convenience only: it changes how much simulated time passes per frame, and
-      says nothing about how fast real neurons run.</p>
-    ${nsSliderRow('ns-I_bg', 'Background current', p.I_bg, R.I_bg, '')}
-    ${nsSliderRow('ns-noise', 'Background noise', p.noise, R.noise, '')}
-    <p class="muted">Think of the current as an experimenter's electrode. The noise stands in for the
-      thousands of real synaptic inputs we do not simulate one by one — not a claim that neurons contain a
-      random-number generator.</p>
+    ${nsSliderRow('ns-speed', 'Speed', p.speed, R.speed, '×')}
+    <p class="muted">Viewing speed only — it says nothing about how fast real neurons run.</p>
+    ${nsSliderRow('ns-I_bg', 'Background drive', p.I_bg, R.I_bg, '')}
+    ${nsSliderRow('ns-noise', 'Noise', p.noise, R.noise, '')}
+    <p class="muted">The drive is an experimenter's electrode; the noise stands in for inputs we do not simulate.</p>
+    ${nsFold('why noise', '<p>A real cortical neuron receives thousands of synaptic inputs this model does not track one by one. The noise term stands in for them — it is not a claim that neurons contain a random-number generator.</p>')}
 
     <details class="ns-group" id="ns-mods" open>
       <summary>Neuromodulators (6)</summary>
-      <p class="muted ns-group-note">Each slider says what it moves here in one line; open <em>why</em> — or
-        just touch the slider — for the real-circuit story in the Explain panel.</p>
+      <p class="muted ns-group-note">One line each. Open <em>why</em> for the real-circuit story.</p>
       ${NEUROMOD_UI.map(nsModBlock).join('')}
     </details>
 
     <details class="ns-adv">
-      <summary>Advanced: raw (a, b, c, d) for the excitatory population</summary>
-      <p class="muted">These override the excitatory preset. Ranges are clamped to keep the integrator
-        stable; the phase portrait below the plots shows what they do to the neuron's geometry.</p>
+      <summary>Advanced: raw a, b, c, d</summary>
+      <p class="muted">These override the excitatory preset; ranges are clamped to keep the maths stable.</p>
       ${nsSliderRow('ns-a', 'a — recovery speed', R.a.def, R.a, '')}
       ${nsSliderRow('ns-b', 'b — sub-threshold coupling', R.b.def, R.b, '')}
       ${nsSliderRow('ns-c', 'c — reset voltage', R.c.def, R.c, ' mV')}
@@ -259,17 +258,16 @@ function nsExplainIntro() {
     badge: 'phenomenological model',
     badgeClass: 'mid',
     html: `
-      <p>150 point neurons — 120 excitatory, 30 inhibitory — each running the two-equation
-      <strong>Izhikevich (2003)</strong> model, wired to about 10% of each other at random and left to run.
-      What you see emerges from those rules; nothing is scripted.</p>
-      <p>The raster shows one dot per <span class="term" data-term="Action potential">spike</span>: rows are
-      neurons, columns are time. The trace beside it is the membrane potential <em>v</em> of one neuron with
-      its recovery variable <em>u</em> — the same events seen as a continuous voltage rather than as
-      all-or-none dots. Click a raster row to follow a different neuron.</p>
-      <p class="muted">Move any slider to see what it changes in real circuits versus what it changes here.
-      Open <strong>How this simulation works → Neuron equations</strong> for the maths in plain English.</p>
-      <div class="note">This is a generic population, not a model of any named brain circuit. It illustrates
-      mechanisms; it never <em>is</em> the thing those mechanisms are named after.</div>`,
+      <p>150 point neurons — 120 excitatory, 30 inhibitory — wired at random and left to run on the
+      two-equation <strong>Izhikevich (2003)</strong> model. Nothing here is scripted.</p>
+      ${nsFold('How to read the plots', `
+        <p>The raster shows one dot per <span class="term" data-term="Action potential">spike</span>: rows are
+        neurons, columns are time. Click a row to follow that neuron in the trace beside it, which shows the
+        same events as a continuous voltage <em>v</em> with its recovery variable <em>u</em>.</p>
+        <p>Move any slider for its own explanation, or open <strong>How this simulation works →
+        Neuron equations</strong> for the maths in plain English.</p>`)}
+      <div class="note">A generic population, not a model of any named circuit. It illustrates mechanisms;
+      it never <em>is</em> the thing they are named after.</div>`,
   });
 }
 
@@ -283,10 +281,13 @@ function nsExplainMod(m) {
     badge: badge.label,
     badgeClass: badge.cls,
     html: `
-      <p><span class="ns-lead">In real circuits:</span> ${nsEsc(m.real)}</p>
-      <p><span class="ns-lead">In this simulation:</span> the slider ${nsEsc(m.sim)}</p>
-      <p class="muted"><strong>Parameters touched:</strong> <span class="mono">${nsEsc(m.param)}</span></p>
-      <div class="note">${nsEsc(def.confidence || '')}</div>`,
+      <p><span class="ns-lead">Here:</span> ${nsEsc(m.short || m.sim)}</p>
+      ${nsFold('Real circuits vs this simulation', `
+        <p><span class="ns-lead">In real circuits:</span> ${nsEsc(m.real)}</p>
+        <p><span class="ns-lead">In this simulation:</span> the slider ${nsEsc(m.sim)}</p>
+        <p class="muted">Parameters touched: <span class="mono">${nsEsc(m.param)}</span></p>
+        <p class="muted">${nsEsc(def.confidence || '')}</p>`)}
+      <div class="note">${nsEsc(m.caution || '')}</div>`,
   });
 }
 
@@ -300,10 +301,8 @@ function nsExplainPreset(which, key) {
     html: `
       <p>${nsEsc(p.note)}</p>
       <p class="mono">a = ${p.a} · b = ${p.b} · c = ${p.c} mV · d = ${p.d}</p>
-      <p class="muted">Same two equations, four different numbers. That is the whole reason this model is
-      used for teaching: one recipe reproduces regular spiking, bursting, chattering, fast spiking and
-      low-threshold spiking without changing anything else.</p>
-      ${key === 'TC' ? '<div class="note">The thalamocortical set only shows its rebound bursting from a hyperpolarised holding potential — turn the background current down to see it. What a preset does depends on the current you inject, not on (a, b, c, d) alone.</div>' : ''}`,
+      ${nsFold('why this matters', '<p>Same two equations, four different numbers. One recipe reproduces regular spiking, bursting, chattering, fast spiking and low-threshold spiking without changing anything else.</p>')}
+      ${key === 'TC' ? '<div class="note">This set only bursts from a hyperpolarised hold, so turn the background drive down to see it. What a preset does depends on the current you inject too.</div>' : ''}`,
   });
 }
 
@@ -312,27 +311,27 @@ function nsExplainDrive(key) {
   ns.lastExplainKey = 'drive:' + key;
   const isNoise = key === 'noise';
   explain({
-    title: isNoise ? 'Background noise' : 'Background current',
+    title: isNoise ? 'Noise' : 'Background drive',
     html: isNoise
-      ? `<p>An independent Gaussian current drawn fresh for every neuron on every tick. It stands in for the
-         thousands of synaptic inputs a real cortical neuron receives that this simulation does not model
-         individually — a necessary simplification, not a claim that neurons are noisy by design.</p>
-         <p class="muted">With noise at zero and the current low, the network falls silent: with nothing
-         driving it and no input from outside, there is nothing to sustain activity.</p>`
-      : `<p>A steady current injected into every neuron, like an experimenter's electrode. Excitatory cells
-         get the full value, inhibitory cells 60% of it.</p>
-         <p class="muted">Below roughly 1 the network needs noise to fire at all; pushed high, firing rates
-         climb toward the model's ceiling and the raster starts to look like stripes — that synchrony is
-         the network's dynamics, not a rendering artefact.</p>`,
+      ? `<p>An independent random current drawn fresh for every neuron on every tick.</p>
+         ${nsFold('why it is there', `<p>It stands in for the thousands of synaptic inputs a real cortical
+         neuron receives that this simulation does not model individually — a necessary simplification, not
+         a claim that neurons are noisy by design.</p>
+         <p>With noise at zero and the drive low, the network falls silent: nothing is sustaining it.</p>`)}`
+      : `<p>A steady current injected into every neuron, like an experimenter's electrode.</p>
+         ${nsFold('what to expect', `<p>Excitatory cells get the full value, inhibitory cells 60% of it.
+         Below roughly 1 the network needs noise to fire at all.</p>
+         <p>Pushed high, firing climbs toward the model's ceiling and the raster turns to stripes — that
+         synchrony is the network's dynamics, not a rendering artefact.</p>`)}`,
   });
 }
 
 function nsExplainAdvanced(k, v) {
   const copy = {
-    a: 'How fast the recovery variable u chases v. Small a means slow recovery — bursting and adaptation across a spike train. Larger a gives fast-spiking behaviour with little adaptation.',
-    b: 'How strongly sub-threshold voltage wobbles recruit u. Larger b makes the neuron resonant and can produce low-threshold spiking.',
-    c: 'The voltage the neuron snaps back to right after a spike — the model\'s version of the afterhyperpolarisation. A less negative c makes bursting easier.',
-    d: 'How big a jump u takes after every spike. Larger d means each spike makes the next one harder: more spike-frequency adaptation.',
+    a: 'How fast the recovery variable u chases v. Small a means slow recovery: bursting and adaptation.',
+    b: 'How strongly sub-threshold voltage wobbles recruit u. Larger b makes the neuron resonant.',
+    c: 'The voltage the neuron snaps back to right after a spike. A less negative c makes bursting easier.',
+    d: 'How big a jump u takes after every spike. Larger d means more spike-frequency adaptation.',
   };
   ns.lastExplainKey = 'adv:' + k;
   explain({
@@ -340,9 +339,8 @@ function nsExplainAdvanced(k, v) {
     badge: 'fitted parameter',
     badgeClass: 'mid',
     html: `<p>${copy[k]}</p>
-      <p class="muted">None of these four are biophysical quantities. They are curve-fit numbers chosen so the
-      model reproduces the right spike patterns cheaply — unlike a Hodgkin-Huxley model, no term here maps
-      onto a measured ion-channel conductance.</p>`,
+      <div class="note">None of these four are biophysical quantities — they are curve-fit numbers, so no
+      term here maps onto a measured ion-channel conductance.</div>`,
   });
 }
 
@@ -363,7 +361,7 @@ function nsBuildPlotLayout() {
   det.classList.add('ns-more');
 
   const sum = det.querySelector(':scope > summary');
-  if (sum) sum.textContent = 'More plots: population rate + phase portrait (v, u)';
+  if (sum) sum.textContent = 'More plots: rate + phase portrait';
 
   const rate = nsEl('plot-rate');
   const rateBlock = rate && rate.closest ? rate.closest('.plot') : null;
@@ -371,9 +369,12 @@ function nsBuildPlotLayout() {
     if (sum && sum.nextSibling) det.insertBefore(rateBlock, sum.nextSibling);
     else det.appendChild(rateBlock);
   }
-  const traceLabel = nsEl('plot-trace') && nsEl('plot-trace').parentNode
-    ? nsEl('plot-trace').parentNode.querySelector('.plot-label') : null;
-  if (traceLabel) traceLabel.textContent = 'Membrane v, u';   // one short line, so the legend fits beside it
+  // Short labels only: each shares one row with its legend, so a long label pushes the legend out.
+  for (const [id, text] of [['plot-raster', 'Raster'], ['plot-trace', 'Membrane v, u'], ['plot-rate', 'Rate']]) {
+    const cv = nsEl(id);
+    const lab = cv && cv.parentNode ? cv.parentNode.querySelector('.plot-label') : null;
+    if (lab) lab.textContent = text;
+  }
 
   if (!det.dataset.nsInit) {                                   // first entry decides; a user toggle wins after
     det.dataset.nsInit = '1';
@@ -763,13 +764,10 @@ export function nsApplyModulators(profile) {
     badge: 'not a measurement',
     badgeClass: 'low',
     html: `
-      <p>The six sliders now sit where the Scenario result put them. The left column is the 0–1 profile
-      that came out of Scenario mode; the right column is the simulation parameter it was mapped onto.</p>
-      <dl class="kv">${rows}</dl>
-      <div class="note">Nothing about this network knows what the scenario was. A profile is a set of
-      knob positions, and the knobs move synapses and currents in a generic 150-neuron population — they
-      do not make it stressed, focused or rewarded. The "Metaphor vs physiology" tab rates each one.</div>
-      <p class="muted">Move any slider to get its own explanation back.</p>`,
+      <p>The six sliders now sit where the Scenario result put them.</p>
+      ${nsFold('what moved', `<dl class="kv">${rows}</dl>`)}
+      <div class="note">Nothing here knows what the scenario was. Moving knobs in a generic population does
+      not make it stressed, focused or rewarded.</div>`,
   });
   ns.lastExplainKey = 'scenario-profile';
   return true;

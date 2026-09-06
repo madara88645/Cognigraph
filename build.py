@@ -14,7 +14,7 @@ ROOT = pathlib.Path(__file__).parent
 SRC = ROOT / "src"
 OUT = ROOT / "dist" / "index.html"
 
-JS_DIRS = ["lib", "data", "llm", "brain", "ui", "modes"]
+JS_DIRS = ["lib", "data", "llm", "lab", "learn", "brain", "ui", "modes"]
 IMPORT_RE = re.compile(r"""^\s*import\s+(?:[^'"]*?\s+from\s+)?['"]([^'"]+)['"]\s*;?\s*$""")
 EXPORT_LIST_RE = re.compile(r"""^\s*export\s*\{[^}]*\}\s*(?:from\s+['"][^'"]+['"])?\s*;?\s*$""")
 

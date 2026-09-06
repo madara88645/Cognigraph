@@ -118,7 +118,18 @@
 .how-mod p { margin: 0 0 5px; font-size: 12.5px; }
 .how-mod .muted { font-size: 11.5px; }
 .how-pitfalls { padding-left: 18px; margin: 8px 0 0; }
-.how-pitfalls li { margin-bottom: 8px; font-size: 12.5px; }
+.how-pitfalls li { margin-bottom: 6px; font-size: 12.5px; }
+/* Everything that is only for the curious sits in one of these, closed. */
+.how-fold { margin: 6px 0 10px; }
+.how-fold > summary {
+  cursor: pointer; list-style: none; color: var(--ink-3);
+  font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; padding: 2px 0;
+}
+.how-fold > summary::-webkit-details-marker { display: none; }
+.how-fold > summary::after { content: " ›"; }
+.how-fold[open] > summary::after { content: " ⌄"; }
+.how-fold > summary:hover { color: var(--accent); }
+.how-fold > p, .how-fold > ul { font-size: 12.5px; }
 #how-body ul { padding-left: 18px; }
 #how-body li { margin-bottom: 6px; }
 #how-body p { margin: 0 0 9px; }

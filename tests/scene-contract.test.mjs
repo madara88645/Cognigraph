@@ -211,6 +211,105 @@ test('the cortex is the primary object: cool, semi-matte, front faces, one blend
   assert.ok(!/transmission:\s*[1-9.]/.test(mat), 'no transmission: it costs a second scene render and looks like glass');
 });
 
+test('the backdrop is a soft vignette with a ground glow, not a flat fill', () => {
+  const src = read('src/brain/scene.js');
+  // A translucent grey object on a flat near-black has no edge and no ground; the whole
+  // image reads as haze. The centre is the navy the brain sits against, the corners keep the
+  // old clear colour.
+  const stops = (src.match(/const BRAIN_BG_STOPS = \[([\s\S]*?)\];/) || [])[1] || '';
+  const cols = stops.match(/#[0-9a-f]{6}/gi) || [];
+  assert.ok(cols.length >= 3, `only ${cols.length} gradient stops — that is a flat fill, not a vignette`);
+  assert.ok(cols.includes('#121523'), 'the vignette centre must be the agreed deep navy #121523');
+  assert.equal(cols[cols.length - 1], '#0a0b0f', 'the vignette must fade to #0a0b0f at the corners');
+  assert.ok(/scene\.background = backdrop/.test(src), 'the gradient is never assigned to scene.background');
+  assert.ok(/CanvasTexture/.test(src) && /colorSpace = THREE\.SRGBColorSpace/.test(src),
+    'a canvas-authored background must be tagged sRGB or it renders washed out');
+  // ground glow: additive, dim, and under the brain
+  assert.ok(/AdditiveBlending/.test(src) && /groundGlow/.test(src), 'no ground glow');
+  const glowOpacity = +(src.match(/BRAIN_GLOW_OPACITY = ([0-9.]+)/) || [])[1];
+  assert.ok(glowOpacity > 0 && glowOpacity <= 0.25,
+    `ground glow opacity ${glowOpacity}: above ~0.25 it shows THROUGH the shell and tints the brain`);
+  const glowY = +(src.match(/groundGlow\.position\.set\(0, (-[0-9.]+)/) || [])[1];
+  assert.ok(glowY < -1.0, `the glow sits at y=${glowY}, which is not under the brain`);
+});
+
+test('deep structures recede with depth, and come back when you need them', () => {
+  const src = read('src/brain/scene.js');
+  const cue = +(src.match(/BRAIN_DEPTH_CUE = ([0-9.]+)/) || [])[1];
+  assert.ok(cue > 0.2 && cue <= 0.7, `depth cue ${cue}: too little does nothing, too much loses the far structures`);
+  // depth is measured along the VIEW axis, so it follows the camera instead of being baked
+  assert.ok(/camera\.getWorldDirection\(tmpFwd\)/.test(src) && /tmpVec\.dot\(tmpFwd\)/.test(src),
+    'the depth cue must be camera-relative, not a fixed per-structure constant');
+  const line = (src.match(/const cue = BRAIN_DEPTH_CUE \* [^;]+;/) || [])[0] || '';
+  assert.ok(/\(1 - w\)/.test(line), 'a selected or hovered structure must not be dimmed by the depth cue');
+  assert.ok(/veil/.test(line) && /cortexMaterial\.opacity/.test(src),
+    'the depth cue must fade out as the cortex slider opens — there is nothing left to be behind');
+  assert.ok(/depthDirty = true;\s*\/\/ with the shell open/.test(src),
+    'moving the cortex slider must invalidate the depth cue');
+});
+
+test('the view drifts when it is left alone and stops the moment you touch it', () => {
+  const src = read('src/brain/scene.js');
+  assert.ok(/setIdleRotate\(on\)/.test(src), 'scene.setIdleRotate is missing from the API');
+  assert.ok(/let idleRotate = true;/.test(src), 'the idle drift must be on by default');
+  const delay = +(src.match(/BRAIN_IDLE_DELAY = ([0-9.]+)/) || [])[1];
+  const speed = (src.match(/BRAIN_IDLE_SPEED = ([0-9.]+) \* Math\.PI \/ 180/) || [])[1];
+  assert.ok(delay >= 3 && delay <= 6, `idle delay ${delay}s is not the agreed ~4 s`);
+  assert.equal(+speed, 4, `idle speed is ${speed} deg/s, not the agreed 4`);
+  // every pointer route has to reset the timer, or the brain rotates under the cursor
+  for (const ev of ['pointerdown', 'pointermove', 'wheel']) {
+    assert.ok(new RegExp(`addEventListener\\('${ev}'[^\n]*brainNoteInteraction`).test(src),
+      `${ev} does not stop the idle drift`);
+  }
+  assert.ok(/controls\.addEventListener\('start', \(\) => \{ fly = null; brainNoteInteraction\(\); \}\)/.test(src),
+    'an orbit drag does not stop the idle drift');
+  assert.ok(/if \(idleRotate && !fly && !pulses\.length/.test(src),
+    'the drift must be suspended while a flight or a pulse is running');
+  // the camera orbits; the brain group must never be rotated (centroids are cached in world space)
+  assert.ok(!/brain\.group\.rotation/.test(src), 'rotating the brain group invalidates every cached centroid');
+});
+
+test('the selected region breathes, and only the selected one', () => {
+  const src = read('src/brain/scene.js');
+  const amp = +(src.match(/BRAIN_PULSE_AMP = ([0-9.]+)/) || [])[1];
+  assert.ok(amp > 0.04 && amp <= 0.15, `pulse amplitude ${amp} is not the agreed +/-10%`);
+  assert.ok(/uniforms\.uHiPulse\.value = pulsePhase/.test(src), 'the cortex pulse uniform is never driven');
+  assert.ok(/smoothstep\(0\.55, 1\.0, bHi\)/.test(src),
+    'the pulse must be gated on the highlight weight so a HOVERED patch does not flicker');
+  assert.ok(/float bHi = vHi \* vTint\.a;/.test(src),
+    'the selection glow must be feathered like the resting tint, or it reads as a jagged sticker');
+  assert.ok(/pulsePhase \* brainStep01\(0\.55, 1\.0, w\)/.test(src), 'deep structures do not share the breath');
+});
+
+test('quality Low keeps the vignette, the baked shade and the depth cue — it only drops bloom', () => {
+  const src = read('src/brain/scene.js');
+  const q = src.slice(src.indexOf('function brainApplyQuality'), src.indexOf('/* ------'
+    , src.indexOf('function brainApplyQuality')));
+  assert.ok(/bloomOn = !!high/.test(q) && /setPixelRatio/.test(q) && /clearcoat/.test(q),
+    'brainApplyQuality should still gate bloom, pixel density and the clearcoat sheen');
+  for (const forbidden of ['background', 'groundGlow', 'uSulcusAO', 'BRAIN_DEPTH_CUE', 'idleRotate']) {
+    assert.ok(!q.includes(forbidden), `quality Low must not turn off ${forbidden}`);
+  }
+});
+
+test('the sulcal shade is what makes the folds readable through a translucent shell', () => {
+  const src = read('src/brain/scene.js');
+  const ao = +(src.match(/uSulcusAO = \{ value: ([0-9.]+) \}/) || [])[1];
+  assert.ok(ao >= 0.85, `groove darkening is only ${ao}: the folds go back to being a haze`);
+  // crowns lifted as well as floors dropped, and a contrast curve on the relaxed attribute
+  assert.ok(/float bSul = smoothstep\([0-9.]+, [0-9.]+, vSul\);/.test(src), 'the sulcus attribute has no contrast curve');
+  const lift = +(src.match(/float bAo = mix\(([0-9.]+), 1\.0 - uSulcusAO/) || [])[1];
+  assert.ok(lift > 1.0 && lift < 1.15, `crown lift ${lift}: above ~1.15 the gyri clip into bright worms`);
+  // a warm crown against a cool groove floor: the tone ramp is what reads as relief
+  const tone = src.match(/vec3 bTone = mix\(vec3\(([0-9.]+), [0-9.]+, ([0-9.]+)\), vec3\(([0-9.]+), [0-9.]+, ([0-9.]+)\)/);
+  assert.ok(tone, 'no crown-to-groove tone ramp');
+  assert.ok(+tone[1] > +tone[2], 'crowns must be the WARM end of the ramp (r > b)');
+  assert.ok(+tone[4] > +tone[3], 'groove floors must be the COOL end of the ramp (b > r)');
+  // grooves are painted more solidly, not made thinner: see the comment in scene.js
+  assert.ok(/diffuseColor\.a = clamp\(diffuseColor\.a \* \(1\.0 \+ 0\.[0-9]+ \* bSul\)/.test(src),
+    'grooves must be MORE opaque than crowns, otherwise the fold pattern reads as haze');
+});
+
 test('a lost WebGL context rebuilds the post-processing chain instead of reusing it', () => {
   const src = read('src/brain/scene.js');
   assert.ok(/function brainDisposeComposer/.test(src), 'no composer teardown');

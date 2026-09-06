@@ -590,11 +590,15 @@ export function buildBrain() {
   // look crumpled. A desaturated cool surface belongs to the page and lets the coloured
   // structures underneath be the only saturated thing in the frame.
   const cortexMaterial = new THREE.MeshPhysicalMaterial({
-    color: 0x9ea6c2,         // blue-grey
-    roughness: 0.55,
+    // 0x949cbb, a shade darker than round 5's 0x9ea6c2. The baked occlusion lifts the gyral
+    // crowns above the base colour, and at the old value the crowns clipped: the fold
+    // pattern turned into bright white worms instead of lit relief.
+    color: 0x9aa2c0,         // blue-grey
+    roughness: 0.58,
     metalness: 0.0,
     transparent: true,
-    opacity: 0.55,           // matches the #cortex-opacity slider default
+    opacity: 0.55,           // start value only; createScene() calls setCortexOpacity(0.63),
+                             // which is what the #cortex-opacity slider defaults to
     // depthWrite OFF: the shell is a single translucent skin, and writing depth from a
     // translucent surface hides the deep structures behind whichever fold got drawn first.
     // Safe here only because of FrontSide below — the far wall is culled, so there is just
@@ -605,8 +609,10 @@ export function buildBrain() {
     // folded surfaces is exactly the "crumpled paper" look. One skin, structures behind it.
     side: THREE.FrontSide,
     forceSinglePass: true,
-    clearcoat: 0.20,         // a subtle sheen along the gyral crowns, not a wet look
-    clearcoatRoughness: 0.5,
+    // 0.12/0.62, down from 0.20/0.50: at the higher value the key light left one big glossy
+    // blob over the parietal crown and the shell read as wet plastic.
+    clearcoat: 0.12,         // a subtle sheen along the gyral crowns, not a wet look
+    clearcoatRoughness: 0.62,
   });
 
   const hemispheres = [];
@@ -645,8 +651,11 @@ export function buildBrain() {
   brainstem.position.set(0, -0.20, -0.04);
   brainstem.rotation.x = 0.22;
   const stemMesh = new THREE.Mesh(brainBuildBrainstem(), new THREE.MeshStandardMaterial({
-    color: 0x99a1b8, emissive: 0x1e2230, emissiveIntensity: 0.20,
-    roughness: 0.72, metalness: 0.0, transparent: true, opacity: 0.62, depthWrite: false,
+    // Opacity 0.36, not 0.62: the brainstem is context, not content (it is not a REGIONS id
+    // and it is not pickable), and at 0.62 it read as a big pale wedge sitting between the
+    // viewer and the thalamus.
+    color: 0x99a1b8, emissive: 0x1e2230, emissiveIntensity: 0.12,
+    roughness: 0.72, metalness: 0.0, transparent: true, opacity: 0.36, depthWrite: false,
     side: THREE.DoubleSide, forceSinglePass: true,
   }));
   stemMesh.name = 'brainstem';

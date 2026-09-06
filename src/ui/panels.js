@@ -20,9 +20,9 @@ export function initUI(app, switchMode) {
   $('webgl-reload').addEventListener('click', () => location.reload());
   window.addEventListener('keydown', onKey);
   registerDrawerTab('about', 'About', `
-    <p><strong>CogniGraph</strong> is an educational, fully client-side simulation. Nothing you do here is measured, stored, or sent anywhere.</p>
-    <p>Three modes: <strong>Pathways</strong> replay textbook cognitive sequences region by region; <strong>Atlas</strong> lets you inspect regions and simulate lesions; <strong>Neurons</strong> runs a small spiking network you can perturb.</p>
-    <p class="muted">Every labeled region is a simplified hub in a distributed network, and the millisecond values are group averages from specific lab paradigms, not fixed constants. See the other tabs for what is physiology and what is metaphor.</p>`);
+    <p><strong>CogniGraph</strong> is an educational simulation that runs entirely in your browser. Nothing is measured, stored or sent anywhere.</p>
+    <p>Four modes: <strong>Pathways</strong> replays textbook sequences, <strong>Atlas</strong> inspects regions and lesions, <strong>Neurons</strong> runs a small spiking network, <strong>Scenario</strong> turns a sentence into a sequence.</p>
+    <p class="muted">Every labelled region is a simplified hub, and the millisecond values are group averages. The other tabs say what is physiology and what is metaphor.</p>`);
 }
 
 function onKey(e) {
@@ -32,6 +32,7 @@ function onKey(e) {
   if (e.key === '2') return switchModeFn('atlas');
   if (e.key === '3') return switchModeFn('neurons');
   if (e.key === '4') return switchModeFn('scenario');
+  if (e.key === '5') return switchModeFn('learn');
   if (e.key === '?') return openDrawer();
   if (e.key === 'r' || e.key === 'R') return appRef.scene.resetView();
   if (appRef.mode && appRef.mode.onKey && appRef.mode.onKey(e, appRef)) e.preventDefault();

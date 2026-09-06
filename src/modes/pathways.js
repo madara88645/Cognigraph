@@ -13,7 +13,6 @@ const PW_LAST_STEP_S = 1.6;
 const PW_FLY_DISTANCE = 5.5;   // frame the step with its neighbourhood; the scene's own default is tight
 const PW_MIN_MARK_PX = 24;     // no two timeline dots may sit closer than this
 const PW_LABEL_MIN_PX = 56;    // below this the markers stay bare dots rather than crowding labels
-const PW_TALL_VIEWPORT = 900;  // px of viewport height above which "How we know" starts open
 
 const pw = {
   pathway: null,      // the selected PATHWAYS entry
@@ -53,13 +52,19 @@ function pwEsc(s) {
 
 function pwRegion(id) { return REGIONS.find((r) => r.id === id) || null; }
 
-/** Short display label: the parenthetical abbreviation if there is one, else a trimmed name. */
+/**
+ * Short display label: the trailing abbreviation if there is one ("(V1)"), otherwise the name with any
+ * trailing gloss dropped — "Substantia Nigra (pars compacta)" is a title, not a label.
+ */
 function pwShortName(id) {
   const r = pwRegion(id);
   if (!r) return id;
   const paren = r.name.match(/\(([^()]{1,12})\)\s*$/);
   if (paren) return paren[1];
-  return r.name.replace(/^(Primary |Visual Area |Middle Temporal Area )/, '').replace(/ Cortex$/, '');
+  return r.name
+    .replace(/\s*\([^()]*\)\s*$/, '')
+    .replace(/^(Primary |Visual Area |Middle Temporal Area )/, '')
+    .replace(/ Cortex$/, '');
 }
 
 function pwStepLabel(step) {
@@ -145,13 +150,13 @@ function pwRenderPanel() {
         </div>`).join('')}
       </div>
       <p class="note">${pwIsSchematic(p)
-        ? 'This journey unfolds over minutes to nights. The order is real; the numbers are not — the timeline is schematic.'
-        : 'Latencies are group averages from specific lab paradigms, not fixed constants. Each step names its own evidence.'}</p>`;
+        ? 'The order is real; the numbers are not. This timeline is schematic.'
+        : 'Latencies are group averages, not constants. Each step names its evidence.'}</p>`;
   }
 
   const body = setSidePanel(`
     <div class="panel-title">Pathways</div>
-    <div class="panel-sub">Eight everyday moments, replayed hub by hub with the evidence behind each step.</div>
+    <div class="panel-sub">Eight everyday moments, replayed hub by hub.</div>
     <h3>Scenarios</h3>
     <div class="list" id="pw-list">${items}</div>
     ${steps}`);
@@ -301,22 +306,25 @@ function pwExplainStep() {
   if (!p) return;
   const s = p.steps[pw.index];
   const schematic = pwIsSchematic(p);
-  const title = `Step ${pw.index + 1} of ${p.steps.length} · ${pwStepLabel(s)} · ${schematic ? 'schematic order' : '~' + s.approx_ms + ' ms'}`;
-  const regionNames = s.region_ids.map((id) => { const r = pwRegion(id); return r ? r.name : id; }).join(', ');
+  // The title names every region in the step (the side-panel list is where the label gets truncated),
+  // so the card does not need a separate "lit up" line under the prose.
+  const names = s.region_ids.map(pwShortName).join(' + ');
+  const title = `Step ${pw.index + 1} of ${p.steps.length} · ${names} · ${schematic ? 'schematic order' : '~' + s.approx_ms + ' ms'}`;
   explain({
     title,
     badge: schematic ? 'schematic timeline' : 'approximate timing',
     badgeClass: schematic ? 'mid' : '',
     html: `
-      <p class="pw-scenario">${pwEsc(p.scenario_sentence)}</p>
-      <p>${pwEsc(s.what_happens)}</p>
-      <p><strong>Why it matters.</strong> ${pwEsc(s.why_it_matters)}</p>
-      ${s.evidence_or_method ? `<details class="pw-evidence"${window.innerHeight >= PW_TALL_VIEWPORT ? ' open' : ''}>
+      <p class="pw-lede">${pwEsc(s.what_happens)}</p>
+      ${s.why_it_matters ? `<details class="pw-more">
+        <summary>Why it matters</summary>
+        <p>${pwEsc(s.why_it_matters)}</p>
+      </details>` : ''}
+      ${s.evidence_or_method ? `<details class="pw-more">
         <summary>How we know</summary>
         <p class="muted">${pwEsc(s.evidence_or_method)}</p>
       </details>` : ''}
-      <p class="muted pw-regions">Lit up: ${pwEsc(regionNames)}</p>
-      <div class="note"><strong>Caveats for this pathway.</strong> ${pwEsc(p.accuracy_caveats)}</div>`,
+      <div class="note">${pwEsc(p.accuracy_caveats)}</div>`,
   });
 }
 
@@ -362,15 +370,13 @@ function pwIntro() {
   explain({
     title: 'Cognitive pathways',
     html: `
-      <p>Pick one of the eight everyday moments on the left. The regions involved light up in order,
-      a pulse travels between them, and each step explains what happens, why it matters and what
-      evidence the claim rests on.</p>
-      <p class="muted">Use <span class="mono">←</span> <span class="mono">→</span> to step, space to play or
-      pause, and click a marker on the timeline to jump.</p>
-      <div class="note">These are teaching sequences, not recordings. A labelled region is a major hub in a
-      distributed network, and the millisecond values are group averages from specific lab paradigms — the
-      caveats shown with every step say where each one is soft. Two of the eight journeys are far too slow
-      for milliseconds and are marked schematic.</div>`,
+      <p>Pick one of the eight everyday moments on the left. Its regions light up in order, and every
+      step opens with one sentence, with the reasoning and the evidence behind it.</p>
+      <p class="muted"><span class="mono">←</span> <span class="mono">→</span> step ·
+      <span class="mono">space</span> plays · click a timeline marker to jump.</p>
+      <div class="note">Teaching sequences, not recordings: a lit region is a major hub, not the whole
+      story, and the millisecond values are group averages. Two of the eight are far too slow for
+      milliseconds and are marked schematic.</div>`,
   });
 }
 

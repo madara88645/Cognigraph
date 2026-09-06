@@ -10,6 +10,7 @@
   --accent-atlas: #a98ef2;
   --accent-neurons: #f5b74a;
   --accent-scenario: #f28b74;
+  --accent-learn: #7ed69a;
   --accent: var(--accent-atlas);
   --danger: #ff6b7a;
   --radius: 14px;
@@ -26,6 +27,7 @@
 #app[data-mode="atlas"]    { --accent: var(--accent-atlas); }
 #app[data-mode="neurons"]  { --accent: var(--accent-neurons); }
 #app[data-mode="scenario"] { --accent: var(--accent-scenario); }
+#app[data-mode="learn"]    { --accent: var(--accent-learn); }
 
 html, body { height: 100%; }
 body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.55 var(--font); overflow: hidden; -webkit-font-smoothing: antialiased; }
@@ -148,6 +150,11 @@ input[type=range] { accent-color: var(--accent); width: 120px; }
 #how-body h3 { color: var(--ink); font-size: 14px; margin: 14px 0 6px; }
 #how-body code, #explain-body code { font-family: var(--mono); font-size: 12px; background: rgba(255,255,255,0.06); padding: 1px 5px; border-radius: 5px; }
 #how-body .eq { font-family: var(--mono); font-size: 12.5px; background: rgba(0,0,0,0.3); padding: 8px 10px; border-radius: 8px; margin: 8px 0; white-space: pre-wrap; }
+
+/* ---- ask + lab containers (filled by their modules) ---- */
+#ask-panel { position: absolute; right: 12px; bottom: 14px; width: var(--explain-w); z-index: 16; padding: 10px 14px; }
+#app[data-mode="neurons"] #ask-panel, #app[data-mode="pathways"] #ask-panel { bottom: 14px; }
+#lab-overlay { position: absolute; inset: 12px; z-index: 35; display: flex; align-items: center; justify-content: center; padding: 24px; }
 
 /* ---- misc ---- */
 #hover-label { position: fixed; z-index: 25; pointer-events: none; padding: 4px 10px; border-radius: 999px; background: rgba(10,11,15,0.85); border: 1px solid var(--line); font-size: 12px; color: var(--ink); transform: translate(12px, -50%); }

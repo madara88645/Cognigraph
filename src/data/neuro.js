@@ -132,21 +132,21 @@ export const NEURON_PRESETS = {
   }
 };
 export const ACCURACY_PITFALLS = [
-  "The '10% of the brain' myth is false — brain imaging shows nearly all regions are active over the course of a day, just not all firing at maximum simultaneously.",
-  "'Left-brained vs. right-brained' personality typing is an oversimplification; real hemispheric lateralization (e.g., language usually left, spatial attention often right-weighted) is a matter of statistical bias, not a hard 'logical vs. creative' personality split.",
-  "fMRI 'activation' should not be read as 'this region does X and only X' — BOLD signal is an indirect, several-second-delayed proxy for neural activity, and most regions participate in multiple functions/networks rather than being single-purpose modules.",
-  "The amygdala is often oversold as 'the fear center' — it is central to threat/salience detection broadly (including some positive learning), and fear itself involves distributed circuitry (hypothalamus, periaqueductal gray, insula, cortex), not one nucleus alone.",
-  "LeDoux's thalamus-to-amygdala 'low road' for ultra-fast fear responses is well established in rodents via direct tract-tracing; in humans it is inferred mainly from MEG/EEG/intracranial timing, so present the human pathway and its exact latency as an active research question, not settled fact.",
-  "Avoid phrenology-style 'one bump/one region = one fixed faculty' framing — modern neuroscience emphasizes distributed networks; a labeled region is a major hub/contributor, not an exclusive seat of a mental faculty.",
-  "Libet's readiness-potential findings are commonly overinterpreted as 'proof free will is an illusion' — this remains a contested methodological and philosophical debate (e.g., whether the potential reflects the specific decision or a general readiness/threshold-crossing), and should be presented as an interesting, contested finding rather than settled fact.",
-  "The classic basal ganglia direct/indirect pathway diagram is a useful simplification, not the full picture — more recent research finds overlap and more nuanced roles (e.g., some 'indirect pathway' neurons also promote action) than the clean two-pathway model suggests.",
-  "Precise millisecond timings quoted for cognitive events (e.g., 'face recognition takes exactly 170ms') are group-averaged findings from specific lab paradigms with real inter-individual and inter-task variability — present them as typical/approximate windows, not fixed universal constants.",
-  "Memories are not stored like video recordings played back perfectly; they are reconstructive and can change slightly (or be distorted) each time they are recalled and 're-stored' (reconsolidation).",
-  "Dopamine is not simply the 'pleasure chemical' and serotonin deficiency is not a fully sufficient explanation for depression — the monoamine hypothesis of depression is now considered an incomplete oversimplification in current research; frame these neuromodulators in terms of their more specific, evidence-backed roles (reward prediction/motivational salience for dopamine; mood/sleep/impulse regulation for serotonin).",
-  "Language lateralization percentages (e.g., ~95-99% left-hemisphere dominance in right-handers) should not be presented as universal — left-handers and some right-handers show right-hemisphere or bilateral language dominance.",
-  "Motor/procedural skill learning is better described as a shift in the relative weighting of a distributed cortical-striatal-cerebellar network with practice, not a literal relocation of a skill from one brain area to another.",
-  "The classic 'Broca produces speech, Wernicke comprehends it, the arcuate fasciculus joins them' model is a teaching simplification that modern aphasiology treats as obsolete (Tremblay & Dick, 2016, 'Broca and Wernicke are dead'). Language depends on a distributed fronto-temporo-parietal network and several white-matter tracts; even Broca's founding patient Leborgne had damage extending well beyond the area later named for him (Dronkers et al., 2007).",
-  "The vivid Phineas Gage story — a decent foreman turned foul-mouthed drifter — is substantially embellished beyond its evidence. It rests on one short secondhand report by Harlow that never quotes Gage, and grew in the retelling across a century of textbooks (Macmillan, 2000). Use it to illustrate frontal-lobe involvement in social behaviour, not as a documented case study.",
-  "The hypothalamic 'satiety centre vs. feeding centre' pair is a historical reading of 1940s-50s lesion experiments. Since leptin was identified in 1994 the field has described appetite as a distributed hormonal network in which the arcuate nucleus integrates leptin and ghrelin signals via POMC and AgRP neurons projecting across several nuclei.",
-  "A named preset is not a guarantee of a firing pattern: the thalamocortical (TC) parameter set only shows rebound bursting from a hyperpolarized holding potential, so what you see also depends on the background current you inject, not on (a, b, c, d) alone."
+  "The '10% of the brain' myth is false: imaging shows nearly all regions are active over a day, just not all at maximum at once.",
+  "'Left-brained vs right-brained' personality typing is not real; lateralization is a statistical bias, not a logic/creativity split.",
+  "fMRI 'activation' does not mean 'this region does X and only X' — BOLD is indirect and slow, and most regions serve several networks.",
+  "The amygdala is oversold as 'the fear centre': it handles threat and salience broadly, and fear involves distributed circuitry.",
+  "LeDoux's thalamus-to-amygdala 'low road' is established in rodents; in humans it is inferred from timing and is still an open question.",
+  "Avoid phrenology-style 'one region = one faculty' framing: a labelled region is a major hub, not an exclusive seat of a faculty.",
+  "Libet's readiness potential is not proof that free will is an illusion; what it reflects is still contested.",
+  "The direct/indirect basal-ganglia diagram is a useful simplification: newer work finds overlap between the two pathways.",
+  "Millisecond figures such as 'face recognition takes 170ms' are group averages from lab paradigms, not universal constants.",
+  "Memories are not video recordings: they are reconstructive and can shift each time they are recalled and re-stored.",
+  "Dopamine is not the 'pleasure chemical', and low serotonin is not a sufficient explanation for depression.",
+  "Language lateralization is not universal: many left-handers and some right-handers are right-dominant or bilateral.",
+  "Skill learning reweights a distributed cortical-striatal-cerebellar network; it does not relocate a skill between areas.",
+  "The 'Broca produces, Wernicke comprehends' model is treated as obsolete: language is a distributed network served by several tracts (Tremblay & Dick, 2016; Dronkers et al., 2007).",
+  "The Phineas Gage story is embellished: it rests on one short secondhand report and grew across a century of textbooks (Macmillan, 2000).",
+  "The hypothalamic 'satiety vs feeding centre' pair is a historical reading; since leptin (1994) appetite is described as a distributed network.",
+  "A named preset does not guarantee a firing pattern: the TC set only bursts from a hyperpolarised hold, so the injected current matters too."
 ];

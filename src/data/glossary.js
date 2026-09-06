@@ -31,11 +31,11 @@ export const GLOSSARY = [
   },
   {
     "term": "Excitatory vs. inhibitory signaling (glutamate & GABA)",
-    "plain_definition": "Glutamate is the brain's main 'go' signal between neurons; GABA is the main 'stop/quiet down' signal — together they balance brain activity."
+    "plain_definition": "Glutamate is the brain's main 'go' signal, GABA the main 'stop' signal. Together they balance activity."
   },
   {
     "term": "Cortex vs. subcortical",
-    "plain_definition": "The cortex is the folded outer layer doing most higher-level processing; 'subcortical' structures sit beneath it handling emotion, memory, movement and basic drives."
+    "plain_definition": "The cortex is the folded outer layer doing most higher-level work; subcortical structures sit beneath it, handling emotion, memory, movement and drives."
   },
   {
     "term": "Gyrus & sulcus",
@@ -43,7 +43,7 @@ export const GLOSSARY = [
   },
   {
     "term": "Gray matter vs. white matter",
-    "plain_definition": "Gray matter is mostly neuron cell bodies (where processing happens); white matter is the myelinated 'wiring' carrying signals between regions."
+    "plain_definition": "Gray matter is mostly cell bodies, where processing happens; white matter is the insulated wiring between regions."
   },
   {
     "term": "Myelin",
@@ -51,11 +51,11 @@ export const GLOSSARY = [
   },
   {
     "term": "Hemispheric lateralization",
-    "plain_definition": "The tendency for some functions (e.g., language, typically left-sided) to rely more on one brain hemisphere than the other — a matter of degree, not an absolute split."
+    "plain_definition": "Some functions lean on one hemisphere more than the other (language is usually left-sided). It is a matter of degree, not an absolute split."
   },
   {
     "term": "Homunculus",
-    "plain_definition": "The distorted 'body map' in motor and somatosensory cortex, where sensitive/dexterous body parts (lips, hands) get disproportionately more cortical space."
+    "plain_definition": "The distorted body map in motor and somatosensory cortex: sensitive parts like lips and hands get far more cortical space."
   },
   {
     "term": "Retinotopic map",
@@ -71,15 +71,15 @@ export const GLOSSARY = [
   },
   {
     "term": "Neuroplasticity",
-    "plain_definition": "The brain's ability to physically reorganize — strengthening, weakening, or rewiring connections — in response to experience."
+    "plain_definition": "The brain's ability to rewire itself, strengthening or weakening connections in response to experience."
   },
   {
     "term": "Long-term potentiation (LTP)",
-    "plain_definition": "A lasting strengthening of the connection between two neurons after repeated co-activation; a leading cellular model of how memories are stored."
+    "plain_definition": "A lasting strengthening of the link between two neurons after repeated co-activation. A leading cellular model of how memories are stored."
   },
   {
     "term": "Reward prediction error",
-    "plain_definition": "The mismatch between an expected and actual reward, signaled by dopamine bursts (better than expected) or dips (worse than expected); drives reinforcement learning."
+    "plain_definition": "The gap between expected and actual reward, signalled by dopamine bursts (better than expected) or dips (worse). It drives reinforcement learning."
   },
   {
     "term": "Working memory",
@@ -99,11 +99,11 @@ export const GLOSSARY = [
   },
   {
     "term": "Systems consolidation",
-    "plain_definition": "The gradual process by which memories shift from depending on the hippocampus to being stored more independently in the neocortex, thought to occur especially during sleep."
+    "plain_definition": "The slow shift of a memory from depending on the hippocampus to being stored in neocortex, thought to happen especially during sleep."
   },
   {
     "term": "Double dissociation",
-    "plain_definition": "A research pattern where damage to region A impairs task 1 but not task 2, while damage to region B does the opposite — strong evidence the two functions are separable."
+    "plain_definition": "Damage to region A hurts task 1 but not task 2, while damage to region B does the opposite. Strong evidence that the two functions are separable."
   },
   {
     "term": "Lesion study",
@@ -111,7 +111,7 @@ export const GLOSSARY = [
   },
   {
     "term": "EEG (electroencephalography)",
-    "plain_definition": "A method that records electrical brain activity via scalp electrodes; excellent timing precision (milliseconds) but coarse spatial detail."
+    "plain_definition": "Records electrical brain activity from scalp electrodes. Excellent timing (milliseconds), coarse spatial detail."
   },
   {
     "term": "ERP (event-related potential)",
@@ -119,15 +119,15 @@ export const GLOSSARY = [
   },
   {
     "term": "fMRI / BOLD signal",
-    "plain_definition": "Functional MRI infers brain activity from blood-oxygenation changes (BOLD signal); great spatial detail but a slow, several-second lag behind actual neural firing."
+    "plain_definition": "Functional MRI infers activity from blood-oxygenation changes. Great spatial detail, but several seconds behind the actual firing."
   },
   {
     "term": "MEG (magnetoencephalography)",
-    "plain_definition": "A method recording tiny magnetic fields from brain activity; combines EEG-like millisecond timing with somewhat better spatial localization."
+    "plain_definition": "Records tiny magnetic fields from brain activity. Millisecond timing like EEG, with somewhat better localisation."
   },
   {
     "term": "N170",
-    "plain_definition": "An ERP brain-wave dip around 130-200ms after seeing a face, linked to fast structural face processing. Simultaneous fMRI-EEG points to the fusiform gyrus/FFA as a leading, not sole, contributor; the occipital face area and superior temporal sulcus are also implicated, so no single generator is settled."
+    "plain_definition": "An ERP dip around 130-200ms after seeing a face, linked to fast structural face processing. fMRI-EEG points to the fusiform gyrus/FFA as a leading, not sole, contributor; the occipital face area and superior temporal sulcus are also implicated."
   },
   {
     "term": "N400",
@@ -143,7 +143,7 @@ export const GLOSSARY = [
   },
   {
     "term": "Readiness potential (Bereitschaftspotential)",
-    "plain_definition": "A slow buildup of brain activity, starting hundreds of milliseconds before a voluntary movement, famously studied by Benjamin Libet in debates about free will."
+    "plain_definition": "A slow buildup of brain activity starting hundreds of milliseconds before a voluntary movement. Famously studied by Benjamin Libet in free-will debates."
   },
   {
     "term": "Sharp-wave ripple",
@@ -155,10 +155,10 @@ export const GLOSSARY = [
   },
   {
     "term": "NREM vs. REM sleep",
-    "plain_definition": "NREM (non-rapid-eye-movement) sleep includes deep slow-wave sleep linked to memory replay; REM sleep is the dream-rich stage with brain activity resembling wakefulness."
+    "plain_definition": "NREM includes the deep slow-wave sleep linked to memory replay. REM is the dream-rich stage, with brain activity resembling wakefulness."
   },
   {
     "term": "HPA axis (stress axis)",
-    "plain_definition": "The hypothalamus-pituitary-adrenal signaling chain that releases stress hormones (like cortisol) in response to threat, initiated largely by the hypothalamus."
+    "plain_definition": "The hypothalamus-pituitary-adrenal chain that releases stress hormones like cortisol in response to threat."
   }
 ];

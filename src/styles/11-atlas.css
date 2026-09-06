@@ -40,3 +40,7 @@
 }
 button.atlas-chip:hover { border-color: var(--accent); color: var(--accent); background: rgba(255,255,255,0.09); }
 .atlas-chip.is-plain { cursor: default; color: var(--ink-3); border-style: dashed; }
+
+.atlas-evidence { margin: 8px 0 2px; }
+.atlas-evidence summary { cursor: pointer; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+.atlas-evidence[open] summary { color: var(--accent); }

@@ -42,19 +42,109 @@ const BRAIN_HOVER_HZ = 30;
 const BRAIN_EMISSIVE_REST = STRUCTURE_REST_EMISSIVE;   // 0.04
 const BRAIN_EMISSIVE_GAIN = 1.85;                      // added at highlight weight 1
 
+/* ------------------------------------------------------------------ the backdrop */
+// A flat near-black behind a translucent grey object is the worst case there is: the
+// silhouette has nothing to sit against and the whole image reads as haze. A very soft
+// radial vignette — deep navy where the brain is, near-black at the corners — costs one
+// screen-space quad and gives the brain both a ground and an edge.
+const BRAIN_BG_STOPS = [
+  [0.00, '#181d33'],
+  [0.34, '#121523'],   // the centre colour the brief asks for
+  [0.70, '#0d0f17'],
+  [1.00, '#0a0b0f'],   // the old flat clear colour, now only at the corners
+];
+const BRAIN_BG_EDGE = 0x0a0b0f;
+// Ground glow: a wide, very dim disc lying under the brain. Additive and low enough that
+// you read it as "the object is standing on something", not as a light source.
+// Round 6, second pass: the first numbers (0x39487a at 0.5, a 5.2 x 4.0 disc at y -1.28)
+// put a blue band across the bottom third of the frame and, because the shell is only 63%
+// opaque, that band showed THROUGH the brain and tinted its whole lower half. A ground glow
+// has to be barely there — you should only notice it by covering it up.
+const BRAIN_GLOW_COLOR = 0x2b3862;
+const BRAIN_GLOW_OPACITY = 0.16;
+
+/* -------------------------------------------------------------- depth & idle motion */
+// How much a structure at the FAR side of the brain recedes compared with one at the near
+// side: it is tinted towards the backdrop navy and its self-illumination is cut. This is
+// the difference between "structures inside a head" and "coloured stickers on the glass".
+const BRAIN_DEPTH_CUE = 0.45;
+const BRAIN_DEPTH_TINT = 0x2a3252;
+// Half the front-to-back spread the deep structures actually occupy. Normalising by the
+// whole bounding radius instead would squeeze every structure into the middle of the range.
+const BRAIN_DEPTH_HALF = 0.85;
+
+const BRAIN_IDLE_DELAY = 4.0;                        // seconds of stillness before the drift
+const BRAIN_IDLE_SPEED = 4 * Math.PI / 180;          // 4 degrees per second
+const BRAIN_IDLE_RAMP = 1.6;                         // seconds to reach that speed
+const BRAIN_PULSE_HZ = 0.55;                         // selection breathing, ~1.8 s period
+const BRAIN_PULSE_AMP = 0.10;                        // +/- 10 %
+
 function brainEaseOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+function brainClamp01(v) { return v < 0 ? 0 : (v > 1 ? 1 : v); }
+/** smoothstep, JS side (geometry.js has its own; the bundle shares one scope). */
+function brainStep01(e0, e1, x) {
+  const t = brainClamp01((x - e0) / (e1 - e0));
+  return t * t * (3 - 2 * t);
+}
+
+/**
+ * Radial gradient painted into a canvas and used as scene.background. A texture background
+ * is drawn as a full-screen quad with uv 0..1, so a square texture stretches to the
+ * viewport and the vignette comes out as an ellipse — which is what you want on a 16:10
+ * window anyway.
+ */
+function brainMakeBackdrop(size = 512) {
+  const cv = document.createElement('canvas');
+  cv.width = size; cv.height = size;
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = BRAIN_BG_STOPS[BRAIN_BG_STOPS.length - 1][1];
+  ctx.fillRect(0, 0, size, size);
+  const g = ctx.createRadialGradient(size * 0.5, size * 0.5, size * 0.02, size * 0.5, size * 0.5, size * 0.68);
+  for (const [stop, hex] of BRAIN_BG_STOPS) g.addColorStop(stop, hex);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, size, size);
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;   // it is authored in sRGB; without this it renders washed out
+  tex.minFilter = THREE.LinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+  tex.generateMipmaps = false;
+  return tex;
+}
+
+/** Soft round falloff, alpha only: the ground glow's texture. */
+function brainMakeGlowTexture(size = 256) {
+  const cv = document.createElement('canvas');
+  cv.width = size; cv.height = size;
+  const ctx = cv.getContext('2d');
+  const g = ctx.createRadialGradient(size * 0.5, size * 0.5, 0, size * 0.5, size * 0.5, size * 0.5);
+  g.addColorStop(0.0, 'rgba(255,255,255,1)');
+  g.addColorStop(0.35, 'rgba(255,255,255,0.42)');
+  g.addColorStop(0.72, 'rgba(255,255,255,0.09)');
+  g.addColorStop(1.0, 'rgba(255,255,255,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, size, size);
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.generateMipmaps = false;
+  tex.minFilter = THREE.LinearFilter;
+  return tex;
+}
 
 export async function createScene(canvas, opts = {}) {
   /* ------------------------------------------------------------------ renderer */
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance' });
   const maxDpr = 1.5;
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxDpr));
-  renderer.setClearColor(0x0a0b0f, 1);
+  renderer.setClearColor(BRAIN_BG_EDGE, 1);
   renderer.shadowMap.enabled = false;                       // never: see research tech notes
   const isWebGL2 = !!(renderer.capabilities && renderer.capabilities.isWebGL2);
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0x0a0b0f, 0.035);
+  const backdrop = brainMakeBackdrop();
+  scene.background = backdrop;                              // soft navy vignette, not a flat black
+  // Fog matches the CENTRE of the vignette, not its edge: what recedes should fade into the
+  // colour actually behind the brain.
+  scene.fog = new THREE.FogExp2(0x121523, 0.035);
   const camera = new THREE.PerspectiveCamera(40, 1, 0.05, 100);
   camera.position.set(BRAIN_HOME_POS[0], BRAIN_HOME_POS[1], BRAIN_HOME_POS[2]);
 
@@ -74,10 +164,36 @@ export async function createScene(canvas, opts = {}) {
   // desaturated blue-grey surface from going flat and grey, without warming it into beige.
   // Ambient stays low on purpose — the sulci only read as grooves if they can go dark, and
   // at 0.63 opacity a good part of that contrast is already lost to the blend.
-  scene.add(new THREE.HemisphereLight(0xc2d2f2, 0x323a4e, 0.46));
-  const key = new THREE.DirectionalLight(0xffe6d0, 2.25); key.position.set(2.6, 3.8, 3.4); scene.add(key);
-  const fill = new THREE.DirectionalLight(0x8fa3ff, 0.58); fill.position.set(2.2, -1.3, -3.2); scene.add(fill);
-  const rim = new THREE.DirectionalLight(0xbfd2ff, 0.72); rim.position.set(-3.2, 1.3, -1.6); scene.add(rim);
+  // Round 6 pulled the ambient term down (0.46 -> 0.34) and pushed the key up (2.25 -> 2.55).
+  // Ambient light is what was flattening the folds: it reaches the floor of every groove
+  // equally, so it pays the same into a crown and into a sulcus and the difference between
+  // them shrinks. Directional light does not, which is the whole point of a key.
+  scene.add(new THREE.HemisphereLight(0xc2d2f2, 0x2b3244, 0.38));
+  const key = new THREE.DirectionalLight(0xffe6d0, 2.90); key.position.set(2.6, 3.8, 3.4); scene.add(key);
+  // The fill was at 0.58 and aimed up from below-behind, which left the occipital and
+  // posterior-temporal half of a lateral view as a dark void once the ambient came down.
+  // Raised and re-aimed to rake in from screen right at roughly eye level.
+  const fill = new THREE.DirectionalLight(0xa9b8e8, 0.72); fill.position.set(1.6, 0.5, -3.6); scene.add(fill);
+  const rim = new THREE.DirectionalLight(0xbfd2ff, 0.74); rim.position.set(-3.2, 1.3, -1.6); scene.add(rim);
+
+  /* ---------------------------------------------------------------- ground glow */
+  // A wide dim disc lying flat under the brain. Seen from 15 degrees above the horizontal it
+  // reads as a shallow pool of light, which is what stops the object floating in a void.
+  const glowTex = brainMakeGlowTexture();
+  const groundGlow = new THREE.Mesh(
+    new THREE.PlaneGeometry(1, 1),
+    new THREE.MeshBasicMaterial({
+      map: glowTex, color: BRAIN_GLOW_COLOR, transparent: true, opacity: BRAIN_GLOW_OPACITY,
+      blending: THREE.AdditiveBlending, depthWrite: false, fog: false, side: THREE.DoubleSide,
+    }));
+  groundGlow.rotation.x = -Math.PI / 2;
+  groundGlow.position.set(0, -1.62, -0.15);
+  // Shallow front-to-back: a deep disc seen from 15 degrees above rises up behind the object
+  // and stops reading as a floor.
+  groundGlow.scale.set(4.6, 2.3, 1);
+  groundGlow.renderOrder = -1;
+  groundGlow.name = 'ground-glow';
+  scene.add(groundGlow);
 
   /* ---------------------------------------------------------------- the brain */
   const brain = buildBrain();
@@ -93,8 +209,12 @@ export async function createScene(canvas, opts = {}) {
     // 0.15, down from 0.26: at rest the thirteen patches should be a hint of where things
     // are, not thirteen coloured stains on a grey surface. Selection is what paints.
     shader.uniforms.uTintMix = { value: 0.15 };
-    shader.uniforms.uSulcusAO = { value: 0.86 };                     // how dark a groove floor gets
-    shader.uniforms.uMedialFade = { value: 0.82 };                   // how far the medial wall recedes
+    shader.uniforms.uSulcusAO = { value: 0.90 };                     // how dark a groove floor gets
+    // 0.93: the far hemisphere's medial wall is the single biggest source of the veil over
+    // the middle of the brain. Hiding that mesh entirely (a diagnostic render) is the
+    // difference between "structures in a fog" and "structures inside a head".
+    shader.uniforms.uMedialFade = { value: 0.93 };                   // how far the medial wall recedes
+    shader.uniforms.uHiPulse = { value: 0.0 };                       // selection breathing, set per frame
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', [
         '#include <common>',
@@ -123,6 +243,7 @@ export async function createScene(canvas, opts = {}) {
         'uniform float uTintMix;',
         'uniform float uSulcusAO;',
         'uniform float uMedialFade;',
+        'uniform float uHiPulse;',
         'varying float vHi;',
         'varying float vLes;',
         'varying float vSul;',
@@ -136,27 +257,50 @@ export async function createScene(canvas, opts = {}) {
         'diffuseColor.rgb = mix(diffuseColor.rgb, vTint.rgb, uTintMix * vTint.a);',
         // Baked sulcal occlusion. The folds are only 3% of the radius deep, so this — not
         // the silhouette — is what makes them readable through a translucent shell.
-        // Slightly blue in the shade, the way an ambient sky term behaves.
         // Crowns are lifted as much as floors are dropped: the same contrast for half the
-        // darkening, which matters when the shell is only 55% opaque over a black page.
-        'float bAo = mix(1.14, 1.0 - uSulcusAO, clamp(vSul, 0.0, 1.0));',
-        'diffuseColor.rgb *= vec3(bAo * 0.97, bAo * 0.99, bAo * 1.03);',
+        // darkening, which matters when the shell is only 63% opaque over a dark page.
+        // One smoothstep on the attribute first: the relaxation pass that de-saw-toothes it
+        // also flattens it, and putting the S-curve back is free contrast on the RIGHT
+        // spatial scale — it sharpens the shoulder of each groove without narrowing it to
+        // the vertex spacing, which is the thing that reads as crumpled foil.
+        'float bSul = smoothstep(0.02, 0.92, vSul);',
+        'float bAo = mix(1.06, 1.0 - uSulcusAO, bSul);',
+        // Tone shift, crown -> groove. A crown faces the warm key; a groove floor only ever
+        // sees the cool sky term, so it should be BLUER as well as darker. Doing it as a
+        // temperature ramp instead of a flat blue cast is what makes the surface read as
+        // relief rather than as an evenly hazy dome.
+        'vec3 bTone = mix(vec3(1.035, 1.005, 0.962), vec3(0.79, 0.87, 1.08), bSul);',
+        'diffuseColor.rgb *= bAo * bTone;',
         // lesion: desaturate + darken
         'float lesGrey = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114));',
         'diffuseColor.rgb = mix(diffuseColor.rgb, vec3(lesGrey) * 0.42, vLes);',
         // Fresnel rim light — cheap stand-in for subsurface glow
         'float bFres = pow(1.0 - abs(dot(normalize(normal), normalize(vViewPosition))), 3.0);',
-        'totalEmissiveRadiance += uRimColor * (uRim * bFres) * (1.0 - 0.75 * vLes) * (1.0 - 0.6 * vSul);',
+        'totalEmissiveRadiance += uRimColor * (uRim * bFres) * (1.0 - 0.75 * vLes) * (1.0 - 0.8 * bSul);',
         // Selection glow: soft, no hard outline. 1.25 rather than 1.55 — with bloom on top,
-        // more than this clips to white and the accent stops reading as a colour.
-        'totalEmissiveRadiance += vHlCol * (vHi * 1.25);',
-        'diffuseColor.a = clamp(diffuseColor.a + vHi * 0.42, 0.0, 1.0);',
+        // more than this clips to white and the accent stops reading as a colour. uHiPulse
+        // breathes it by +/-10% and is gated on the weight, so a SELECTED patch (1.0) pulses
+        // and a merely HOVERED one (0.35) does not flicker under the cursor.
+        // Feather the glow with the SAME weight the resting tint uses (vTint.a fades to zero
+        // across the outer third of the patch cone). Without it the highlight stops dead at
+        // the patch boundary, and because that boundary follows triangle edges a selected
+        // region reads as a jagged violet sticker rather than as part of the surface. The
+        // resting tint has been feathered since round 3; the highlight never was.
+        'float bHi = vHi * vTint.a;',
+        'float bPulse = 1.0 + uHiPulse * smoothstep(0.55, 1.0, bHi);',
+        'totalEmissiveRadiance += vHlCol * (bHi * 1.10 * bPulse);',
+        // 0.30, not 0.42: pushing a selected patch to fully opaque is the other half of the
+        // sticker look — it stops being a part of a translucent shell.
+        'diffuseColor.a = clamp(diffuseColor.a + bHi * 0.30, 0.0, 1.0);',
         // the medial wall of the FAR hemisphere is the last thing to fade
-        'diffuseColor.a *= 1.0 - uMedialFade * vMed * (1.0 - vHi);',
-        // Grooves are thinner than crowns. At 0.63 opacity the shading contrast alone is
-        // nearly halved by the blend, and letting the dark page show through the sulci
-        // gives it back without touching the geometry.
-        'diffuseColor.a *= 1.0 - 0.24 * vSul;',
+        'diffuseColor.a *= 1.0 - uMedialFade * vMed * (1.0 - bHi);',
+        // Grooves are drawn slightly MORE opaque than crowns — the opposite of rounds 1-5,
+        // which made them thinner so the dark page showed through. Letting the page through
+        // does darken a groove, but it darkens it with BACKGROUND, so the fold pattern reads
+        // as varying transparency: haze. Painting the groove's own shaded colour more solidly
+        // gives the same darkness as surface, and the deep structures stop leaking through
+        // every sulcus at once.
+        'diffuseColor.a = clamp(diffuseColor.a * (1.0 + 0.22 * bSul), 0.0, 1.0);',
       ].join('\n'));
     cortexShader = shader;
   };
@@ -189,6 +333,49 @@ export async function createScene(canvas, opts = {}) {
     }
   }
   const regionIds = CORTICAL_IDS.concat(brain.structureIds);
+
+  /* -------------------------------------------------------------- depth cue state */
+  // Where the whole brain sits, so "how far behind the shell is this structure" can be
+  // asked in camera-relative terms rather than in absolute world coordinates.
+  const brainBounds = new THREE.Box3().setFromObject(brain.group);
+  const brainCentre = brainBounds.getCenter(new THREE.Vector3());
+  const structDepth = new Map();          // id -> 0 (nearest the camera) .. 1 (far side)
+  const brainDepthTint = new THREE.Color(BRAIN_DEPTH_TINT);
+  const tmpVec = new THREE.Vector3();
+  const tmpFwd = new THREE.Vector3();
+  const lastDepthCam = new THREE.Vector3(1e9, 0, 0);
+  let depthDirty = true;
+
+  /**
+   * Recompute each structure's depth along the view axis. Returns true when anything moved,
+   * which is the signal to rewrite the structure materials.
+   *
+   * depth = 0.5 + (structure - brain centre) . viewDirection / (2 * BRAIN_DEPTH_HALF),
+   * clamped — 0 at the front of the deep-structure cloud, 1 at the back of it.
+   */
+  function brainUpdateDepth() {
+    if (!depthDirty && camera.position.distanceToSquared(lastDepthCam) < 1e-8) return false;
+    lastDepthCam.copy(camera.position);
+    depthDirty = false;
+    camera.getWorldDirection(tmpFwd);
+    for (const id of brain.structureIds) {
+      const c = centroids.get(id);
+      if (!c) { structDepth.set(id, 0.5); continue; }
+      tmpVec.copy(c).sub(brainCentre);
+      structDepth.set(id, brainClamp01(0.5 + tmpVec.dot(tmpFwd) / (2 * BRAIN_DEPTH_HALF)));
+    }
+    return true;
+  }
+
+  /* ------------------------------------------- animation clock, pulse and idle drift */
+  let sceneTime = 0;              // seconds since createScene, advanced by update(dt)
+  let pulsePhase = 0;             // -BRAIN_PULSE_AMP .. +BRAIN_PULSE_AMP, the selection breath
+  let idleRotate = true;          // scene.setIdleRotate(); Pathways turns it off while playing
+  let lastInteractAt = 0;
+  let idleRamp = 0;               // 0..1, so the drift eases in instead of snapping to speed
+  const brainUpAxis = new THREE.Vector3(0, 1, 0);
+  const idleOffset = new THREE.Vector3();
+  function brainNoteInteraction() { lastInteractAt = sceneTime; idleRamp = 0; }
 
   /* ------------------------------------------------- highlight / lesion state */
   const hlState = new Map();   // id -> { cur, target, color, dirty }
@@ -236,7 +423,18 @@ export async function createScene(canvas, opts = {}) {
     mat.color.copy(base).lerp(BRAIN_GREY, lw);
     mat.emissive.copy(base);
     if (hl) mat.emissive.lerp(hl.color, Math.min(1, w));
-    mat.emissiveIntensity = (BRAIN_EMISSIVE_REST + BRAIN_EMISSIVE_GAIN * w) * (1 - 0.92 * lw);
+    // Depth cue. A structure on the far side of the brain is tinted towards the backdrop
+    // navy and loses part of its self-illumination, so it sits BEHIND the near ones instead
+    // of beside them. Three things switch it off, in this order of importance:
+    //   - selection/hover (1 - w): whatever you are looking at is always fully readable;
+    //   - the cortex slider: with the shell open there is nothing left to be behind;
+    //   - lesion, which owns the colour already.
+    const veil = Math.min(1, brain.cortexMaterial.opacity / 0.5);
+    const cue = BRAIN_DEPTH_CUE * (structDepth.get(id) || 0) * veil * (1 - w) * (1 - lw);
+    if (cue > 0.001) mat.color.lerp(brainDepthTint, cue);
+    const pulse = 1 + pulsePhase * brainStep01(0.55, 1.0, w);
+    mat.emissiveIntensity = (BRAIN_EMISSIVE_REST + BRAIN_EMISSIVE_GAIN * w)
+      * pulse * (1 - 0.92 * lw) * (1 - 0.5 * cue);
     mat.opacity = 1 - 0.65 * lw;
     mat.transparent = lw > 0.01;
     const sc = 1 + 0.10 * w;
@@ -272,7 +470,8 @@ export async function createScene(canvas, opts = {}) {
   }
 
   let downAt = null;
-  canvas.addEventListener('pointerdown', (e) => { downAt = { x: e.clientX, y: e.clientY, t: performance.now() }; });
+  canvas.addEventListener('pointerdown', (e) => { brainNoteInteraction(); downAt = { x: e.clientX, y: e.clientY, t: performance.now() }; });
+  canvas.addEventListener('wheel', brainNoteInteraction, { passive: true });
   canvas.addEventListener('pointerup', (e) => {
     if (!downAt) return;
     const moved = Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y);
@@ -280,7 +479,7 @@ export async function createScene(canvas, opts = {}) {
     if (moved > 5) return;                                     // a drag, not a click
     if (pickCb) pickCb(brainPickAt(e.clientX, e.clientY), { x: e.clientX, y: e.clientY });
   });
-  canvas.addEventListener('pointermove', (e) => { pendingHover = { x: e.clientX, y: e.clientY }; });
+  canvas.addEventListener('pointermove', (e) => { brainNoteInteraction(); pendingHover = { x: e.clientX, y: e.clientY }; });
   canvas.addEventListener('pointerleave', () => {
     pendingHover = null;
     if (hovered !== null) { hovered = null; if (hoverCb) hoverCb(null, { x: 0, y: 0 }); }
@@ -288,7 +487,9 @@ export async function createScene(canvas, opts = {}) {
 
   /* ---------------------------------------------------------- camera easing */
   let fly = null;
-  controls.addEventListener('start', () => { fly = null; });
+  // 'start' only, never 'change': 'change' also fires for the camera moves this file makes
+  // itself, so listening to it would let the idle drift keep resetting its own timer.
+  controls.addEventListener('start', () => { fly = null; brainNoteInteraction(); });
 
   function brainStartFly(toPos, toTarget, duration) {
     fly = {
@@ -309,7 +510,10 @@ export async function createScene(canvas, opts = {}) {
     const size = renderer.getSize(new THREE.Vector2());
     composer = new EffectComposer(renderer);
     composer.addPass(new RenderPass(scene, camera));
-    bloomPass = new UnrealBloomPass(new THREE.Vector2(size.x, size.y), 0.45, 0.70, 0.72);
+    // strength 0.58 (was 0.45), threshold 0.68 (was 0.72): a selected patch sits around
+    // 0.7 luminance, so the old threshold barely caught it. The backdrop tops out near 0.09
+    // and the resting cortex near 0.45, so neither of them blooms at all.
+    bloomPass = new UnrealBloomPass(new THREE.Vector2(size.x, size.y), 0.58, 0.75, 0.68);
     composer.addPass(bloomPass);
     composer.addPass(new OutputPass());
     composer.setSize(size.x, size.y);
@@ -441,10 +645,12 @@ export async function createScene(canvas, opts = {}) {
         if (camDir.lengthSq() < 1e-6) camDir.set(0, 0.4, 1);
         camDir.normalize();
       }
+      brainNoteInteraction();
       brainStartFly(p.clone().add(camDir.multiplyScalar(dist)), p, duration);
     },
 
     resetView() {
+      brainNoteInteraction();
       brainStartFly(
         new THREE.Vector3(BRAIN_HOME_POS[0], BRAIN_HOME_POS[1], BRAIN_HOME_POS[2]),
         new THREE.Vector3(BRAIN_HOME_TARGET[0], BRAIN_HOME_TARGET[1], BRAIN_HOME_TARGET[2]),
@@ -455,7 +661,22 @@ export async function createScene(canvas, opts = {}) {
       const o = Math.max(0, Math.min(1, v));
       brain.cortexMaterial.opacity = o;
       for (const m of hemiMeshes) m.visible = o > 0.015;
+      depthDirty = true;    // with the shell open, nothing should still be receding behind it
     },
+
+    /**
+     * Slow auto-rotation (4 degrees a second) after BRAIN_IDLE_DELAY seconds of no pointer
+     * interaction. On by default. Any pointer event, wheel, orbit drag or flyTo stops it and
+     * restarts the timer; a mode that is animating the camera itself (Pathways) should turn
+     * it off for the duration.
+     */
+    setIdleRotate(on) {
+      idleRotate = !!on;
+      idleRamp = 0;
+      lastInteractAt = sceneTime;    // always wait out the full delay before drifting again
+      return idleRotate;
+    },
+    get idleRotate() { return idleRotate; },
 
     setQuality(mode) {
       quality = mode || 'auto';
@@ -493,6 +714,11 @@ export async function createScene(canvas, opts = {}) {
     update(dt) {
       if (contextLost) return;
       const now = performance.now();
+      sceneTime += dt;
+      // One breath shared by the cortex patches and the deep structures, so a selection that
+      // spans both pulses in phase.
+      pulsePhase = BRAIN_PULSE_AMP * Math.sin(sceneTime * BRAIN_PULSE_HZ * 2 * Math.PI);
+      if (cortexShader) cortexShader.uniforms.uHiPulse.value = pulsePhase;
 
       // hover raycast, throttled
       if (pendingHover && now - lastHoverAt > 1000 / BRAIN_HOVER_HZ) {
@@ -524,6 +750,16 @@ export async function createScene(canvas, opts = {}) {
         }
       }
       for (const id of touched) brainWrite(id);
+      // The depth cue and the selection breath are camera- and time-driven, not event-driven,
+      // so the structures need a rewrite whenever the view moves or something is lit up.
+      // Fifteen materials, a handful of colour operations each: cheaper than the raycast.
+      const depthMoved = brainUpdateDepth();
+      for (const id of brain.structureIds) {
+        if (touched.has(id)) continue;
+        const hl = hlState.get(id), les = lesState.get(id);
+        const w = hl ? hl.cur : 0;
+        if (depthMoved || w > 0.005 || (les && les.cur > 0.005)) brainWriteStructure(id);
+      }
       if (dirtyGeos.size) {
         for (const g of dirtyGeos) {
           g.attributes.highlight.needsUpdate = true;
@@ -540,6 +776,17 @@ export async function createScene(canvas, opts = {}) {
         camera.position.lerpVectors(fly.fromPos, fly.toPos, e);
         controls.target.lerpVectors(fly.fromTgt, fly.toTgt, e);
         if (fly.t >= fly.duration) fly = null;
+      }
+      // Idle drift. The CAMERA orbits the target — the brain group is never rotated, because
+      // every centroid, pulse curve and overlay is cached in world space. Suspended while a
+      // flight or a pulse is running, so it never fights a mode that is driving the camera.
+      if (idleRotate && !fly && !pulses.length && sceneTime - lastInteractAt > BRAIN_IDLE_DELAY) {
+        idleRamp = Math.min(1, idleRamp + dt / BRAIN_IDLE_RAMP);
+        idleOffset.copy(camera.position).sub(controls.target)
+          .applyAxisAngle(brainUpAxis, BRAIN_IDLE_SPEED * idleRamp * dt);
+        camera.position.copy(controls.target).add(idleOffset);
+      } else if (idleRamp) {
+        idleRamp = 0;
       }
       controls.update();
 

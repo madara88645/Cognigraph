@@ -2,9 +2,6 @@
    settings fields in the drawer. Accent is --accent-scenario (coral) via #app[data-mode="scenario"]. */
 
 /* ---- side panel ---- */
-.sc-pitch { color: var(--ink-3); font-size: 12.5px; margin-bottom: 14px; }
-.sc-pitch strong { color: var(--ink-2); font-weight: 600; }
-
 textarea.sc-input {
   resize: vertical; min-height: 62px; max-height: 220px; line-height: 1.45;
   font: 13px var(--font); margin-bottom: 8px; display: block;
@@ -53,21 +50,23 @@ textarea.sc-input {
 
 /* ---- result card (inside #explain-body) ---- */
 .sc-quote {
-  font-family: var(--display); font-weight: 300; font-size: 15px; line-height: 1.4;
-  color: var(--ink); border-left: 2px solid var(--accent); padding: 2px 0 2px 12px; margin-bottom: 10px;
+  font-family: var(--display); font-weight: 300; font-size: 13.5px; line-height: 1.3;
+  color: var(--ink); border-left: 2px solid var(--accent); padding: 0 0 0 12px; margin-bottom: 6px;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
 }
-.sc-note-line { margin-bottom: 12px; }
 #explain-body h4.sc-h4 {
   font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3);
-  margin: 16px 0 8px; font-weight: 600;
+  margin: 10px 0 4px; font-weight: 600;
 }
 
-.sc-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.sc-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
 .sc-steps li {
-  display: flex; flex-direction: column; gap: 3px;
-  padding: 8px 10px; border-radius: var(--radius-sm);
+  display: flex; flex-direction: column; gap: 1px; cursor: pointer;
+  padding: 5px 10px; border-radius: var(--radius-sm);
   border: 1px solid transparent; transition: background .2s, border-color .2s;
 }
+.sc-steps li:hover { background: rgba(255,255,255,0.03); }
+.sc-steps li:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .sc-steps li.active { background: rgba(255,255,255,0.06); border-color: var(--accent); }
 .sc-step-head { display: flex; align-items: center; gap: 8px; }
 .sc-step-n {
@@ -78,23 +77,35 @@ textarea.sc-input {
 .sc-steps li.active .sc-step-n { background: var(--accent); color: #0b0c10; }
 .sc-step-regions { color: var(--ink); font-weight: 600; font-size: 13px; flex: 1; }
 .sc-step-ms { color: var(--ink-3); flex: none; }
-.sc-step-what { font-size: 12.5px; }
-/* Five steps of full prose ran to four screens at 1280x720. why_it_matters is the secondary line, so
-   it is clamped to two lines and carries the full text in a title attribute for anyone who wants it. */
-.sc-step-why {
-  font-size: 12px;
+/* Six steps of full prose ran to three and a half screens at 1280x720. The list stays a list: only the
+   open step spells itself out, the rest are one row each, and the full step plus its reasoning ride
+   along in the title attribute either way. */
+.sc-step-what { display: none; }
+.sc-steps li.active .sc-step-what {
+  font-size: 12.5px; line-height: 1.35;
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
   overflow: hidden;
 }
-.sc-step-regions-full { font-size: 11.5px; }
+
+/* closed disclosures: the rationale and the engine explainer */
+.sc-fold { margin: 10px 0 0; }
+.sc-fold > summary {
+  cursor: pointer; list-style: none; color: var(--ink-3);
+  font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; padding: 2px 0;
+}
+.sc-fold > summary::-webkit-details-marker { display: none; }
+.sc-fold > summary::after { content: " ›"; }
+.sc-fold[open] > summary::after { content: " ⌄"; }
+.sc-fold > summary:hover { color: var(--accent); }
+.sc-fold p { margin: 4px 0 6px; font-size: 13px; }
 
 /* Refusal card: deliberately plain — no badge, no bars, nothing that looks like a result. */
 .sc-refusal { font-size: 13.5px; line-height: 1.55; color: var(--ink-2); max-width: 52ch; }
 
 /* ---- neuromodulator bars ---- */
-.sc-bars { display: flex; flex-direction: column; gap: 5px; margin-bottom: 8px; }
-.sc-bar { display: grid; grid-template-columns: 96px 1fr 34px; align-items: center; gap: 10px; }
-.sc-bar-name { font-size: 12px; color: var(--ink-2); }
+.sc-bars { display: flex; flex-direction: column; gap: 2px; margin-bottom: 4px; }
+.sc-bar { display: grid; grid-template-columns: 96px 1fr 34px; align-items: center; gap: 10px; line-height: 1.2; }
+.sc-bar-name { font-size: 11.5px; color: var(--ink-2); }
 .sc-bar-track {
   position: relative; height: 7px; border-radius: 4px;
   background: rgba(255,255,255,0.07); overflow: hidden;
@@ -109,11 +120,12 @@ textarea.sc-input {
   background: rgba(255,255,255,0.55);
 }
 .sc-bar-val { color: var(--ink-3); text-align: right; }
-.sc-bar-legend { margin-top: 2px; }
 
 .sc-rationale { font-size: 13px; color: var(--ink-2); }
-.sc-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0 10px; }
-.sc-meta { margin-top: 8px; }
+.sc-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0 8px; }
+.sc-meta { margin-top: 6px; }
+.sc-bar-legend { margin-top: 0; font-size: 12px; }
+#app[data-mode="scenario"] #explain-body .note { margin: 8px 0; }
 
 /* ---- settings fields (drawer) ---- */
 .sc-field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
@@ -125,12 +137,11 @@ textarea.sc-input {
 
 @media (max-width: 760px) {
   .sc-bar { grid-template-columns: 82px 1fr 32px; gap: 8px; }
-  .sc-pitch { display: none; }
 }
 
 /* The result card is long (steps + bars + rationale), so Scenario gets a taller Explain panel than the
    52vh default. The timeline sits below it at bottom:14px/height:44px, which this must not reach. */
-#app[data-mode="scenario"] #explain-panel { max-height: 60vh; }
+#app[data-mode="scenario"] #explain-panel { max-height: 62vh; }
 @media (max-height: 700px) { #app[data-mode="scenario"] #explain-panel { max-height: 52vh; } }
 
 /* compact settings facts */

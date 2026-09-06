@@ -21,41 +21,29 @@
 .pw-step .muted { font-size: 11px; }
 
 /* explain panel -------------------------------------------------------------- */
-/* The caveat note is the last block and must stay on screen without scrolling at 720p, so the
-   repeated scenario line is clamped and the evidence sits behind a disclosure. */
-.pw-scenario {
-  font-family: var(--display); font-weight: 300; font-style: italic;
-  font-size: 14.5px; line-height: 1.35; color: var(--ink); margin-bottom: 8px;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-}
-.pw-regions { margin-top: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.pw-evidence { margin: 0 0 8px; }
-.pw-evidence > summary {
+/* One sentence is visible; the reasoning and the evidence sit behind closed disclosures, so the
+   caveat note is only a couple of lines below the fold even on a short screen. */
+.pw-lede { font-size: 14.5px; line-height: 1.45; color: var(--ink-2); margin: 0 0 8px; }
+.pw-more { margin: 0 0 4px; }
+.pw-more > summary {
   cursor: pointer; list-style: none; color: var(--ink-3);
   font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; padding: 2px 0;
 }
-.pw-evidence > summary::-webkit-details-marker { display: none; }
-.pw-evidence > summary::after { content: " ›"; }
-.pw-evidence[open] > summary::after { content: " ⌄"; }
-.pw-evidence > summary:hover { color: var(--accent); }
-.pw-evidence p { margin: 2px 0 0; }
+.pw-more > summary::-webkit-details-marker { display: none; }
+.pw-more > summary::after { content: " ›"; }
+.pw-more[open] > summary::after { content: " ⌄"; }
+.pw-more > summary:hover { color: var(--accent); }
+.pw-more p { margin: 2px 0 6px; font-size: 13px; }
 #app[data-mode="pathways"] #explain-body p { margin-bottom: 8px; }
-/* The pathway caveat must be readable without scrolling on a 720p screen, and the step prose alone
-   is taller than the panel there. So it stays last in reading order but pins to the bottom of the
-   scrollport: content scrolls behind it, the caveat never leaves the screen. */
+/* The pathway caveat stays last in reading order but pins to the bottom of the scrollport, so it
+   never leaves the screen while the step prose scrolls behind it. Two sentences fit without a
+   scrollbar of its own. */
 #app[data-mode="pathways"] #explain-body .note {
   position: sticky; bottom: 0; z-index: 1;
   margin: 10px 0 0; padding: 8px 10px;
-  max-height: 84px; overflow-y: auto; overscroll-behavior: contain;
   background: rgba(22, 25, 36, 0.96);
   -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
   box-shadow: 0 -10px 16px rgba(10, 11, 15, 0.5);
-  -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 13px), rgba(0, 0, 0, 0.25) 100%);
-  mask-image: linear-gradient(180deg, #000 calc(100% - 13px), rgba(0, 0, 0, 0.25) 100%);
-}
-/* the caveats run to ~700 characters: pin the opening lines and let the rest scroll inside the strip */
-@media (min-height: 900px) {
-  #app[data-mode="pathways"] #explain-body .note { max-height: 176px; }
 }
 
 /* timeline -------------------------------------------------------------------- */

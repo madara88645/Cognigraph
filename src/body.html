@@ -6,6 +6,7 @@
       <button class="mode-pill" data-mode="atlas" title="Explore the atlas (2)">Atlas</button>
       <button class="mode-pill" data-mode="neurons" title="Parametric neuron simulation (3)">Neurons</button>
       <button class="mode-pill" data-mode="scenario" title="Describe a scenario, watch the brain respond (4)">Scenario</button>
+      <button class="mode-pill" data-mode="learn" title="Quiz yourself; missed items come back later (5)">Learn</button>
     </nav>
     <div class="topbar-right">
       <label class="quality" title="Rendering quality">
@@ -64,6 +65,8 @@
     <div id="how-body"></div>
   </aside>
 
+  <div id="ask-panel" class="glass" hidden></div>
+  <div id="lab-overlay" class="glass" hidden></div>
   <div id="disclaimer">Educational simulation. Not medical software. Regions are simplified hubs, not the whole story.</div>
   <div id="toast" hidden></div>
   <div id="webgl-lost" class="glass" hidden>WebGL context was lost. <button id="webgl-reload" class="text-btn">Reload</button></div>

@@ -38,8 +38,8 @@ const SC_MOD_LABELS = {
   serotonin: 'Serotonin', gaba: 'GABA tone', cortisol: 'Cortisol / stress',
 };
 
-const SC_CAVEATS = 'This sequence was assembled for one typed sentence, not measured. Treat the order '
-  + 'as a teaching sketch and any millisecond value as borrowed from group averages in lab paradigms.';
+const SC_CAVEATS = 'Assembled for one typed sentence, not measured. Treat the order as a sketch and any '
+  + 'millisecond value as borrowed from lab group averages.';
 
 const sc = {
   app: null,
@@ -58,8 +58,10 @@ const sc = {
 
 function scEl(id) { return document.getElementById(id); }
 
+/** Quotes are escaped too: LLM text lands in `title="…"` attributes, where a bare " would break out. */
 function scEsc(s) {
-  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 function scOn(el, type, fn) {
@@ -82,7 +84,8 @@ function scShortName(id) {
   const r = REGIONS.find((x) => x.id === id);
   if (!r) return id;
   const paren = r.name.match(/\(([^()]{1,12})\)\s*$/);
-  return paren ? paren[1] : r.name.replace(/ Cortex$/, '');
+  if (paren) return paren[1];
+  return r.name.replace(/\s*\([^()]*\)\s*$/, '').replace(/ Cortex$/, '');
 }
 
 /** True when the page is running inside a sandbox we already know blocks outbound fetch. */
@@ -201,6 +204,11 @@ function scSetStatus(kind, extra) {
 
 /* ---------- result card ---------- */
 
+/** One closed disclosure, so the detail is reachable without being on screen by default. */
+function scFold(summary, inner) {
+  return `<details class="sc-fold"><summary>${scEsc(summary)}</summary>${inner}</details>`;
+}
+
 function scBars(profile) {
   return `<div class="sc-bars">` + LLM_MODULATORS.map((k) => {
     const v = typeof profile[k] === 'number' ? profile[k] : LLM_BASELINE[k];
@@ -214,19 +222,27 @@ function scBars(profile) {
   }).join('') + `</div>`;
 }
 
+/** First sentence only. The rest of a long step stays on the element as a tooltip, not on screen. */
+function scFirstSentence(text) {
+  const t = String(text || '').trim();
+  const m = t.match(/^[\s\S]*?[.!?](?=\s|$)/);
+  const first = m ? m[0].trim() : t;
+  return (first.length >= 20 || !t) ? first : t;
+}
+
 function scStepsHtml(result) {
   return `<ol class="sc-steps" id="sc-steps">` + result.steps.map((s, i) => {
     const names = s.region_ids.map(scShortName).join(' + ');
     const ms = (typeof s.approx_ms === 'number') ? '~' + s.approx_ms + ' ms' : 'order only';
-    return `<li data-i="${i}">
+    const what = scFirstSentence(s.what_happens);
+    const full = [s.what_happens, s.why_it_matters].filter(Boolean).join('\n\n');
+    return `<li data-i="${i}"${i === 0 ? ' class="active"' : ''} title="${scEsc(full)}" role="button" tabindex="0">
       <span class="sc-step-head">
         <span class="sc-step-n mono">${i + 1}</span>
         <span class="sc-step-regions">${scEsc(names)}</span>
         <span class="sc-step-ms mono">${scEsc(ms)}</span>
       </span>
-      <span class="sc-step-what">${scEsc(s.what_happens)}</span>
-      ${s.why_it_matters ? `<span class="sc-step-why muted" title="${scEsc(s.why_it_matters)}">${scEsc(s.why_it_matters)}</span>` : ''}
-
+      <span class="sc-step-what">${scEsc(what)}</span>
     </li>`;
   }).join('') + `</ol>`;
 }
@@ -274,8 +290,8 @@ function scShowResult(result, note) {
   ].filter(Boolean).map(scEsc).join(' · ');
   const dropped = scDroppedHtml(result.dropped);
   const screened = (result.screened && result.screened.flagged)
-    ? `<div class="note">The model's wording drifted toward diagnosis or advice. CogniGraph does not
-       diagnose; read this as a story about mechanisms only.</div>`
+    ? `<div class="note">The wording drifted toward diagnosis or advice. Read it as a story about
+       mechanisms only.</div>`
     : '';
 
   explain({
@@ -284,7 +300,6 @@ function scShowResult(result, note) {
     badgeClass: 'low',
     html: `
       ${sc.lastText ? `<p class="sc-quote">${scEsc(sc.lastText)}</p>` : ''}
-      ${sc.note ? `<p class="sc-note-line muted">${scEsc(sc.note)}</p>` : ''}
       <div class="sc-actions">
         <button class="text-btn primary" id="sc-replay" type="button">Replay on the brain</button>
         <button class="text-btn" id="sc-neurons" type="button">Send to Neurons</button>
@@ -292,20 +307,33 @@ function scShowResult(result, note) {
       ${scStepsHtml(result)}
       <h4 class="sc-h4">Neuromodulator profile</h4>
       ${scBars(result.neuromodulators)}
-      <p class="muted sc-bar-legend">The tick on each bar is that system's resting value in this app, so a
-        bar past its tick means "more in play than usual", not a concentration.</p>
-      <h4 class="sc-h4">${llm ? 'What the model said, verbatim' : 'How the heuristic got here'}</h4>
-      <p class="sc-rationale">${scEsc(result.rationale || '(no rationale returned)')}</p>
-      ${dropped}
+      <p class="muted sc-bar-legend">Past the tick = more in play than usual, not a dose.</p>
+      <details class="sc-fold">
+        <summary>Why these regions</summary>
+        <p class="sc-rationale">${scEsc(result.rationale || '(no rationale returned)')}</p>
+        ${sc.note ? `<p class="muted">${scEsc(sc.note)}</p>` : ''}
+        ${dropped}
+        <p class="muted sc-meta">${meta}</p>
+      </details>
       ${screened}
       <div class="note">${llm
-        ? 'A language model wrote this. It is a plausible-sounding narrative assembled from text, not a reading of anyone\'s brain and not a citation of any study. Region ids were checked against this app\'s 28; everything else — the order, the latencies, the profile — is the model\'s claim, shown to you unedited so you can judge it.'
-        : 'This came from keyword matching against eight built-in pathways and a small word list. It cannot understand your sentence; it can only notice words in it. Treat it as a starting point for looking around the model, not as an answer.'}</div>
-      <p class="muted sc-meta">${meta}</p>`,
+        ? 'A language model wrote this: a plausible narrative, not a reading of anyone\'s brain. Only the region ids were checked.'
+        : 'Keyword matching, not understanding: it notices words and picks the nearest built-in pathway.'}</div>`,
   });
 
   scOn(scEl('sc-replay'), 'click', scReplay);
   scOn(scEl('sc-neurons'), 'click', scToNeurons);
+  // Only the open step shows its sentence, so the list stays a list; clicking another one opens it.
+  const list = scEl('sc-steps');
+  if (list) {
+    const pick = (el) => { const i = parseInt(el.dataset.i, 10); if (isFinite(i)) scMarkStep(i); };
+    scOn(list, 'click', (e) => { const li = e.target.closest ? e.target.closest('li[data-i]') : null; if (li) pick(li); });
+    scOn(list, 'keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const li = e.target.closest ? e.target.closest('li[data-i]') : null;
+      if (li) { e.preventDefault(); pick(li); }
+    });
+  }
 }
 
 function scIntro() {
@@ -314,14 +342,14 @@ function scIntro() {
     badge: 'plausible narrative, not evidence',
     badgeClass: 'low',
     html: `
-      <p>Type a moment on the left — or pick one of the six examples — and this mode turns it into an
-      ordered list of regions with a neuromodulator profile, then replays it on the brain.</p>
-      <p>With no API key it runs a <strong>local keyword heuristic</strong>: it matches your words against
-      the eight built-in pathways and a small lexicon, and tells you which words it matched. With your own
-      OpenRouter key it asks a <strong>language model</strong> instead, then throws away anything the model
-      invented that this app cannot verify — unknown region ids, out-of-range numbers, missing fields.</p>
-      <div class="note">Not evidence. One engine matches keywords, the other is a text model guessing; the
-      confidence number is the engine's own guess about itself.</div>`,
+      <p>Type a moment on the left, or pick an example. You get an ordered list of regions and a
+      neuromodulator profile, replayed on the brain.</p>
+      ${scFold('Which engine runs', `
+        <p>With no key it is a <strong>local keyword heuristic</strong>: it matches your words against the
+        eight built-in pathways and a small lexicon, and tells you which words it matched.</p>
+        <p>With your own OpenRouter key it asks a <strong>language model</strong>, then drops anything this
+        app cannot verify: unknown region ids, out-of-range numbers, missing fields.</p>`)}
+      <div class="note">Not evidence. One engine matches keywords, the other is a text model guessing.</div>`,
   });
 }
 
@@ -376,8 +404,8 @@ function scAbort() {
 function scFailureMessage(res) {
   if (res && res.aborted) return 'The LLM request timed out after 20 seconds, so the local heuristic ran instead.';
   if (res && res.blocked) {
-    return 'Scenario’s LLM path is blocked in this sandbox; open the hosted version or the local file. '
-      + 'Local heuristic still works.';
+    return 'The LLM path is blocked in this sandbox — open the hosted version or the local file. '
+      + 'The heuristic still works.';
   }
   const reason = (res && res.reason) ? res.reason : 'The LLM call failed for an unknown reason.';
   return reason + ' The local heuristic ran instead.';
@@ -388,14 +416,12 @@ function scFailureMessage(res) {
 const SC_REFUSALS = {
   crisis: {
     title: 'This isn’t something to simulate',
-    body: 'This reads as being about your own wellbeing rather than a scenario to visualise. CogniGraph '
-      + 'is an educational simulation and can’t help with that. If you’re struggling, please reach out to '
-      + 'someone you trust or a local helpline.',
+    body: 'This reads as being about your own wellbeing, and an educational simulation can’t help with '
+      + 'that. If you’re struggling, please reach out to someone you trust or a local helpline.',
   },
   medical: {
     title: 'This isn’t something to simulate',
-    body: 'CogniGraph does not diagnose or advise on health. It shows textbook-level mechanisms of '
-      + 'everyday moments; try describing a moment instead.',
+    body: 'CogniGraph does not diagnose or advise on health. Try describing an everyday moment instead.',
   },
 };
 
@@ -432,7 +458,7 @@ async function scRun(text) {
 
   if (!key) {
     scSetStatus('local');
-    scShowResult(classifyLocal(t), 'Keyword heuristic (no key). Add a key in Settings for the language model.');
+    scShowResult(classifyLocal(t), 'Keyword heuristic — no key stored. Add one in Settings for the language model.');
     return;
   }
 
@@ -454,8 +480,7 @@ async function scRun(text) {
 
   if (res && res.ok) {
     scSetStatus('llm', { model: res.model || model });
-    scShowResult(res, 'Written by ' + (res.model || model) + ' through OpenRouter, then filtered: unknown '
-      + 'region ids removed, every number clamped to its range.');
+    scShowResult(res, 'Written by ' + (res.model || model) + ' through OpenRouter, then filtered.');
     return;
   }
 
@@ -476,7 +501,7 @@ function scSettingsHtml() {
   const custom = LLM_MODELS.some((m) => m.id === model) ? '' : `<option value="${scEsc(model)}" selected>${scEsc(model)} (stored)</option>`;
   return `
     <h3>OpenRouter key</h3>
-    <p class="muted">Optional. Without a key, Scenario uses the built-in keyword heuristic.</p>
+    <p class="muted">Optional — without one, Scenario uses the built-in keyword heuristic.</p>
     <label class="sc-field">
       <span>API key</span>
       <input type="password" id="sc-key" class="search" autocomplete="off" spellcheck="false"
@@ -488,8 +513,8 @@ function scSettingsHtml() {
       <span class="muted" id="sc-key-status">${key ? 'Stored: ' + scEsc(llmMaskKey(key)) : 'No key stored.'}</span>
     </div>
     <ul class="sc-facts muted">
-      <li>Stored only in this browser (localStorage). No server of its own.</li>
-      <li>Sent only to openrouter.ai, once per Run, with your sentence.</li>
+      <li>Stored only in this browser. No server of its own.</li>
+      <li>Sent only to openrouter.ai, once per Run.</li>
       <li>Shared computer? Clear it when you are done.</li>
     </ul>
 
@@ -498,7 +523,7 @@ function scSettingsHtml() {
       <span>Model id</span>
       <select id="sc-model">${custom}${options}</select>
     </label>
-    <p class="muted">Ids are passed through as-is; a retired id returns 404 and the heuristic takes over.</p>`;
+    <p class="muted">Ids pass through as-is; a retired id returns 404 and the heuristic takes over.</p>`;
 }
 
 function scRegisterSettings() {
