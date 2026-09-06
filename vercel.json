@@ -1,6 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "",
+  "buildCommand": "",
   "outputDirectory": "dist",
-  "buildCommand": "python3 build.py",
+  "cleanUrls": true,
   "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
 }
