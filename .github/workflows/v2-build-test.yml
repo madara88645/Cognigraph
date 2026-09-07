@@ -1,0 +1,26 @@
+name: v2 build and test
+on:
+  push:
+    branches: [v2-single-file, master]
+  pull_request:
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build the single-file bundle
+        run: python3 build.py
+      - name: Unit tests
+        run: node --test 'tests/*.test.mjs'
+      - name: Committed dist must match the build
+        run: |
+          if ! git diff --exit-code -- dist/index.html; then
+            echo "dist/index.html is stale. Run python3 build.py and commit the result."
+            exit 1
+          fi

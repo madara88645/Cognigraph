@@ -1,0 +1,15 @@
+/* 10-brain.css — only what the 3D stage needs on top of the base sheet. */
+
+#stage { cursor: grab; }
+#stage:active { cursor: grabbing; }
+
+/* the hover chip sits over a busy 3D image, so give it a little more contrast */
+#hover-label { background: rgba(8, 9, 13, 0.92); letter-spacing: 0.01em; }
+
+/* context loss is the one failure the user can act on — make it look like a warning */
+#webgl-lost { border-color: rgba(255, 107, 122, 0.45); color: var(--ink); max-width: 320px; text-align: center; }
+#webgl-lost .text-btn { margin-left: 8px; }
+
+/* the cortex slider is the main way to see through the shell: give it room to read */
+#view-controls label span { letter-spacing: 0.02em; }
+#view-controls input[type=range] { width: 96px; }

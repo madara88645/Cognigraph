@@ -1,0 +1,161 @@
+/* Scenario mode (Worker B): input + presets + status in the side panel, result card in Explain,
+   settings fields in the drawer. Accent is --accent-scenario (coral) via #app[data-mode="scenario"]. */
+
+/* ---- side panel ---- */
+textarea.sc-input {
+  resize: vertical; min-height: 62px; max-height: 220px; line-height: 1.45;
+  font: 13px var(--font); margin-bottom: 8px; display: block;
+}
+
+.sc-runrow { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.sc-hint { color: var(--ink-3); font-size: 11px; }
+
+/* ---- status line ---- */
+.sc-status {
+  display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
+  font-size: 12px; color: var(--ink-2); line-height: 1.4;
+  padding: 7px 10px; border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.04); border: 1px solid var(--line);
+}
+.sc-status .muted { font-size: 11.5px; }
+.sc-status .mono { font-size: 11.5px; color: var(--ink); }
+.sc-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-3); flex: none; }
+.sc-status.sc-ok { border-color: rgba(94,225,214,.35); }
+.sc-status.sc-ok .sc-dot { background: #5ee1d6; box-shadow: 0 0 8px rgba(94,225,214,.7); }
+.sc-status.sc-warn { border-color: rgba(255,107,122,.35); }
+.sc-status.sc-warn .sc-dot { background: var(--danger); box-shadow: 0 0 8px rgba(255,107,122,.6); }
+.sc-status.sc-running { border-color: var(--accent); }
+.sc-spinner {
+  width: 11px; height: 11px; flex: none; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.18); border-top-color: var(--accent);
+  animation: sc-spin .8s linear infinite;
+}
+@keyframes sc-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .sc-spinner { animation-duration: 2.4s; } }
+
+/* ---- preset chips ---- */
+.sc-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.sc-chip {
+  display: inline-flex; align-items: center; gap: 6px; max-width: 100%;
+  border: 1px solid var(--line); background: rgba(255,255,255,0.04); color: var(--ink-2);
+  font: 500 12px var(--font); padding: 6px 11px; border-radius: 999px; cursor: pointer;
+  text-align: left; transition: background .18s, border-color .18s, color .18s;
+}
+.sc-chip:hover { background: rgba(255,255,255,0.1); color: var(--ink); border-color: var(--accent); }
+.sc-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sc-chip-emoji { font-size: 13px; line-height: 1; }
+
+.sc-settings-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.sc-settings-row .muted { font-size: 11.5px; }
+
+/* ---- result card (inside #explain-body) ---- */
+.sc-quote {
+  font-family: var(--display); font-weight: 300; font-size: 13.5px; line-height: 1.3;
+  color: var(--ink); border-left: 2px solid var(--accent); padding: 0 0 0 12px; margin-bottom: 6px;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
+}
+#explain-body h4.sc-h4 {
+  font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3);
+  margin: 10px 0 4px; font-weight: 600;
+}
+
+.sc-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
+.sc-steps li {
+  display: flex; flex-direction: column; gap: 1px; cursor: pointer;
+  padding: 5px 10px; border-radius: var(--radius-sm);
+  border: 1px solid transparent; transition: background .2s, border-color .2s;
+}
+.sc-steps li:hover { background: rgba(255,255,255,0.03); }
+.sc-steps li:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.sc-steps li.active { background: rgba(255,255,255,0.06); border-color: var(--accent); }
+.sc-step-head { display: flex; align-items: center; gap: 8px; }
+.sc-step-n {
+  width: 18px; height: 18px; flex: none; border-radius: 50%; font-size: 10px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.08); color: var(--ink-2);
+}
+.sc-steps li.active .sc-step-n { background: var(--accent); color: #0b0c10; }
+.sc-step-regions { color: var(--ink); font-weight: 600; font-size: 13px; flex: 1; }
+.sc-step-ms { color: var(--ink-3); flex: none; }
+/* Six steps of full prose ran to three and a half screens at 1280x720. The list stays a list: only the
+   open step spells itself out, the rest are one row each, and the full step plus its reasoning ride
+   along in the title attribute either way. */
+.sc-step-what { display: none; }
+.sc-steps li.active .sc-step-what {
+  font-size: 12.5px; line-height: 1.35;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
+  overflow: hidden;
+}
+
+/* closed disclosures: the rationale and the engine explainer */
+.sc-fold { margin: 10px 0 0; }
+.sc-fold > summary {
+  cursor: pointer; list-style: none; color: var(--ink-3);
+  font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; padding: 2px 0;
+}
+.sc-fold > summary::-webkit-details-marker { display: none; }
+.sc-fold > summary::after { content: " ›"; }
+.sc-fold[open] > summary::after { content: " ⌄"; }
+.sc-fold > summary:hover { color: var(--accent); }
+.sc-fold p { margin: 4px 0 6px; font-size: 13px; }
+
+/* Refusal card: deliberately plain — no badge, no bars, nothing that looks like a result. */
+.sc-refusal { font-size: 13.5px; line-height: 1.55; color: var(--ink-2); max-width: 52ch; }
+
+/* ---- neuromodulator bars ---- */
+.sc-bars { display: flex; flex-direction: column; gap: 2px; margin-bottom: 4px; }
+.sc-bar { display: grid; grid-template-columns: 96px 1fr 34px; align-items: center; gap: 10px; line-height: 1.2; }
+.sc-bar-name { font-size: 11.5px; color: var(--ink-2); }
+.sc-bar-track {
+  position: relative; height: 7px; border-radius: 4px;
+  background: rgba(255,255,255,0.07); overflow: hidden;
+}
+.sc-bar-track i {
+  position: absolute; left: 0; top: 0; bottom: 0; display: block; border-radius: 4px;
+  background: var(--accent); opacity: .9;
+}
+.sc-bar-down .sc-bar-track i { background: var(--ink-3); opacity: .8; }
+.sc-bar-track b {
+  position: absolute; top: -2px; bottom: -2px; width: 1px;
+  background: rgba(255,255,255,0.55);
+}
+.sc-bar-val { color: var(--ink-3); text-align: right; }
+
+.sc-rationale { font-size: 13px; color: var(--ink-2); }
+.sc-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0 8px; }
+.sc-meta { margin-top: 6px; }
+.sc-bar-legend { margin-top: 0; font-size: 12px; }
+#app[data-mode="scenario"] #explain-body .note { margin: 8px 0; }
+
+/* ---- settings fields (drawer) ---- */
+.sc-field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
+.sc-field > span { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+.sc-field input.search { margin-bottom: 0; font-family: var(--mono); font-size: 12px; }
+.sc-field select { width: 100%; padding: 8px 10px; border-radius: 10px; }
+.sc-field-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.sc-field-actions .muted { font-size: 11.5px; }
+
+@media (max-width: 760px) {
+  .sc-bar { grid-template-columns: 82px 1fr 32px; gap: 8px; }
+}
+
+/* The result card is long (steps + bars + rationale), so Scenario gets a taller Explain panel than the
+   52vh default. The timeline sits below it at bottom:14px/height:44px, which this must not reach. */
+#app[data-mode="scenario"] #explain-panel { max-height: 62vh; }
+@media (max-height: 700px) { #app[data-mode="scenario"] #explain-panel { max-height: 52vh; } }
+
+/* compact settings facts */
+.sc-facts { margin: 8px 0 4px; padding-left: 18px; font-size: 12.5px; }
+.sc-facts li { margin-bottom: 3px; }
+
+/* ---- lesioned steps ---- */
+/* The step stays in the list and says what is wrong with it. Dropping it would show a chain that
+   still works, which is exactly the thing a lesion stops being true. */
+.sc-steps li[data-broken] { border-color: rgba(255,107,122,.35); background: rgba(255,107,122,0.06); }
+.sc-steps li[data-broken] .sc-step-n { background: rgba(255,107,122,.28); color: #ffc2c9; }
+.sc-steps li[data-broken].active { border-color: var(--danger); }
+.sc-step-broken {
+  display: block; font-size: 11px; line-height: 1.35; color: #ffa3ad;
+  padding-left: 26px; margin-top: 1px;
+}
+#explain-body .note.sc-lesion-note { border-left-color: var(--danger); }

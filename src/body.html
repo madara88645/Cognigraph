@@ -1,0 +1,73 @@
+<div id="app" data-mode="pathways">
+  <header id="topbar" class="glass">
+    <div class="brand"><button id="panel-open" class="icon-btn" title="Show panel">☰</button><span class="brand-mark"></span><span class="brand-name">CogniGraph</span><span class="brand-sub">cognitive neuroscience, explained</span></div>
+    <nav id="mode-switcher" aria-label="Mode">
+      <button class="mode-pill" data-mode="pathways" title="Cognitive pathway journeys (1)">Pathways</button>
+      <button class="mode-pill" data-mode="atlas" title="Explore the atlas (2)">Atlas</button>
+      <button class="mode-pill" data-mode="neurons" title="Parametric neuron simulation (3)">Neurons</button>
+      <button class="mode-pill" data-mode="scenario" title="Describe a scenario, watch the brain respond (4)">Scenario</button>
+      <button class="mode-pill" data-mode="learn" title="Quiz yourself; missed items come back later (5)">Learn</button>
+    </nav>
+    <div class="topbar-right">
+      <label class="quality" title="Rendering quality">
+        <span>Quality</span>
+        <select id="quality-toggle"><option value="auto">Auto</option><option value="high">High</option><option value="low">Low</option></select>
+      </label>
+      <button id="help-btn" class="icon-btn" title="How this simulation works (?)">?</button>
+    </div>
+  </header>
+
+  <canvas id="stage" aria-label="3D brain"></canvas>
+  <div id="hover-label" hidden></div>
+
+  <aside id="side-panel" class="glass">
+    <button id="side-panel-toggle" class="icon-btn" title="Collapse panel">‹</button>
+    <div id="side-panel-body"></div>
+  </aside>
+
+  <section id="explain-panel" class="glass" aria-live="polite">
+    <div class="explain-head"><span class="explain-kicker">Explain this</span><span class="explain-head-right"><span id="explain-badge" class="badge" hidden></span><button id="explain-ask" class="text-btn" hidden title="Ask about this (needs an OpenRouter key)">Ask</button></span></div>
+    <h2 id="explain-title">Welcome</h2>
+    <div id="explain-body"><p>Drag to rotate, scroll to zoom, click a region.</p></div>
+  </section>
+
+  <div id="view-controls" class="glass">
+    <label title="Cortex opacity"><span>Cortex</span><input id="cortex-opacity" type="range" min="0" max="1" step="0.01" value="0.63"></label>
+    <button id="reset-view" class="text-btn" title="Reset camera (R)">Reset view</button>
+  </div>
+
+  <footer id="timeline" class="glass" hidden>
+    <div class="transport">
+      <button id="tl-prev" class="icon-btn" title="Previous step (←)">⏮</button>
+      <button id="tl-play" class="icon-btn" title="Play / pause (space)">▶</button>
+      <button id="tl-next" class="icon-btn" title="Next step (→)">⏭</button>
+    </div>
+    <div id="timeline-track" role="slider" aria-label="Pathway timeline"></div>
+    <div id="timeline-readout" class="mono">0 ms</div>
+  </footer>
+
+  <section id="neuron-plots" class="glass" hidden>
+    <div class="plot"><span class="plot-label">Spike raster</span><canvas id="plot-raster"></canvas></div>
+    <div class="plot"><span class="plot-label">Membrane potential v (and u)</span><canvas id="plot-trace"></canvas></div>
+    <div class="plot"><span class="plot-label">Population rate</span><canvas id="plot-rate"></canvas></div>
+    <details class="plot advanced"><summary>Advanced: phase portrait (v, u)</summary><canvas id="plot-phase"></canvas></details>
+  </section>
+
+  <div id="glossary-popover" class="glass" hidden role="dialog">
+    <div class="gp-term" id="gp-term"></div>
+    <div class="gp-def" id="gp-def"></div>
+    <button class="text-btn" id="gp-more">Open full glossary</button>
+  </div>
+
+  <aside id="how-drawer" class="glass" hidden>
+    <div class="drawer-head"><h2>How this simulation works</h2><button id="how-close" class="icon-btn" title="Close (Esc)">×</button></div>
+    <nav id="how-tabs"></nav>
+    <div id="how-body"></div>
+  </aside>
+
+  <div id="ask-panel" class="glass" hidden></div>
+  <div id="lab-overlay" class="glass" hidden></div>
+  <div id="disclaimer">Educational simulation. Not medical software. Regions are simplified hubs, not the whole story.</div>
+  <div id="toast" hidden></div>
+  <div id="webgl-lost" class="glass" hidden>WebGL context was lost. <button id="webgl-reload" class="text-btn">Reload</button></div>
+</div>

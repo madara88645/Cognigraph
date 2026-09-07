@@ -1,0 +1,1420 @@
+{
+ "content": {
+  "regions": [
+   {
+    "id": "v1",
+    "name": "Primary Visual Cortex (V1)",
+    "group": "occipital lobe",
+    "one_liner": "The first cortical stop for vision; builds a retinotopic map of edges, contrast and orientation.",
+    "functions": [
+     "Retinotopic mapping of the visual field",
+     "Edge, contrast and orientation detection (simple/complex cells)",
+     "Feeds the ventral ('what') and dorsal ('where/how') visual streams"
+    ],
+    "lesion_effects": "Damage causes a scotoma (blind patch) in the corresponding part of the visual field; bilateral destruction causes cortical blindness, sometimes with 'blindsight' \u2014 unconscious residual visual responding via spared subcortical routes.",
+    "approx_location": "Posterior pole of the occipital lobe, along the calcarine sulcus, bilateral.",
+    "key_connections": [
+     "Thalamus (LGN)",
+     "V4",
+     "MT/V5",
+     "Posterior parietal cortex"
+    ],
+    "famous_case_or_evidence": "Blindsight patients (e.g., patient D.B., studied by Weiskrantz) respond to stimuli in a subjectively 'blind' field, showing vision without V1-based awareness."
+   },
+   {
+    "id": "v4",
+    "name": "Visual Area V4",
+    "group": "occipito-temporal (ventral stream)",
+    "one_liner": "Ventral-stream specialist for color constancy and intermediate shape/form.",
+    "functions": [
+     "Color processing and color constancy",
+     "Curvature and intermediate shape-feature coding",
+     "Feeds object- and face-recognition areas downstream"
+    ],
+    "lesion_effects": "Damage can cause cerebral achromatopsia \u2014 loss of color perception (the world looks gray) despite otherwise intact vision and acuity.",
+    "approx_location": "Ventral occipito-temporal cortex, anterior to V1/V2, bilateral.",
+    "key_connections": [
+     "V1",
+     "FFA/fusiform gyrus",
+     "Posterior parietal cortex"
+    ]
+   },
+   {
+    "id": "mt_v5",
+    "name": "Middle Temporal Area (MT/V5)",
+    "group": "occipito-temporal (dorsal stream)",
+    "one_liner": "Dorsal-stream motion specialist computing direction and speed of moving stimuli.",
+    "functions": [
+     "Motion direction and speed detection",
+     "Optic-flow processing for self-motion",
+     "Supports smooth-pursuit eye movements"
+    ],
+    "lesion_effects": "Bilateral damage produces akinetopsia ('motion blindness') \u2014 the world appears as a series of static snapshots rather than continuous motion.",
+    "approx_location": "Posterior temporal cortex at the temporo-parieto-occipital junction, bilateral.",
+    "famous_case_or_evidence": "Patient L.M. (Zihl, von Cramon & Mai, 1983) with bilateral MT-area damage could not perceive continuous motion (e.g., poured liquid looked frozen in successive positions)."
+   },
+   {
+    "id": "ffa",
+    "name": "Fusiform Face Area (FFA)",
+    "group": "temporal lobe (ventral)",
+    "one_liner": "Specializes in fast, holistic recognition of individual faces (and, in an adjacent patch, visual word forms).",
+    "functions": [
+     "Face detection and holistic/configural structural encoding",
+     "Discriminating individual identities from facial structure",
+     "Generates the face-selective N170 ERP response"
+    ],
+    "lesion_effects": "Damage causes prosopagnosia (face blindness) \u2014 inability to recognize familiar faces by sight, while other object recognition and person identification via voice/gait can remain intact.",
+    "approx_location": "Lateral fusiform gyrus, ventral temporal lobe, with a right-hemisphere bias.",
+    "famous_case_or_evidence": "Simultaneous fMRI-EEG work (Gao et al., 2019, Psychophysiology) source-localizes the N170 face response to the fusiform gyrus/FFA; acquired prosopagnosia cases confirm the region's necessity for face identity."
+   },
+   {
+    "id": "a1",
+    "name": "Primary Auditory Cortex (A1)",
+    "group": "temporal lobe",
+    "one_liner": "First cortical relay for sound, mapping sound frequency tonotopically.",
+    "functions": [
+     "Tonotopic (frequency) mapping of sound",
+     "Basic pitch, loudness and timing encoding",
+     "Feeds language (Wernicke's area) and auditory 'what/where' streams"
+    ],
+    "lesion_effects": "Unilateral damage causes only mild contralateral hearing deficits (because subcortical relays are bilateral); bilateral destruction can cause cortical deafness.",
+    "approx_location": "Superior temporal gyrus / Heschl's gyrus, bilateral."
+   },
+   {
+    "id": "wernicke",
+    "name": "Wernicke's Area",
+    "group": "temporal lobe (language-dominant hemisphere)",
+    "one_liner": "Supports language comprehension \u2014 turning heard or read words into meaning.",
+    "functions": [
+     "Auditory/lexical comprehension",
+     "Semantic access for words and sentences",
+     "Monitoring one's own speech for sense"
+    ],
+    "lesion_effects": "Causes Wernicke's (fluent/receptive) aphasia: fluent, grammatical-sounding but often meaningless speech (paraphasias, neologisms) with poor comprehension; patients are often unaware of their own errors.",
+    "approx_location": "Posterior superior temporal gyrus, left hemisphere in roughly 95-99% of right-handers.",
+    "key_connections": [
+     "Broca's area (via arcuate fasciculus)",
+     "A1"
+    ],
+    "famous_case_or_evidence": "Carl Wernicke's 1874 description of patients with fluent but incoherent speech and poor comprehension, contrasting with Broca's earlier cases."
+   },
+   {
+    "id": "broca",
+    "name": "Broca's Area",
+    "group": "frontal lobe (language-dominant hemisphere)",
+    "one_liner": "Supports speech production and grammatical sentence construction.",
+    "functions": [
+     "Articulatory planning for speech",
+     "Syntactic/grammatical processing",
+     "Coordinating language output with motor cortex"
+    ],
+    "lesion_effects": "Causes Broca's (non-fluent/expressive) aphasia: slow, effortful, agrammatic ('telegraphic') speech with relatively preserved comprehension; patients are typically aware of and frustrated by the deficit.",
+    "approx_location": "Posterior inferior frontal gyrus (pars opercularis/triangularis), typically left hemisphere.",
+    "key_connections": [
+     "Wernicke's area (via arcuate fasciculus)",
+     "M1 (orofacial region)"
+    ],
+    "famous_case_or_evidence": "Paul Broca's patient 'Tan' (Leborgne, 1861) could only utter the syllable 'tan' but understood language, localizing expressive speech to the left frontal lobe."
+   },
+   {
+    "id": "s1",
+    "name": "Primary Somatosensory Cortex (S1)",
+    "group": "parietal lobe",
+    "one_liner": "Maps touch, pressure, temperature and body position onto a distorted 'body map' (the sensory homunculus).",
+    "functions": [
+     "Tactile and proprioceptive processing",
+     "Somatotopic (homunculus) body mapping",
+     "Fine touch discrimination (e.g., two-point discrimination)"
+    ],
+    "lesion_effects": "Causes contralateral loss of fine touch/proprioception and astereognosis (inability to identify objects by touch alone); pain/temperature sensation is more diffusely represented and less selectively lost.",
+    "approx_location": "Postcentral gyrus, parietal lobe, immediately posterior to the central sulcus."
+   },
+   {
+    "id": "m1",
+    "name": "Primary Motor Cortex (M1)",
+    "group": "frontal lobe",
+    "one_liner": "Generates direct commands for voluntary, skilled movement via a somatotopic 'motor homunculus'.",
+    "functions": [
+     "Voluntary movement execution",
+     "Somatotopic control of muscle groups",
+     "Major origin of the corticospinal tract"
+    ],
+    "lesion_effects": "Causes contralateral weakness or paralysis (hemiparesis/hemiplegia), classically from stroke; some recovery can occur over time via plasticity in surrounding cortex.",
+    "approx_location": "Precentral gyrus, frontal lobe, immediately anterior to the central sulcus."
+   },
+   {
+    "id": "ppc",
+    "name": "Posterior Parietal Cortex (PPC)",
+    "group": "parietal lobe",
+    "one_liner": "Integrates senses to build a spatial map of body and world, guiding attention and reaching.",
+    "functions": [
+     "Spatial attention allocation",
+     "Sensorimotor integration for reaching/grasping",
+     "Multisensory representation of body-in-space"
+    ],
+    "lesion_effects": "Right PPC damage (especially right inferior parietal lobule/temporo-parietal junction) classically causes hemispatial neglect \u2014 inattention to the left side of space despite intact vision and no primary sensory loss.",
+    "approx_location": "Posterior parietal lobe around the intraparietal sulcus; spatial-attention functions are often right-lateralized.",
+    "famous_case_or_evidence": "Classic neglect patients fail to draw the left half of a clock or eat food from the left side of a plate (reviewed in Heilman & Mesulam's work on neglect)."
+   },
+   {
+    "id": "dlpfc",
+    "name": "Dorsolateral Prefrontal Cortex (dlPFC)",
+    "group": "frontal lobe",
+    "one_liner": "Executive-control hub: holds information in mind, plans, and flexibly switches strategies.",
+    "functions": [
+     "Working-memory maintenance and manipulation",
+     "Cognitive flexibility and rule-switching",
+     "Planning and inhibitory control"
+    ],
+    "lesion_effects": "Causes 'dysexecutive syndrome': poor planning, perseveration (e.g., impaired Wisconsin Card Sorting performance), and working-memory deficits, while personality and social behavior are relatively spared (contrast with vmPFC damage).",
+    "approx_location": "Lateral surface of the frontal lobe, anterior to premotor cortex, bilateral."
+   },
+   {
+    "id": "vmpfc_ofc",
+    "name": "Ventromedial Prefrontal Cortex / Orbitofrontal Cortex (vmPFC/OFC)",
+    "group": "frontal lobe",
+    "one_liner": "Assigns emotional/subjective value to options and integrates 'gut feeling' into decisions.",
+    "functions": [
+     "Value-based decision making (a 'common currency' for comparing options)",
+     "Integrating emotional/interoceptive signals into choice",
+     "Regulating impulse control and social behavior"
+    ],
+    "lesion_effects": "Causes impaired real-life decision-making and personality change (impulsivity, poor foresight, blunted social/emotional judgment) despite normal IQ and intact working memory.",
+    "approx_location": "Ventral and medial surface of the frontal lobe, above the orbits.",
+    "key_connections": [
+     "Amygdala",
+     "Striatum",
+     "ACC"
+    ],
+    "famous_case_or_evidence": "Phineas Gage (1848 railroad-spike injury to ventromedial/orbitofrontal cortex) showed dramatic personality change; Damasio's 'somatic marker hypothesis' patients (e.g., patient EVR) show similar real-world decision deficits despite intact intellect."
+   },
+   {
+    "id": "acc",
+    "name": "Anterior Cingulate Cortex (ACC)",
+    "group": "frontal lobe / limbic",
+    "one_liner": "Monitors conflict and errors, and links effort and pain to motivation.",
+    "functions": [
+     "Conflict monitoring (e.g., Stroop interference)",
+     "Error detection (error-related negativity, ~50-100ms post-error)",
+     "Pain affect and effort-based motivation"
+    ],
+    "lesion_effects": "Bilateral damage can cause akinetic mutism \u2014 profound apathy and reduced spontaneous movement/speech despite preserved physical ability; partial damage can blunt error sensitivity and motivation.",
+    "approx_location": "Medial frontal cortex, wrapping around the anterior corpus callosum."
+   },
+   {
+    "id": "insula",
+    "name": "Insula",
+    "group": "frontal/temporal (folded cortex)",
+    "one_liner": "The body's interoceptive hub \u2014 senses internal states and links them to emotion.",
+    "functions": [
+     "Interoception (internal bodily awareness, e.g., heartbeat)",
+     "Disgust processing",
+     "Integrating bodily state with subjective feeling and risk perception"
+    ],
+    "lesion_effects": "Linked to impaired disgust recognition/experience and altered risk-taking (reduced 'gut feeling' warning signals); insular stroke can also disrupt pain/temperature perception or cardiac regulation.",
+    "approx_location": "Folded deep within the lateral sulcus, between the frontal, temporal and parietal opercula."
+   },
+   {
+    "id": "corpus_callosum",
+    "name": "Corpus Callosum",
+    "group": "white matter / commissure",
+    "one_liner": "The brain's largest fiber bridge, carrying information between the left and right hemispheres.",
+    "functions": [
+     "Interhemispheric transfer of sensory, motor and cognitive information",
+     "Coordinating bilateral movements",
+     "Unifying left- and right-hemisphere processing"
+    ],
+    "lesion_effects": "Surgical section ('split-brain') or damage causes disconnection syndromes \u2014 e.g., an object felt only by the left hand cannot be verbally named, because right-hemisphere information can't reach left-hemisphere language areas.",
+    "approx_location": "Midline, beneath the cingulate cortex, arching between the two cerebral hemispheres.",
+    "famous_case_or_evidence": "Roger Sperry and Michael Gazzaniga's split-brain patient studies (1960s-70s; Sperry received the 1981 Nobel Prize) revealed hemisphere-specific processing."
+   },
+   {
+    "id": "thalamus",
+    "name": "Thalamus",
+    "group": "diencephalon",
+    "one_liner": "The brain's central relay and gatekeeper, routing almost all sensory (and some motor) signals to cortex.",
+    "functions": [
+     "Sensory relay to cortex (vision via LGN, hearing via MGN, touch via VPL/VPM)",
+     "Motor relay from basal ganglia/cerebellum to M1",
+     "Regulating arousal and consciousness via thalamocortical loops"
+    ],
+    "lesion_effects": "Can cause contralateral sensory loss and thalamic pain syndrome (Dejerine-Roussy syndrome \u2014 chronic burning pain); damage to intralaminar/central nuclei can impair arousal and consciousness, even causing coma.",
+    "approx_location": "Paired egg-shaped structures deep in the brain's center, flanking the third ventricle."
+   },
+   {
+    "id": "hypothalamus",
+    "name": "Hypothalamus",
+    "group": "diencephalon",
+    "one_liner": "The body's homeostasis control center \u2014 regulating hunger, thirst, temperature, sleep drive and hormones.",
+    "functions": [
+     "Homeostatic regulation (hunger, thirst, temperature)",
+     "Control of the pituitary/endocrine axis (HPA axis)",
+     "Circadian rhythm coordination via the suprachiasmatic nucleus"
+    ],
+    "lesion_effects": "Damage to specific nuclei produces distinct syndromes: classic animal studies show ventromedial hypothalamus lesions cause overeating/obesity and lateral hypothalamus lesions reduce feeding; human hypothalamic damage (e.g., tumors) can cause obesity, temperature dysregulation, or disrupted sleep-wake cycles.",
+    "approx_location": "Below the thalamus, above the brainstem, surrounding the floor of the third ventricle."
+   },
+   {
+    "id": "amygdala",
+    "name": "Amygdala",
+    "group": "limbic/subcortical (temporal lobe)",
+    "one_liner": "Rapid threat/emotional-salience detector, central to fear learning and emotional memory tagging.",
+    "functions": [
+     "Fear conditioning and threat detection",
+     "Emotional salience tagging of memories (modulates hippocampal consolidation)",
+     "Reading emotional facial expressions"
+    ],
+    "lesion_effects": "Bilateral damage impairs recognition of fear in others' faces and reduces the subjective experience/physiological expression of fear, while other emotions remain more intact.",
+    "approx_location": "Almond-shaped nucleus in the anterior medial temporal lobe, just anterior to the hippocampus.",
+    "key_connections": [
+     "Thalamus (fast subcortical route)",
+     "Hippocampus",
+     "vmPFC/OFC",
+     "Hypothalamus"
+    ],
+    "famous_case_or_evidence": "Patient S.M. (Urbach-Wiethe disease causing bilateral amygdala calcification), studied by Adolphs & Tranel, showed impaired fear recognition and reduced real-world fear, though she could still be induced to panic via CO2 inhalation \u2014 showing the amygdala isn't the sole fear pathway."
+   },
+   {
+    "id": "hippocampus",
+    "name": "Hippocampus",
+    "group": "limbic/subcortical (temporal lobe)",
+    "one_liner": "Forms new explicit (episodic/declarative) memories and supports spatial navigation, then gradually 'teaches' them to cortex.",
+    "functions": [
+     "Encoding new episodic/declarative memories",
+     "Spatial mapping (place cells, 'cognitive map')",
+     "Pattern separation/completion for memory retrieval",
+     "Sharp-wave ripple replay during sleep for consolidation"
+    ],
+    "lesion_effects": "Bilateral damage causes profound anterograde amnesia \u2014 inability to form new long-term declarative memories \u2014 while procedural/skill learning and short-term/working memory remain intact; old, well-consolidated memories are often relatively preserved (temporally graded retrograde amnesia).",
+    "approx_location": "Curved structure in the medial temporal lobe, bilateral.",
+    "famous_case_or_evidence": "Patient H.M. (Henry Molaison), after bilateral medial temporal lobectomy in 1953 for epilepsy, became severely amnesic \u2014 the foundational case (studied by Brenda Milner, later Suzanne Corkin) for localizing declarative memory formation to the hippocampus."
+   },
+   {
+    "id": "striatum",
+    "name": "Striatum (Caudate + Putamen)",
+    "group": "basal ganglia",
+    "one_liner": "Input hub of the basal ganglia; learns which actions/habits to select based on reward history.",
+    "functions": [
+     "Action-selection gating (balancing direct/indirect pathways)",
+     "Habit and procedural learning",
+     "Receiving dopaminergic input signaling reward prediction error"
+    ],
+    "lesion_effects": "Progressive degeneration (especially of the caudate) causes Huntington's disease \u2014 involuntary jerky movements (chorea), cognitive decline and personality change.",
+    "approx_location": "Caudate (arcs around the thalamus) and putamen, deep subcortical, lateral to the thalamus."
+   },
+   {
+    "id": "globus_pallidus",
+    "name": "Globus Pallidus (GPe/GPi)",
+    "group": "basal ganglia",
+    "one_liner": "Output gate of the basal ganglia; its internal segment tonically inhibits the thalamus to suppress unwanted movement until released.",
+    "functions": [
+     "External segment (GPe) relays the indirect pathway to the subthalamic nucleus",
+     "Internal segment (GPi) is a major basal-ganglia output nucleus inhibiting the thalamus",
+     "Net gating of movement initiation"
+    ],
+    "lesion_effects": "GPi is a common deep-brain-stimulation target for Parkinson's disease and dystonia; pathological damage here can disturb movement initiation and cause abnormal postures, while therapeutic lesioning/stimulation can relieve rigidity.",
+    "approx_location": "Medial to the putamen, deep subcortical, split into external (GPe) and internal (GPi) segments."
+   },
+   {
+    "id": "stn",
+    "name": "Subthalamic Nucleus (STN)",
+    "group": "basal ganglia",
+    "one_liner": "Small but powerful 'brake' in the indirect pathway that excites output nuclei to suppress competing movements.",
+    "functions": [
+     "Excitatory driver of GPi/SNr output (indirect and 'hyperdirect' pathways)",
+     "Action-selection braking to prevent premature or competing movements",
+     "Contributes to impulse control"
+    ],
+    "lesion_effects": "Damage causes hemiballismus \u2014 violent, involuntary flinging movements of the contralateral limbs; the STN is also the most common deep-brain-stimulation target for Parkinson's disease, where stimulation improves motor symptoms but can sometimes increase impulsivity.",
+    "approx_location": "Small lens-shaped nucleus just below the thalamus, adjacent to the substantia nigra."
+   },
+   {
+    "id": "nucleus_accumbens",
+    "name": "Nucleus Accumbens",
+    "group": "basal ganglia (ventral striatum) / limbic",
+    "one_liner": "Core of the brain's reward circuit \u2014 translates motivation and pleasure signals into approach behavior.",
+    "functions": [
+     "Reward processing and reinforcement learning",
+     "Translating motivational 'wanting' into action",
+     "Integrating limbic input (amygdala/hippocampus) with dopaminergic (VTA) signals"
+    ],
+    "lesion_effects": "Central to addiction: drugs of abuse hijack this dopamine-driven circuit; animal lesion/inactivation studies show reduced motivation for both natural and drug rewards and reduced cue-triggered 'wanting' behavior.",
+    "approx_location": "Ventral striatum, below the caudate/putamen junction."
+   },
+   {
+    "id": "vta",
+    "name": "Ventral Tegmental Area (VTA)",
+    "group": "brainstem/midbrain",
+    "one_liner": "Major dopamine source signaling reward prediction and driving motivation and reinforcement learning.",
+    "functions": [
+     "Dopaminergic reward-prediction-error signaling (phasic bursts for better-than-expected outcomes)",
+     "Projecting to nucleus accumbens/PFC (mesolimbic and mesocortical pathways)",
+     "Motivation and incentive salience"
+    ],
+    "lesion_effects": "Damage/dysfunction reduces motivation and reward-driven learning; VTA dysfunction is implicated in addiction and studied in depression (anhedonia), mostly via animal lesion/optogenetic work rather than clean human lesion cases.",
+    "approx_location": "Ventral midbrain, near the substantia nigra."
+   },
+   {
+    "id": "substantia_nigra",
+    "name": "Substantia Nigra (pars compacta)",
+    "group": "brainstem/midbrain (basal-ganglia associated)",
+    "one_liner": "Dopamine source for the motor loop; its loss is the hallmark of Parkinson's disease.",
+    "functions": [
+     "Dopaminergic modulation of the striatum (nigrostriatal pathway)",
+     "Facilitating the direct pathway / suppressing the indirect pathway to enable movement",
+     "Reinforcement signaling for motor learning"
+    ],
+    "lesion_effects": "Progressive loss of these dopaminergic neurons causes Parkinson's disease: bradykinesia, rigidity, resting tremor and postural instability \u2014 symptoms typically appear only after roughly 50-80% of these neurons are already lost.",
+    "approx_location": "Midbrain, dorsal to the cerebral peduncles; pars compacta is the pigmented, dopamine-producing part."
+   },
+   {
+    "id": "cerebellum",
+    "name": "Cerebellum",
+    "group": "cerebellum",
+    "one_liner": "Fine-tunes movement timing and accuracy, and calibrates motor learning through error correction.",
+    "functions": [
+     "Motor coordination and timing",
+     "Error-based motor learning/calibration using sensory feedback",
+     "Contributes to some cognitive and timing tasks"
+    ],
+    "lesion_effects": "Causes ataxia (uncoordinated movement), dysmetria (over/undershooting targets), intention tremor, and impaired motor adaptation (e.g., poor adjustment to prism-shifted vision or novel force fields), while raw muscle strength remains normal.",
+    "approx_location": "Posterior fossa, below the occipital lobe, dorsal to the brainstem."
+   },
+   {
+    "id": "locus_coeruleus",
+    "name": "Locus Coeruleus",
+    "group": "brainstem (pons)",
+    "one_liner": "The brain's primary noradrenaline source; drives arousal, vigilance and response to novelty/stress.",
+    "functions": [
+     "Noradrenergic modulation of arousal and alertness",
+     "Phasic firing tied to attention/orienting toward salient or novel stimuli",
+     "Modulating cortical signal-to-noise ratio during stress"
+    ],
+    "lesion_effects": "Locus coeruleus neurons are among the earliest to degenerate in both Alzheimer's and Parkinson's disease, often before hallmark pathology appears in cortex/substantia nigra; loss is linked to disrupted arousal, attention and sleep regulation.",
+    "approx_location": "Small nucleus in the dorsal pons, near the fourth ventricle, bilateral."
+   },
+   {
+    "id": "raphe_nuclei",
+    "name": "Raphe Nuclei",
+    "group": "brainstem (midline, midbrain to medulla)",
+    "one_liner": "Chain of midline nuclei and the brain's main serotonin source, shaping mood, sleep and impulse control.",
+    "functions": [
+     "Serotonergic modulation of mood and anxiety",
+     "Regulating sleep-wake architecture (contributes to REM sleep regulation)",
+     "Influencing impulsivity and pain modulation"
+    ],
+    "lesion_effects": "Dysfunction is strongly associated with depression and anxiety (the target of SSRIs, which block serotonin reuptake); animal lesion studies show disrupted sleep architecture and increased impulsive/aggressive behavior, though clean human lesion evidence is rare since damage is seldom isolated to the raphe alone.",
+    "approx_location": "Midline of the brainstem, spanning midbrain to medulla (e.g., the dorsal raphe nucleus in the midbrain)."
+   }
+  ],
+  "pathways": [
+   {
+    "id": "recognize_face",
+    "title": "Recognizing a Face",
+    "scenario_sentence": "You glance across a crowded room and instantly recognize a friend's face.",
+    "steps": [
+     {
+      "region_ids": [
+       "v1"
+      ],
+      "approx_ms": 55,
+      "what_happens": "Light patterns from the face reach the retina and are relayed via the thalamus (LGN) to primary visual cortex, where basic edges, contrast and orientation are extracted in a retinotopic map.",
+      "why_it_matters": "This is the first cortical stage of 'seeing' anything \u2014 without intact V1, no conscious visual image of the face can form.",
+      "evidence_or_method": "Human visual evoked potential (C1 component) and macaque LGN/V1 latencies (~20-30ms onset in monkeys; longer human conduction distance implies ~50-70ms)."
+     },
+     {
+      "region_ids": [
+       "v4"
+      ],
+      "approx_ms": 95,
+      "what_happens": "Ventral-stream area V4 refines color and mid-level shape/contour information, beginning to separate the face's form from the background.",
+      "why_it_matters": "Builds the shape/color scaffolding that face-specific processing depends on.",
+      "evidence_or_method": "Macaque V4 shape/color-tuned single-unit response timing; precise human latency is inferred, not directly measured non-invasively."
+     },
+     {
+      "region_ids": [
+       "ffa"
+      ],
+      "approx_ms": 170,
+      "what_happens": "The fusiform face area performs fast, holistic structural encoding of the face, distinguishing it from other object categories.",
+      "why_it_matters": "This is the brain's dedicated specialization for face shape \u2014 damage here causes prosopagnosia even with otherwise normal vision.",
+      "evidence_or_method": "N170 ERP component (occipito-temporal electrodes), source-localized to the fusiform gyrus/FFA (Gao et al., 2019, Psychophysiology)."
+     },
+     {
+      "region_ids": [
+       "hippocampus",
+       "amygdala"
+      ],
+      "approx_ms": 300,
+      "what_happens": "The specific facial identity is matched against stored memories in the medial temporal lobe/hippocampus while the amygdala tags any emotional significance.",
+      "why_it_matters": "Recognizing THAT something is a face and recognizing WHO it is are separable steps that can be selectively impaired independently.",
+      "evidence_or_method": "fMRI studies of familiar-face recognition implicate medial-temporal/hippocampal regions; timing is estimated from MEG/intracranial familiarity effects rather than one sharp ERP marker."
+     },
+     {
+      "region_ids": [
+       "vmpfc_ofc",
+       "dlpfc"
+      ],
+      "approx_ms": 400,
+      "what_happens": "Prefrontal regions integrate identity and emotional tag into a conscious, nameable recognition ('that's my friend Alex').",
+      "why_it_matters": "This step converts a visual/memory match into a usable, reportable social recognition.",
+      "evidence_or_method": "fMRI/EEG studies of person-identification implicate prefrontal integration; this final stage is the least precisely time-locked step in the sequence."
+     }
+    ],
+    "accuracy_caveats": "Millisecond values are approximate averages from group-level EEG/MEG/fMRI studies using simplified lab tasks, not measurements of a single real-world glance. The N170 (step 3) indexes detecting face-like structure, not full personal-identity recognition, which likely takes longer and is less precisely time-locked (steps 4-5 are estimates, not established ERP components)."
+   },
+   {
+    "id": "recall_word",
+    "title": "Recalling a Word or Name",
+    "scenario_sentence": "You try to remember the name of an old classmate.",
+    "steps": [
+     {
+      "region_ids": [
+       "dlpfc",
+       "ppc"
+      ],
+      "approx_ms": 200,
+      "what_happens": "A retrieval cue ('what was her name?') triggers a strategic search, coordinated by prefrontal and parietal executive regions.",
+      "why_it_matters": "Retrieval is an active search process that can succeed, fail, or stall \u2014 as in the 'tip-of-the-tongue' state.",
+      "evidence_or_method": "fMRI studies of directed memory search show dorsolateral prefrontal and parietal engagement during retrieval effort."
+     },
+     {
+      "region_ids": [
+       "hippocampus"
+      ],
+      "approx_ms": 400,
+      "what_happens": "The hippocampus performs 'pattern completion' \u2014 using a partial cue to reactivate the full memory trace distributed across cortex.",
+      "why_it_matters": "This computation lets a small hint (a face, a context) unlock a whole memory.",
+      "evidence_or_method": "Computational memory models (Marr, 1971; O'Reilly & McClelland, 1994) and hippocampal lesion/imaging studies; exact human timing is inferred from ERP 'old/new' effects, not measured directly for this specific computation."
+     },
+     {
+      "region_ids": [
+       "thalamus",
+       "hippocampus"
+      ],
+      "approx_ms": 450,
+      "what_happens": "A frontally-generated 'familiarity' signal can arise ('I know this person') even before full recollection occurs.",
+      "why_it_matters": "Familiarity and full recollection are dissociable memory processes with different reliability.",
+      "evidence_or_method": "Frontal/early old-new ERP effect associated with familiarity, roughly 300-500ms post-cue (Rugg & Curran, 2007 review)."
+     },
+     {
+      "region_ids": [
+       "ppc"
+      ],
+      "approx_ms": 650,
+      "what_happens": "If retrieval succeeds, a later parietal signal reflects full recollection \u2014 recovering specific contextual detail.",
+      "why_it_matters": "Distinguishes vague familiarity from rich, detailed remembering, explaining why some memories 'come back in a flash' with context and others stay vague.",
+      "evidence_or_method": "Parietal old/new ERP effect, roughly 500-800ms post-cue, associated with recollection (Rugg & Curran, 2007)."
+     },
+     {
+      "region_ids": [
+       "broca",
+       "wernicke"
+      ],
+      "approx_ms": 800,
+      "what_happens": "Once the concept is retrieved, language areas convert it into the specific word/name and prepare it for speech output.",
+      "why_it_matters": "This lexical-retrieval step is exactly where 'tip-of-the-tongue' failures happen \u2014 the concept/face can be known without accessing its word form.",
+      "evidence_or_method": "Tip-of-the-tongue research (Brown & McNeill, 1966) and neuroimaging implicating left insula/frontal regions in successful word-form retrieval."
+     }
+    ],
+    "accuracy_caveats": "Most memory-retrieval timing here comes from group-averaged ERP 'old/new' effects, not sharp single events \u2014 the numbers mark typical windows, not fixed checkpoints, and vary enormously with how well-learned the memory is and how strong the retrieval cue is."
+   },
+   {
+    "id": "fear_response",
+    "title": "Fear Response to a Sudden Threat",
+    "scenario_sentence": "You spot what might be a snake on the path in front of you.",
+    "steps": [
+     {
+      "region_ids": [
+       "thalamus"
+      ],
+      "approx_ms": 20,
+      "what_happens": "A crude, low-resolution version of the scene is relayed through the thalamus toward the amygdala via a fast subcortical shortcut, in parallel with the slower cortical route.",
+      "why_it_matters": "This 'quick and dirty' route can trigger a protective reaction before you've consciously identified what you saw.",
+      "evidence_or_method": "MEG gamma-synchronization study reporting thalamic/hypothalamic activity ~10-20ms and amygdala activity by ~20-30ms post-stimulus (Luo et al., 2007, PNAS); direct human tract-tracing evidence for a monosynaptic thalamo-amygdala route is more limited than in rodents \u2014 treat this pathway's speed in humans as an active research question."
+     },
+     {
+      "region_ids": [
+       "amygdala"
+      ],
+      "approx_ms": 80,
+      "what_happens": "The amygdala performs rapid threat evaluation on the coarse input (shape, low spatial-frequency contrast) and can begin triggering a defensive response.",
+      "why_it_matters": "This speed advantage \u2014 acting before full visual analysis finishes \u2014 is thought to be adaptive: better a false alarm than a fatal delay.",
+      "evidence_or_method": "Human intracranial amygdala recordings show responses to fearful faces beginning ~74-88ms post-stimulus (M\u00e9ndez-B\u00e9rtolo et al., 2016, Nature Neuroscience)."
+     },
+     {
+      "region_ids": [
+       "hypothalamus"
+      ],
+      "approx_ms": 150,
+      "what_happens": "The amygdala engages the hypothalamus, which triggers the sympathetic 'fight-or-flight' cascade \u2014 stress hormones and bodily readiness (heart rate, blood flow to muscles).",
+      "why_it_matters": "This converts a brain signal into the felt bodily experience of fear before you've consciously decided how to react.",
+      "evidence_or_method": "Amygdala-hypothalamic-brainstem fear circuitry established mainly in animal lesion/stimulation studies (LeDoux and colleagues); precise human millisecond timing for this autonomic cascade is not directly measurable non-invasively and is estimated here."
+     },
+     {
+      "region_ids": [
+       "v1",
+       "v4",
+       "ffa"
+      ],
+      "approx_ms": 200,
+      "what_happens": "In parallel, the slower, detailed cortical ('high road') visual pathway finishes analyzing the object properly \u2014 is it really a snake, or a curved stick?",
+      "why_it_matters": "This slower but more accurate pathway can override or confirm the fast amygdala-driven alarm.",
+      "evidence_or_method": "Standard visual object-recognition timing; full object categorization ERP effects typically emerge ~150-250ms."
+     },
+     {
+      "region_ids": [
+       "vmpfc_ofc",
+       "acc",
+       "insula"
+      ],
+      "approx_ms": 350,
+      "what_happens": "The ventromedial prefrontal cortex evaluates the detailed information and, if the 'threat' is harmless, helps down-regulate the amygdala, while the insula and ACC register bodily sensations and any conflict.",
+      "why_it_matters": "This regulation step is impaired in some anxiety disorders \u2014 an overactive amygdala without adequate prefrontal 'braking' can produce persistent or excessive fear.",
+      "evidence_or_method": "vmPFC-amygdala functional connectivity and its role in fear regulation/extinction is documented in human fMRI (e.g., Phelps et al., 2004, Neuron), though exact millisecond timing of this regulatory step is not precisely established."
+     }
+    ],
+    "accuracy_caveats": "The 'fast subcortical low road vs. slow cortical high road' dual-pathway model for fear was built primarily on rodent tract-tracing (LeDoux); in humans it is inferred from EEG/MEG/intracranial timing and remains debated (some researchers argue the human low road is weaker or less direct than in rodents). Hypothalamic/autonomic-step timings are extrapolated from general fear-circuit knowledge, not directly timed non-invasively in humans."
+   },
+   {
+    "id": "making_decision",
+    "title": "Making a Decision",
+    "scenario_sentence": "You're deciding between two snacks at a vending machine.",
+    "steps": [
+     {
+      "region_ids": [
+       "v1",
+       "ppc"
+      ],
+      "approx_ms": 100,
+      "what_happens": "Visual information about both options is processed and spatial attention is allocated to compare them.",
+      "why_it_matters": "You can't weigh options you haven't perceptually registered \u2014 attention determines what enters the decision process.",
+      "evidence_or_method": "Standard visual latency (V1 ~50-70ms) plus parietal attention engagement."
+     },
+     {
+      "region_ids": [
+       "vmpfc_ofc"
+      ],
+      "approx_ms": 250,
+      "what_happens": "The ventromedial prefrontal/orbitofrontal cortex assigns a subjective value to each option, incorporating past experience and current state (e.g., hunger).",
+      "why_it_matters": "This 'common currency' computation lets you compare completely different things (candy vs. chips) on one internal value scale.",
+      "evidence_or_method": "Single-neuron recordings in macaque OFC encoding relative subjective value (Padoa-Schioppa & Assad, 2006, Nature) and human fMRI value-correlate studies (Rangel and colleagues)."
+     },
+     {
+      "region_ids": [
+       "dlpfc",
+       "acc"
+      ],
+      "approx_ms": 300,
+      "what_happens": "Dorsolateral prefrontal cortex holds the options and values in working memory while the anterior cingulate cortex monitors for conflict if the values are close.",
+      "why_it_matters": "Close-call decisions take measurably longer and engage more conflict-monitoring activity \u2014 why difficult decisions feel effortful.",
+      "evidence_or_method": "ACC conflict-monitoring literature (Botvinick et al., 2001) and P300 latency increasing with decision difficulty."
+     },
+     {
+      "region_ids": [
+       "striatum",
+       "ppc"
+      ],
+      "approx_ms": 400,
+      "what_happens": "Evidence for each option accumulates (a drift-diffusion-like process) until one option crosses a decision threshold, involving striatal and parietal circuits.",
+      "why_it_matters": "Explains the classic speed-accuracy tradeoff: rushing lowers the threshold and raises errors; deliberation raises accuracy at the cost of time.",
+      "evidence_or_method": "Centro-parietal positivity ('CPP') tracks evidence accumulation to threshold, roughly 250-500ms depending on difficulty (O'Connell et al., 2012, Nature Neuroscience); drift-diffusion modeling (Ratcliff & McKoon, 2008)."
+     },
+     {
+      "region_ids": [
+       "m1"
+      ],
+      "approx_ms": 500,
+      "what_happens": "Once threshold is crossed, primary motor cortex executes the chosen action (reaching for the snack).",
+      "why_it_matters": "This is the irreversible commitment point \u2014 before this, the 'decision' is still internally revisable.",
+      "evidence_or_method": "Motor-evoked potential and reaction-time studies linking decision commitment to movement onset."
+     }
+    ],
+    "accuracy_caveats": "These figures describe simple, well-studied lab decisions (two-alternative forced-choice tasks); real-world decisions with more options, social context, or higher stakes take much longer, and the exact millisecond figures shift substantially with decision difficulty and confidence."
+   },
+   {
+    "id": "reading_sentence",
+    "title": "Reading a Sentence",
+    "scenario_sentence": "You read the sentence: 'The tired cat sat on the...' and predict what comes next.",
+    "steps": [
+     {
+      "region_ids": [
+       "v1"
+      ],
+      "approx_ms": 60,
+      "what_happens": "Visual cortex registers the basic shapes of the printed letters.",
+      "why_it_matters": "Reading starts as pure vision, before any letter or word knowledge is applied.",
+      "evidence_or_method": "Standard V1 visual evoked potential latency."
+     },
+     {
+      "region_ids": [
+       "ffa"
+      ],
+      "approx_ms": 180,
+      "what_happens": "A specialized patch of the fusiform gyrus (the 'visual word form area', adjacent to face-processing cortex) recognizes the letter string as a familiar written word shape, independent of font or case.",
+      "why_it_matters": "This is why skilled readers recognize whole familiar words almost instantly rather than sounding out every letter.",
+      "evidence_or_method": "Visual word form area studies (Dehaene & Cohen, 2011, Trends in Cognitive Sciences) report word-selective responses in a ~150-200ms window, in a region adjacent to but distinct from the face-selective N170 source."
+     },
+     {
+      "region_ids": [
+       "wernicke"
+      ],
+      "approx_ms": 400,
+      "what_happens": "Wernicke's area and surrounding temporal/semantic regions access the word's meaning; an unexpected next word ('...on the moon' instead of '...on the mat') produces a distinctive brain signature.",
+      "why_it_matters": "Shows the brain actively predicts upcoming words from context rather than processing them in isolation.",
+      "evidence_or_method": "N400 ERP component, peaking ~400ms, larger for semantically unexpected words (Kutas & Hillyard, 1980, Science)."
+     },
+     {
+      "region_ids": [
+       "broca"
+      ],
+      "approx_ms": 500,
+      "what_happens": "Broca's area parses the sentence's grammatical structure and, if reading aloud, prepares the articulatory motor plan.",
+      "why_it_matters": "Grammar processing and speech planning are separable from word meaning \u2014 why Broca's aphasia patients understand meaning but struggle to produce fluent, grammatical sentences.",
+      "evidence_or_method": "Syntactic ERP effects (e.g., P600, linked to grammatical reanalysis) and classic Broca's-aphasia lesion-symptom mapping."
+     },
+     {
+      "region_ids": [
+       "m1"
+      ],
+      "approx_ms": 600,
+      "what_happens": "If reading aloud, primary motor cortex (orofacial region) executes the speech articulation.",
+      "why_it_matters": "Converts the linguistic plan into physical sound.",
+      "evidence_or_method": "Standard motor execution timing following articulatory planning."
+     }
+    ],
+    "accuracy_caveats": "This describes one influential (broadly dual-route-inspired) sequence; real reading also uses a parallel phonological route via parietal/temporal regions for unfamiliar or nonsense words, and skilled silent reading can overlap or shortcut several stages rather than running them strictly in series."
+   },
+   {
+    "id": "motor_skill_learning",
+    "title": "Learning a New Motor Skill",
+    "scenario_sentence": "You practice a new tennis serve over several training sessions.",
+    "steps": [
+     {
+      "region_ids": [
+       "dlpfc",
+       "ppc",
+       "m1"
+      ],
+      "approx_ms": 0,
+      "what_happens": "Early attempts are slow and effortful \u2014 prefrontal and parietal executive regions are heavily engaged to consciously control each part of the movement.",
+      "why_it_matters": "Explains why a brand-new skill feels mentally exhausting even though the movements themselves are simple \u2014 you're using effortful general-purpose control, not a specialized motor circuit yet.",
+      "evidence_or_method": "Doyon et al. (2003, 2018) models of motor sequence learning describe an early 'fast learning' stage with strong prefrontal/associative involvement."
+     },
+     {
+      "region_ids": [
+       "cerebellum"
+      ],
+      "approx_ms": 5000,
+      "what_happens": "With each attempt, the cerebellum compares the predicted sensory outcome (an internal 'forward model') against what actually happened, computing an error signal to adjust the next attempt.",
+      "why_it_matters": "This trial-by-trial error correction is the core mechanism of motor learning \u2014 why immediate feedback speeds learning dramatically.",
+      "evidence_or_method": "Cerebellar internal/forward-model theory of motor learning (Wolpert, Miall & Kawato, 1998, Trends in Cognitive Sciences)."
+     },
+     {
+      "region_ids": [
+       "striatum",
+       "globus_pallidus"
+      ],
+      "approx_ms": 15000,
+      "what_happens": "As the sequence becomes more reliable, control shifts toward the basal ganglia (striatum), which increasingly encodes the whole sequence as one learned 'chunk'.",
+      "why_it_matters": "This chunking is why a practiced serve eventually feels like one smooth motion rather than separate decisions.",
+      "evidence_or_method": "Striatal associative-to-sensorimotor shift with automaticity, and action-sequence chunking (Yin & Knowlton, 2006, Nature Reviews Neuroscience; Graybiel, 1998)."
+     },
+     {
+      "region_ids": [
+       "substantia_nigra",
+       "striatum"
+      ],
+      "approx_ms": 20000,
+      "what_happens": "Dopaminergic signals from the substantia nigra reinforce successful movement patterns, strengthening the corticostriatal connections that produced a good outcome.",
+      "why_it_matters": "This reward-based strengthening is why skills improve faster with clear success/failure feedback.",
+      "evidence_or_method": "Nigrostriatal dopamine's role in reinforcement learning and corticostriatal plasticity (Schultz, 1998, and later studies)."
+     },
+     {
+      "region_ids": [
+       "m1",
+       "cerebellum"
+      ],
+      "approx_ms": 30000,
+      "what_happens": "With enough practice, the skill becomes largely automatic ('procedural memory') \u2014 executable with minimal conscious prefrontal involvement.",
+      "why_it_matters": "Procedural memories are famously robust \u2014 they survive even severe declarative-memory damage, showing they are stored differently from facts and events.",
+      "evidence_or_method": "Amnesic patient H.M. learned and retained new motor skills (e.g., mirror-tracing) at a normal rate despite no explicit memory of practicing them (Milner, 1962; Corkin, 1968)."
+     }
+    ],
+    "accuracy_caveats": "Motor skill learning unfolds over minutes, sessions and days/weeks, not milliseconds. The approx_ms values above are a SCHEMATIC animation timeline only (relative order/spacing within a compressed practice montage), not measured neural latencies \u2014 treat this pathway's timing as ORDER of engagement, not literal figures. The Doyon fast/slow-stage model and cortical-to-subcortical shift are broadly supported but simplified here; real circuits overlap throughout learning rather than handing off cleanly."
+   },
+   {
+    "id": "attention_shift",
+    "title": "Shifting Attention to a Sudden Event",
+    "scenario_sentence": "While driving, a ball suddenly rolls into the street ahead of you.",
+    "steps": [
+     {
+      "region_ids": [
+       "v1"
+      ],
+      "approx_ms": 60,
+      "what_happens": "The sudden motion and contrast change registers in visual cortex as a salient, bottom-up event.",
+      "why_it_matters": "Sudden, high-contrast, moving stimuli automatically grab visual processing resources before you consciously 'decide' to look.",
+      "evidence_or_method": "Standard early visual response latency (V1 ~50-70ms); subcortical salience circuits (superior colliculus/pulvinar, not separately modeled here) also contribute to this capture."
+     },
+     {
+      "region_ids": [
+       "mt_v5"
+      ],
+      "approx_ms": 100,
+      "what_happens": "MT/V5 rapidly computes the object's motion direction and speed.",
+      "why_it_matters": "Fast motion computation is essential for predicting where a moving hazard will be a moment from now, not just where it is.",
+      "evidence_or_method": "MT/V5 motion-selective response latencies in primate electrophysiology, generally in the 80-120ms range."
+     },
+     {
+      "region_ids": [
+       "ppc"
+      ],
+      "approx_ms": 220,
+      "what_happens": "Attention is captured and reoriented toward the ball's location, visible as a lateralized attention signal over posterior scalp contralateral to the object.",
+      "why_it_matters": "This attention 'grab' is largely automatic and hard to suppress \u2014 it lets us react to sudden hazards even while focused on something else.",
+      "evidence_or_method": "N2pc ERP component (attention-related lateralized negativity), peaking roughly 200-250ms post-onset (Eimer, 1996; Luck & Hillyard, 1994)."
+     },
+     {
+      "region_ids": [
+       "locus_coeruleus"
+      ],
+      "approx_ms": 250,
+      "what_happens": "The locus coeruleus fires a phasic burst of noradrenaline in response to the salient event, boosting the gain/responsiveness of relevant cortical circuits brain-wide.",
+      "why_it_matters": "This is the neural basis of the sudden 'jolt' of alertness \u2014 a brief, brain-wide shift into a more vigilant mode.",
+      "evidence_or_method": "Adaptive gain theory linking phasic locus coeruleus activity to attention/orienting and the P300 component (Aston-Jones & Cohen, 2005, Annual Review of Neuroscience) \u2014 based largely on animal electrophysiology, with human evidence more indirect (pupil dilation, fMRI proxies)."
+     },
+     {
+      "region_ids": [
+       "acc",
+       "m1"
+      ],
+      "approx_ms": 350,
+      "what_happens": "The anterior cingulate cortex helps override the ongoing action if needed, and motor cortex executes the corrective response (braking).",
+      "why_it_matters": "This conflict-resolution/override step allows rapid, appropriate behavioral correction instead of continuing a now-inappropriate action.",
+      "evidence_or_method": "ACC's role in action monitoring/override in conflict paradigms (Botvinick et al., 2001); driving-simulator studies cite additional reaction-time cost above pure perceptual latency for braking responses."
+     }
+    ],
+    "accuracy_caveats": "This pathway compresses a well-studied lab phenomenon (covert attentional capture in simple visual-search displays) onto a more complex real-world scenario (driving). Real hazard-braking reaction times vary widely \u2014 commonly cited overall brake-reaction times in driving research are roughly 0.7-1.5 seconds, depending on expectancy, distraction and individual differences \u2014 so this region-by-region breakdown is illustrative, not a validated decomposition of real driving reaction time."
+   },
+   {
+    "id": "sleep_consolidation",
+    "title": "Sleep and Memory Consolidation",
+    "scenario_sentence": "You study for an exam in the evening, sleep, and remember the material better the next morning.",
+    "steps": [
+     {
+      "region_ids": [
+       "hippocampus"
+      ],
+      "approx_ms": 0,
+      "what_happens": "During studying (while awake), the hippocampus rapidly encodes new episodic memory traces, acting as a 'fast learner' that can bind new information in a single exposure.",
+      "why_it_matters": "This fast-binding capacity lets you learn new facts in minutes, but these fresh traces are initially fragile and hippocampus-dependent.",
+      "evidence_or_method": "Complementary Learning Systems theory (McClelland, McNaughton & O'Reilly, 1995) \u2014 hippocampus as fast learner vs. neocortex as slow learner."
+     },
+     {
+      "region_ids": [
+       "thalamus"
+      ],
+      "approx_ms": 3000,
+      "what_happens": "Entering NREM slow-wave sleep, the thalamus generates sleep spindles (brief ~12-15Hz oscillation bursts) that help gate out sensory input and coordinate cortical activity.",
+      "why_it_matters": "Spindles are believed to open a temporal window that helps synchronize cortical and hippocampal activity for memory transfer.",
+      "evidence_or_method": "Sleep spindle-memory correlations reviewed in Diekelmann & Born (2010, Nature Reviews Neuroscience)."
+     },
+     {
+      "region_ids": [
+       "hippocampus"
+      ],
+      "approx_ms": 4000,
+      "what_happens": "The hippocampus generates sharp-wave ripples \u2014 brief (~50-100ms), fast (~150-250Hz) oscillatory bursts during which recently learned activity patterns are 'replayed' in compressed, accelerated form.",
+      "why_it_matters": "This replay is thought to be the literal mechanism by which the day's experiences get rehearsed for storage \u2014 a fast-forwarded highlight reel played to the rest of the brain.",
+      "evidence_or_method": "Hippocampal sharp-wave ripple replay during sleep, extensively documented in rodents (Wilson & McNaughton, 1994, Science), with converging human intracranial/fMRI evidence."
+     },
+     {
+      "region_ids": [
+       "hippocampus",
+       "thalamus"
+      ],
+      "approx_ms": 4500,
+      "what_happens": "Hippocampal ripples become temporally coupled with cortical slow oscillations (~0.5-1Hz) and thalamic spindles, forming coordinated 'triple coupling' thought to time information transfer to cortex.",
+      "why_it_matters": "The precision of this coupling (ripples nested in spindles nested in slow-oscillation up-states) predicts overnight retention in some studies.",
+      "evidence_or_method": "Slow oscillation-spindle-ripple coupling literature (Staresina et al., 2015, Nature Neuroscience)."
+     },
+     {
+      "region_ids": [
+       "dlpfc",
+       "ppc"
+      ],
+      "approx_ms": 8000,
+      "what_happens": "Over repeated replay across the night (and following nights), the memory trace becomes gradually distributed across neocortical networks, including prefrontal and parietal regions, and less dependent on the hippocampus.",
+      "why_it_matters": "This 'systems consolidation' explains why old memories can survive hippocampal damage (as in H.M.), while very recent memories cannot.",
+      "evidence_or_method": "Systems consolidation theory and temporally graded retrograde amnesia in hippocampal amnesia patients (Squire & Alvarez, 1995); whether cortex ever becomes fully hippocampus-independent remains debated (multiple trace theory offers a competing account)."
+     }
+    ],
+    "accuracy_caveats": "All approx_ms values in this pathway are SCHEMATIC (representing order and relative spacing within a compressed overnight animation), not real elapsed times \u2014 consolidation actually unfolds over multiple sleep cycles across a full night and further nights. The specific causal role of REM sleep (versus NREM/slow-wave sleep) in consolidation remains actively debated and is deliberately not included as a distinct step here. 'Systems consolidation' is a leading model, but multiple trace theory and trace transformation theory offer competing accounts of how completely and quickly hippocampal dependence is lost."
+   }
+  ],
+  "glossary": [
+   {
+    "term": "Neuron",
+    "plain_definition": "The basic signaling cell of the brain; receives, processes and passes on electrical/chemical signals."
+   },
+   {
+    "term": "Synapse",
+    "plain_definition": "The tiny gap where one neuron passes a chemical signal to the next."
+   },
+   {
+    "term": "Action potential",
+    "plain_definition": "The brief electrical spike a neuron fires when it 'sends a message' down its length."
+   },
+   {
+    "term": "Neurotransmitter",
+    "plain_definition": "A chemical messenger released at a synapse that excites or inhibits the next neuron."
+   },
+   {
+    "term": "Dopamine",
+    "plain_definition": "A neurotransmitter central to motivation, reward-prediction and movement \u2014 not simply 'the pleasure chemical'."
+   },
+   {
+    "term": "Serotonin",
+    "plain_definition": "A neurotransmitter involved in mood, sleep and impulse control; target of common antidepressants (SSRIs)."
+   },
+   {
+    "term": "Noradrenaline (norepinephrine)",
+    "plain_definition": "A neurotransmitter driving arousal, alertness and the stress/fight-or-flight response."
+   },
+   {
+    "term": "Excitatory vs. inhibitory signaling (glutamate & GABA)",
+    "plain_definition": "Glutamate is the brain's main 'go' signal between neurons; GABA is the main 'stop/quiet down' signal \u2014 together they balance brain activity."
+   },
+   {
+    "term": "Cortex vs. subcortical",
+    "plain_definition": "The cortex is the folded outer layer doing most higher-level processing; 'subcortical' structures sit beneath it handling emotion, memory, movement and basic drives."
+   },
+   {
+    "term": "Gyrus & sulcus",
+    "plain_definition": "A gyrus is a raised fold on the brain's surface; a sulcus is a groove between folds \u2014 together they let a lot of cortex fit in a small skull."
+   },
+   {
+    "term": "Gray matter vs. white matter",
+    "plain_definition": "Gray matter is mostly neuron cell bodies (where processing happens); white matter is the myelinated 'wiring' carrying signals between regions."
+   },
+   {
+    "term": "Myelin",
+    "plain_definition": "A fatty insulating sheath around axons that speeds up electrical signal transmission."
+   },
+   {
+    "term": "Hemispheric lateralization",
+    "plain_definition": "The tendency for some functions (e.g., language, typically left-sided) to rely more on one brain hemisphere than the other \u2014 a matter of degree, not an absolute split."
+   },
+   {
+    "term": "Homunculus",
+    "plain_definition": "The distorted 'body map' in motor and somatosensory cortex, where sensitive/dexterous body parts (lips, hands) get disproportionately more cortical space."
+   },
+   {
+    "term": "Retinotopic map",
+    "plain_definition": "An organization in visual cortex where neighboring points in the visual field are processed by neighboring cortical neurons."
+   },
+   {
+    "term": "Tonotopic map",
+    "plain_definition": "An organization in auditory cortex where different sound frequencies are mapped to different cortical locations."
+   },
+   {
+    "term": "Receptive field",
+    "plain_definition": "The specific stimulus (e.g., patch of visual space, sound frequency) that makes a given neuron respond."
+   },
+   {
+    "term": "Neuroplasticity",
+    "plain_definition": "The brain's ability to physically reorganize \u2014 strengthening, weakening, or rewiring connections \u2014 in response to experience."
+   },
+   {
+    "term": "Long-term potentiation (LTP)",
+    "plain_definition": "A lasting strengthening of the connection between two neurons after repeated co-activation; a leading cellular model of how memories are stored."
+   },
+   {
+    "term": "Reward prediction error",
+    "plain_definition": "The mismatch between an expected and actual reward, signaled by dopamine bursts (better than expected) or dips (worse than expected); drives reinforcement learning."
+   },
+   {
+    "term": "Working memory",
+    "plain_definition": "The mental 'scratchpad' that holds and manipulates a small amount of information for seconds while you use it."
+   },
+   {
+    "term": "Executive function",
+    "plain_definition": "Umbrella term for planning, inhibition, flexibility and goal-directed control, largely supported by prefrontal cortex."
+   },
+   {
+    "term": "Declarative memory",
+    "plain_definition": "Memory for facts and events that can be consciously recalled and stated ('I remember that...')."
+   },
+   {
+    "term": "Procedural memory",
+    "plain_definition": "Memory for skills and habits (e.g., riding a bike) that operates largely without conscious recall."
+   },
+   {
+    "term": "Systems consolidation",
+    "plain_definition": "The gradual process by which memories shift from depending on the hippocampus to being stored more independently in the neocortex, thought to occur especially during sleep."
+   },
+   {
+    "term": "Double dissociation",
+    "plain_definition": "A research pattern where damage to region A impairs task 1 but not task 2, while damage to region B does the opposite \u2014 strong evidence the two functions are separable."
+   },
+   {
+    "term": "Lesion study",
+    "plain_definition": "Research inferring a brain region's function by studying what ability is lost when that region is damaged (by injury, stroke, surgery or disease)."
+   },
+   {
+    "term": "EEG (electroencephalography)",
+    "plain_definition": "A method that records electrical brain activity via scalp electrodes; excellent timing precision (milliseconds) but coarse spatial detail."
+   },
+   {
+    "term": "ERP (event-related potential)",
+    "plain_definition": "A small EEG voltage pattern time-locked to a specific event (like seeing a face), extracted by averaging many trials."
+   },
+   {
+    "term": "fMRI / BOLD signal",
+    "plain_definition": "Functional MRI infers brain activity from blood-oxygenation changes (BOLD signal); great spatial detail but a slow, several-second lag behind actual neural firing."
+   },
+   {
+    "term": "MEG (magnetoencephalography)",
+    "plain_definition": "A method recording tiny magnetic fields from brain activity; combines EEG-like millisecond timing with somewhat better spatial localization."
+   },
+   {
+    "term": "N170",
+    "plain_definition": "An ERP brain-wave dip around 130-200ms after seeing a face, linked to fast structural face processing in the fusiform gyrus."
+   },
+   {
+    "term": "N400",
+    "plain_definition": "An ERP brain-wave dip peaking around 400ms when a word doesn't fit the meaning of its sentence context."
+   },
+   {
+    "term": "P300",
+    "plain_definition": "A positive ERP brain-wave peak around 300-500ms linked to detecting a significant or decision-relevant event."
+   },
+   {
+    "term": "N2pc",
+    "plain_definition": "An ERP signature (~200-250ms) showing that visual attention has shifted toward a target on one side of space."
+   },
+   {
+    "term": "Readiness potential (Bereitschaftspotential)",
+    "plain_definition": "A slow buildup of brain activity, starting hundreds of milliseconds before a voluntary movement, famously studied by Benjamin Libet in debates about free will."
+   },
+   {
+    "term": "Sharp-wave ripple",
+    "plain_definition": "A brief, fast burst of hippocampal activity during rest/sleep thought to 'replay' recent experiences to help consolidate them into long-term memory."
+   },
+   {
+    "term": "Sleep spindle",
+    "plain_definition": "A short burst of 12-15Hz brain-wave activity generated by the thalamus during NREM sleep, linked to memory consolidation."
+   },
+   {
+    "term": "NREM vs. REM sleep",
+    "plain_definition": "NREM (non-rapid-eye-movement) sleep includes deep slow-wave sleep linked to memory replay; REM sleep is the dream-rich stage with brain activity resembling wakefulness."
+   },
+   {
+    "term": "HPA axis (stress axis)",
+    "plain_definition": "The hypothalamus-pituitary-adrenal signaling chain that releases stress hormones (like cortisol) in response to threat, initiated largely by the hypothalamus."
+   }
+  ],
+  "accuracy_pitfalls": [
+   "The '10% of the brain' myth is false \u2014 brain imaging shows nearly all regions are active over the course of a day, just not all firing at maximum simultaneously.",
+   "'Left-brained vs. right-brained' personality typing is an oversimplification; real hemispheric lateralization (e.g., language usually left, spatial attention often right-weighted) is a matter of statistical bias, not a hard 'logical vs. creative' personality split.",
+   "fMRI 'activation' should not be read as 'this region does X and only X' \u2014 BOLD signal is an indirect, several-second-delayed proxy for neural activity, and most regions participate in multiple functions/networks rather than being single-purpose modules.",
+   "The amygdala is often oversold as 'the fear center' \u2014 it is central to threat/salience detection broadly (including some positive learning), and fear itself involves distributed circuitry (hypothalamus, periaqueductal gray, insula, cortex), not one nucleus alone.",
+   "LeDoux's thalamus-to-amygdala 'low road' for ultra-fast fear responses is well established in rodents via direct tract-tracing; in humans it is inferred mainly from MEG/EEG/intracranial timing, so present the human pathway and its exact latency as an active research question, not settled fact.",
+   "Avoid phrenology-style 'one bump/one region = one fixed faculty' framing \u2014 modern neuroscience emphasizes distributed networks; a labeled region is a major hub/contributor, not an exclusive seat of a mental faculty.",
+   "Libet's readiness-potential findings are commonly overinterpreted as 'proof free will is an illusion' \u2014 this remains a contested methodological and philosophical debate (e.g., whether the potential reflects the specific decision or a general readiness/threshold-crossing), and should be presented as an interesting, contested finding rather than settled fact.",
+   "The classic basal ganglia direct/indirect pathway diagram is a useful simplification, not the full picture \u2014 more recent research finds overlap and more nuanced roles (e.g., some 'indirect pathway' neurons also promote action) than the clean two-pathway model suggests.",
+   "Precise millisecond timings quoted for cognitive events (e.g., 'face recognition takes exactly 170ms') are group-averaged findings from specific lab paradigms with real inter-individual and inter-task variability \u2014 present them as typical/approximate windows, not fixed universal constants.",
+   "Memories are not stored like video recordings played back perfectly; they are reconstructive and can change slightly (or be distorted) each time they are recalled and 're-stored' (reconsolidation).",
+   "Dopamine is not simply the 'pleasure chemical' and serotonin deficiency is not a fully sufficient explanation for depression \u2014 the monoamine hypothesis of depression is now considered an incomplete oversimplification in current research; frame these neuromodulators in terms of their more specific, evidence-backed roles (reward prediction/motivational salience for dopamine; mood/sleep/impulse regulation for serotonin).",
+   "Language lateralization percentages (e.g., ~95-99% left-hemisphere dominance in right-handers) should not be presented as universal \u2014 left-handers and some right-handers show right-hemisphere or bilateral language dominance.",
+   "Motor/procedural skill learning is better described as a shift in the relative weighting of a distributed cortical-striatal-cerebellar network with practice, not a literal relocation of a skill from one brain area to another."
+  ]
+ },
+ "tech": {
+  "threejs_cdn": {
+   "recommended_version": "0.170.0",
+   "module_url": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+   "addons_base_url": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/",
+   "importmap_snippet": "<script type=\"importmap\">\n{\n  \"imports\": {\n    \"three\": \"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js\",\n    \"three/addons/\": \"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/\"\n  }\n}\n</script>\n<script type=\"module\">\n  import * as THREE from 'three';\n  import { OrbitControls } from 'three/addons/controls/OrbitControls.js';\n  import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';\n  import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';\n  import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';\n  // ... app code\n</script>",
+   "notes": "cdnjs.cloudflare.com mirrors ONLY the core build files (three.module.js / three.min.js per revision) \u2014 confirmed via api.cdnjs.com/libraries/three.js, which lists no examples/jsm or addons directory at all. So OrbitControls/EffectComposer/RenderPass/UnrealBloomPass CANNOT come from cdnjs. They must come from cdn.jsdelivr.net/npm/three@<version>/examples/jsm/..., which is jsdelivr's generic npm-package proxy (allowed under the 'cdn.jsdelivr.net/npm/' rule) and serves the full published package tree, including the examples/jsm addons and three's package.json export map ('three/addons/*' -> './examples/jsm/*', confirmed by fetching the package.json). Recommendation: source BOTH the core module and every addon from jsdelivr's npm proxy at the SAME pinned version \u2014 never mix cdnjs-core with jsdelivr-addons, and never use an unpinned/latest path. All addon files import 'three' as a bare specifier (e.g. OrbitControls.js does `import {...} from 'three'`), which is exactly what the importmap above resolves. Versions 0.160.0 and 0.170.0 both have three.module.js as a single self-contained file; starting around 0.180.0, three.module.js began internally importing a sibling './three.core.js' via a relative path (still works fine via the CDN since jsdelivr serves the whole directory, but means the module is no longer a single portable text blob) \u2014 this is a good reason to always reference three.js via its CDN URL through the importmap rather than trying to inline/copy its source text. 0.170.0 is recommended as the newest version I could fully verify end-to-end (core + OrbitControls + EffectComposer + RenderPass + Pass + the Addons.js barrel confirming all four requested exports) without the file-split behavior of later versions.",
+   "verified_urls": [
+    "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js (REVISION 160, valid JS)",
+    "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js (valid JS, imports from 'three')",
+    "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/postprocessing/UnrealBloomPass.js (valid JS)",
+    "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/postprocessing/EffectComposer.js (valid JS)",
+    "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/postprocessing/RenderPass.js (valid JS)",
+    "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/postprocessing/Pass.js (valid JS)",
+    "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/shaders/LuminosityHighPassShader.js (valid JS)",
+    "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js (REVISION 170, valid JS, single self-contained file)",
+    "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/Addons.js (barrel file; confirmed re-exports OrbitControls, EffectComposer (via postprocessing star-export), RenderPass, UnrealBloomPass)",
+    "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/postprocessing/UnrealBloomPass.js (valid JS)",
+    "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/controls/OrbitControls.js (valid JS, bare-specifier import from 'three')",
+    "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js (REVISION exists but file now imports from sibling './three.core.js' \u2014 split build, noted as a gotcha, NOT recommended as the pin)",
+    "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js (valid JS, confirms cdnjs DOES host module builds per-revision)",
+    "https://api.cdnjs.com/libraries/three.js (confirms cdnjs has NO examples/jsm or addons directory in its asset listing)",
+    "https://cdn.jsdelivr.net/npm/three@0.160.0/package.json (confirms official export map: './addons' -> './examples/jsm/Addons.js', './addons/*' -> './examples/jsm/*')",
+    "https://cdn.jsdelivr.net/npm/simplex-noise@4.0.3/dist/esm/simplex-noise.js (valid ESM, exports createNoise2D/createNoise3D/createNoise4D \u2014 usable for CPU-side gyri/sulci displacement via the same jsdelivr/npm allowlist path)"
+   ]
+  },
+  "brain_model_options": [
+   {
+    "name": "Neuro.Wiki 3D Brain Atlas (CIT168 + DKT31 cortical parcellation)",
+    "source_url": "https://neuro.wiki/3d/",
+    "license": "Mixed: cortex (DKT31) is CC0 1.0; whole-brain/subcortical layers are CC BY-SA 4.0",
+    "format": "glTF (served to an interactive WebGL viewer)",
+    "has_subcortical_segments": true,
+    "embeddable_as_data_uri_under_16mb": false,
+    "segments_list": "437 named structures across 12 systems (cortex, tracts, deep grey/subcortical nuclei, ventricles, brainstem, cerebellum, amygdala, thalamic nuclei, hypothalamic regions)",
+    "verdict": "NOT PRACTICAL. This is the closest match in scope/licensing but (1) there is no direct download link for the raw glTF files \u2014 only an interactive viewer, so the underlying per-structure meshes are not obtainable without scraping the live site, which is itself borderline given the CC BY-SA attribution/share-alike terms; (2) the site's own disclaimer states deep/subcortical structures are 'registered, not segmented \u2014 approximate to about 7mm', i.e. not true independent per-structure meshes but a shared reference volume; (3) CC BY-SA is a copyleft license \u2014 bundling it would arguably obligate the resulting single HTML file to also be released under CC BY-SA, which is a real constraint for a personal project. Not recommended as an asset source."
+   },
+   {
+    "name": "NIH 3D Print Exchange \u2013 'Subcortical Structures' (3DPX-001944, by Roman Kessler)",
+    "source_url": "https://3d.nih.gov/discover/3dpx-001944",
+    "license": "CC BY-NC-SA 4.0 (NonCommercial + ShareAlike)",
+    "format": "STL (single combined segmentation output)",
+    "has_subcortical_segments": true,
+    "embeddable_as_data_uri_under_16mb": false,
+    "segments_list": "Bilateral hippocampus, amygdala, thalamus, nucleus accumbens, caudate, pallidum, putamen, and brainstem \u2014 but delivered as ONE combined STL, not separate files; the page states individual parts are only available 'on request'.",
+    "verdict": "NOT PRACTICAL. Right structures, wrong packaging and wrong license: NC (NonCommercial) and SA (ShareAlike) clauses make it legally awkward to bundle into any project that might ever be shared/published beyond pure personal use, and it isn't pre-segmented into individual clickable meshes anyway \u2014 it's a single fused STL requiring manual re-segmentation in Blender/MeshLab before it would even be usable as ~10 separate clickable objects."
+   },
+   {
+    "name": "Z-Anatomy (Blender template, derived from BodyParts3D/Anatomography)",
+    "source_url": "https://www.z-anatomy.com/",
+    "license": "CC BY-SA 4.0",
+    "format": "Blender scene (.blend) with individually named mesh objects per structure; would need manual export to glTF per-object",
+    "has_subcortical_segments": true,
+    "embeddable_as_data_uri_under_16mb": false,
+    "segments_list": "Full-body atlas including nervous system layer with named brain substructures (built on BodyParts3D's FMA-labelled parts), but requires opening Blender, isolating the ~10 desired brain objects, decimating/cleaning them, and exporting a new lightweight glTF yourself \u2014 a real production step, not a drop-in file.",
+    "verdict": "POSSIBLE BUT NOT A QUICK WIN. Best license of the three real candidates (share-alike is manageable for a small personal educational artifact with attribution), and the source geometry genuinely has separate named subcortical meshes. But it requires a manual Blender pipeline (open scene, isolate ~10 objects, decimate to a low enough triangle budget, export minimal glTF, base64-encode) entirely outside the 'single HTML file, fetch-only-from-CDN' authoring loop \u2014 real effort with an uncertain final file size (source models were originally OBJ files 'too large for GitHub' at 100MB+ before conversion, so heavy decimation would be mandatory). Not recommended for a first prototype; worth revisiting only if the procedural approach later feels visually insufficient."
+   },
+   {
+    "name": "BodyParts3D / Anatomography (Database Center for Life Science, Japan)",
+    "source_url": "https://github.com/Kevin-Mattheus-Moerman/BodyParts3D",
+    "license": "CC BY-SA 2.1 Japan",
+    "format": "STL (converted from original OBJ; originals were too large for GitHub, some 100MB+)",
+    "has_subcortical_segments": false,
+    "embeddable_as_data_uri_under_16mb": false,
+    "segments_list": "General whole-body FMA-indexed parts (skin, bones, organs); repository documentation does not surface dedicated subcortical brain structure files as a ready subset \u2014 it's the raw source Z-Anatomy was built from, not a curated brain-only package.",
+    "verdict": "NOT PRACTICAL as a direct source for this project \u2014 same underlying data as Z-Anatomy but even less curated for brain-only use, share-alike licensed, and originally oversized before conversion."
+   },
+   {
+    "name": "Sketchfab brain/subcortical models (e.g. 'Brain with subcortical structures and tracts' by Tracy A, and the aherrler/ailame collections)",
+    "source_url": "https://sketchfab.com/3d-models/brain-with-subcortical-structures-and-tracts-783dcf878d5d4616aba6e092eed9de49",
+    "license": "Unclear/unverified per-model \u2014 page content did not surface a CC0/CC-BY tag, only a 'NoAI' flag; most Sketchfab anatomy models are under the platform's Standard (non-redistributable) license unless explicitly marked CC",
+    "format": "glTF/GLB (Sketchfab's native download format), but gated behind Sketchfab's own viewer/download flow",
+    "has_subcortical_segments": true,
+    "embeddable_as_data_uri_under_16mb": false,
+    "segments_list": "Described as color-coded separate components: caudate (green), thalamus (orange), hippocampus (yellow), amygdala (red), putamen (purple) \u2014 visually separated but license status not confirmed as CC0/CC-BY, and downloading requires visiting Sketchfab per-model (not automatable/verifiable at scale here).",
+    "verdict": "NOT PRACTICAL / DO NOT USE without manually verifying the exact license on each model page first. Even if a specific model turned out to be CC0, this class of resource is irrelevant here anyway: the sandbox's CSP explicitly forbids fetching any non-script resource from any host outside the CDN allowlist, and Sketchfab is not on that allowlist \u2014 so a Sketchfab-hosted GLB could only be used by manually downloading it once, converting/compressing it, and base64-embedding the bytes directly into the HTML (same effort/size problem as the Z-Anatomy path, with added license uncertainty on top)."
+   },
+   {
+    "name": "General conclusion on real assets",
+    "source_url": "n/a",
+    "license": "n/a",
+    "format": "n/a",
+    "has_subcortical_segments": false,
+    "embeddable_as_data_uri_under_16mb": false,
+    "verdict": "No real free asset is directly practical for this project. The combination of requirements is unusually strict: (1) truly permissive license (CC0 or plain CC-BY, no NC/SA complications), (2) genuinely pre-segmented into ~10 separate meshes rather than one fused blob, (3) directly downloadable without a manual request/Blender pipeline, and (4) small enough that base64 (which inflates size ~33%) still fits comfortably under the 16MB total-page cap alongside all UI/JS/CSS. Every candidate found fails at least one of these, and most fail two or three. On top of that, the sandbox's own rules forbid loading any GLB via a live external fetch \u2014 even a perfect asset could only be used by hand-converting it to a base64 data URI baked into the file at authoring time (via GLTFLoader.parse(arrayBuffer) rather than loader.load(url)), never via loader.load() to a remote path. Given all this, the procedural approach (section C) is not a fallback \u2014 it is the correct primary path for this project."
+   }
+  ],
+  "procedural_brain_recipe": "GOAL: an elegant, stylized-but-recognizable brain built entirely from Three.js primitives + noise displacement, with ~10 clickable subcortical structures, at 60fps on a laptop, single HTML file.\n\n1) NOISE SOURCE\nUse `simplex-noise` from jsdelivr's npm proxy for CPU-side vertex displacement (verified: https://cdn.jsdelivr.net/npm/simplex-noise@4.0.3/dist/esm/simplex-noise.js, ESM, exports createNoise3D). Import it via the same importmap pattern: `\"simplex-noise\": \"https://cdn.jsdelivr.net/npm/simplex-noise@4.0.3/dist/esm/simplex-noise.js\"`. Use `createNoise3D()` once (seeded) and sample it as fractal Brownian motion (fBm): sum 3-4 octaves, each doubling frequency and halving amplitude, e.g. `fbm(p) = \u03a3 noise3D(p.x*f, p.y*f, p.z*f) * a` for f in [2,4,8,16], a in [1, 0.5, 0.25, 0.12], normalized. This is cheap enough to run once at mesh-build time (not per frame) since the cortex shape is static geometry, not GPU-animated.\n\n2) CEREBRAL HEMISPHERES (the cortex \"shell\")\n- Base geometry: `IcosahedronGeometry(radius, 5)` per hemisphere (20*4^5 = 20,480 triangles \u2014 enough vertex density for visible gyral folding without tanking triangle budget; avoid detail 6, which quadruples to ~82k triangles per hemisphere).\n- Shape sculpting (before noise): non-uniformly scale each vertex position to turn the sphere into a brain-like ellipsoid \u2014 narrower medio-laterally, longer antero-posteriorly, and flatten the medial (inner) face toward x\u22480 so the two hemispheres can sit flush against a longitudinal fissure. Add a smooth low-frequency \"lobe mask\" (a couple of smoothstep bumps as a function of the vertex's spherical angle) to bulge out a frontal pole, temporal lobe, and occipital pole, and taper the underside near where the brainstem attaches.\n- Gyri/sulci: for every vertex, after the ellipsoid shaping, displace along the (pre-noise) vertex normal by `displacement = fbm(normalizedPosition * baseFrequency) * amplitude`, with amplitude roughly 3-6% of the hemisphere's mean radius. Use one lower-frequency fBm pass for the big, sweeping folds and blend in a smaller-amplitude higher-frequency pass for fine surface texture \u2014 this is what reads as \"cortex\" rather than \"lumpy sphere.\"\n- After displacing, call `geometry.computeVertexNormals()` so lighting responds correctly to the new folded surface.\n- Longitudinal fissure: translate each hemisphere a small fixed distance away from the median plane (e.g. \u00b10.15 * radius along local X) so a visible groove/gap appears between them; optionally deepen it further by adding an extra localized noise term that only activates near x\u22480 (a smoothstep falloff based on distance from the medial plane) to pull those vertices inward slightly, exaggerating the fissure.\n- Material: default to a cheap \"glassy\" look \u2014 `MeshPhysicalMaterial({ transparent: true, opacity: 0.32, roughness: 0.35, metalness: 0, side: THREE.DoubleSide, depthWrite: false })` plus a subtle Fresnel rim-light added via `material.onBeforeCompile` (cheap, one extra dot-product term in the fragment shader). Offer real `transmission: 1, thickness: ...` (physically-based glass) as an optional \"high quality\" toggle, since transmission forces an extra background-capture render pass per transmissive object per frame and should be limited to at most the 2 hemisphere meshes if enabled at all.\n\n3) CEREBELLUM\nA separate, smaller ellipsoid (`IcosahedronGeometry` detail 4, or a scaled `SphereGeometry`) positioned posterior-inferior to the cerebral hemispheres. Give it a distinct \"folia\" texture instead of blobby gyri: combine a fine fBm with an added directional sine ripple, e.g. `displacement = fbm(p)*smallAmplitude + sin(localY * highFrequency) * rippleAmplitude`, so the ridges look parallel/laminar rather than random blobs \u2014 this single trick is what visually distinguishes cerebellum from cortex at a glance.\n\n4) BRAINSTEM\nA tapered, gently curved shape from `LatheGeometry` (rotate a hand-authored 2D profile \u2014 wider at the top for the midbrain, narrowing through pons and medulla) or a `CylinderGeometry` with different top/bottom radii as a cheaper approximation. Position it below the thalamus, angled slightly posterior, connecting the cerebrum to a short stub representing the spinal cord.\n\n5) ~10 SUBCORTICAL STRUCTURES (clickable primitives)\nModel each as the simplest primitive that reads as its real shape, positioned at approximate relative anatomical coordinates scaled to the model's own bounding box (not real MNI mm, just proportionally plausible placement), each as its own `THREE.Mesh` with `userData = { id, name, function, connections, lesionEffect, famousCase }`:\n- Thalamus (paired ellipsoids, scaled spheres) \u2014 central, just above brainstem top.\n- Hypothalamus (tiny sphere) \u2014 just below/anterior to thalamus.\n- Hippocampus (paired) \u2014 a curved, C-shaped tube: define a `CatmullRomCurve3` with 4-5 control points tracing the classic \"seahorse\" curve, then `TubeGeometry(curve, ...)`; sits in the medial temporal lobe.\n- Amygdala (paired) \u2014 small almond-shaped ellipsoid, anterior to each hippocampus.\n- Caudate nucleus (paired) \u2014 a longer, gently arcing `TubeGeometry` along a curve sweeping over the thalamus (its real C-shape).\n- Putamen (paired) \u2014 lens-shaped, a flattened/scaled sphere lateral to the globus pallidus.\n- Globus pallidus (paired) \u2014 small wedge-shaped mesh (a scaled/cut sphere) medial to the putamen.\n- Nucleus accumbens (paired) \u2014 tiny sphere at the head of the caudate/putamen junction, anteroventral.\n- Corpus callosum \u2014 one flattened, curved `TubeGeometry` along a `CatmullRomCurve3` shaped like its real \"C\" profile (genu, body, splenium), arching over the thalamus, connecting the two hemispheres.\n- (Brainstem and cerebellum, already built in steps 3-4, are also registered as clickable atlas entries using the same userData pattern, bringing the labelled-structure count to ~11-12.)\n\n6) MAKING CORTICAL REGIONS (lobes) CLICKABLE \u2014 recommended hybrid approach\n- Subcortical structures (step 5): trivial \u2014 they're already discrete meshes, so plain `raycaster.intersectObjects(subcorticalMeshes)` gives you the exact object and its userData directly.\n- Cortical lobes on the folded hemisphere shell: rather than building 4-6 separate lobe meshes (seam-matching risk, since each would need to reproduce the exact same noise displacement at its boundary), tag every vertex of the single hemisphere geometry with a custom `Float32BufferAttribute('regionId', ...)` computed once at build time from each vertex's PRE-displacement spherical angle (theta/phi), using a small set of hand-tuned angular boundary rules approximating frontal/parietal/temporal/occipital/insula lobes (a lightweight \"cortical parcellation by angle\" lookup). On click: raycast against the single hemisphere mesh, take `intersection.face`, read the `regionId` attribute at its three vertex indices, and use a majority vote (or just vertex `a`) to resolve which lobe was hit, then look up that id in a name/function/connections table for the Atlas Explore panel. For the visual \"selected region glows\" effect, maintain a second attribute `highlightWeight` (0 or 1 per vertex, set for all vertices sharing the clicked regionId) and multiply it into emissive intensity inside a custom fragment shader (via `onBeforeCompile`) \u2014 this gives a clean per-region highlight with a single draw call and no extra geometry, and the shader-side highlight can be smoothly animated (lerp highlightWeight toward target) for a nice fade-in glow instead of an instant hard-edged selection.\n\n7) LESION MODE\nSince subcortical structures are discrete meshes, \"lesioning\" one is just toggling its visibility/opacity to near-zero (or replacing its material with a dim gray \"damaged tissue\" look) and showing the associated deficit text \u2014 no extra geometry work needed. For cortical lobes, reuse the same `regionId`/`highlightWeight` machinery to dim a lobe's opacity via a per-vertex attribute instead of a full separate mesh.\n\n8) ACTIVATION-FLOW ANIMATION (for \"Cognitive pathway journeys\" mode)\nRepresent the traveling signal as a handful of small emissive spheres via a single `InstancedMesh` (not one Mesh per particle), moving each instance along a `CatmullRomCurve3` connecting the relevant structure centers for that scenario step, updating instance matrices in the render loop. Keep particle counts in the tens, not hundreds, per active step \u2014 this is a stylized diagram, not a real network simulation, so a handful of glowing dots plus a soft trailing line (e.g. a `Line2`/fat-line from `three/addons/lines/` or simply a `TubeGeometry` with an animated opacity gradient) communicates \"activity flowing region to region\" perfectly well.\n\n9) NEURON POPULATION MODE (parametric simulation)\nKeep this almost entirely OUT of the WebGL scene: implement a simple leaky-integrate-and-fire model in plain JS (no library needed \u2014 a few lines per neuron: `V += dt * (-(V - V_rest)/tau + I/C); if (V > V_thresh) { spike(); V = V_reset; }`), stepped with a fixed-timestep accumulator so it's independent of frame rate. Visualize the small population (e.g. 20-50 neurons) as an `InstancedMesh` of tiny spheres whose per-instance color/scale pulses on spike (updated via `setColorAt`/instance matrix, not per-instance Mesh objects). Draw the raster plot and membrane-potential trace on a plain 2D `<canvas>` overlay (not WebGL) \u2014 far cheaper and simpler than trying to plot in three.js, and it composites fine as an absolutely-positioned HTML element over the WebGL canvas.\n\n10) PERFORMANCE BUDGET FOR 60FPS ON A LAPTOP\n- Triangle budget: ~20-25k tris per hemisphere (detail-5 icosahedron) \u00d7 2, + a few thousand for cerebellum/brainstem, + a few hundred each for ~10-12 small subcortical primitives \u2192 comfortably under ~100-150k triangles total, well within a 60fps budget on integrated GPUs.\n- Cap `renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5))` \u2014 Retina/4K displays otherwise multiply fragment-shader cost 4x+, which matters a lot once bloom is added.\n- `UnrealBloomPass` is the single most expensive part of the stack (multiple downsample+blur passes). Construct it at a reduced resolution (e.g. half the render target size) and/or gate it behind a \"quality\" toggle that's off by default on lower-end hardware (a simple heuristic: measure the first ~1s of actual frame times and auto-disable bloom/transmission if frame time exceeds ~20ms).\n- Avoid shadow maps entirely \u2014 rely on emissive highlighting, rim lighting, and the translucent-material Fresnel trick instead of `castShadow`/`receiveShadow`, which are unnecessary for this stylized look and expensive to compute.\n- Limit `MeshPhysicalMaterial({transmission:1})` usage to at most the 2 cortex-shell meshes if used at all \u2014 every transmissive surface triggers an extra render-to-texture pass of the background per frame.\n- Use `InstancedMesh` for anything repeated (activation-flow particles, neuron population dots) rather than individual `Mesh` objects \u2014 each unique Mesh is a separate draw call, and draw-call count (not triangle count) is usually the real fps bottleneck on integrated GPUs.\n- Do the noise-displacement geometry building ONCE at startup (bake it into the BufferGeometry), never per-frame \u2014 only material/shader uniforms and instance matrices should update in the render loop.\n- If static/non-interactive decorative geometry is added later (e.g. a ventricle outline), merge it into as few draw calls as possible via `BufferGeometryUtils.mergeGeometries` (also available from `three/addons/utils/BufferGeometryUtils.js` on the same jsdelivr path).",
+  "single_file_constraints": [
+   "cdnjs.cloudflare.com mirrors ONLY three.js's core build files per revision (three.module.js/three.min.js) \u2014 confirmed via api.cdnjs.com/libraries/three.js, which lists no examples/jsm or addons directory whatsoever. OrbitControls, EffectComposer, RenderPass, and UnrealBloomPass are only reachable through cdn.jsdelivr.net/npm/three@<version>/examples/jsm/... \u2014 plan on jsdelivr as the sole source for both the core module AND every addon, at one pinned version, never mixed with cdnjs.",
+   "Always pin an exact three.js version in every CDN URL (e.g. @0.170.0), and use the IDENTICAL version string for the core module and every addon import. Three.js's internal APIs shift between revisions; loading OrbitControls from one revision against a three.module.js from another can produce subtle breakage (e.g. instanceof/class-identity checks failing) even when both files individually parse fine.",
+   "Starting around three@0.180.0, build/three.module.js stopped being a single self-contained file \u2014 it now does `import {...} from './three.core.js'` as a sibling file in the same directory. This is transparent when referencing the CDN URL directly (jsdelivr serves the whole directory), but means you can no longer treat three.module.js as one portable blob of text (e.g. don't try to inline/copy just its source) \u2014 always import it live via the importmap URL, don't vendor its source manually. This is a concrete reason 0.170.0 (still single-file) is a slightly safer pin than something newer if you ever want to reason about exactly what's being fetched.",
+   "Only a single <script type=\"importmap\"> is allowed per document, and it must appear BEFORE any <script type=\"module\"> that uses the bare specifiers it defines. Put it immediately after <head> opens, or right before your first module script.",
+   "Every addon file (OrbitControls.js, RenderPass.js, UnrealBloomPass.js, etc.) imports 'three' as a bare specifier internally \u2014 this only resolves correctly because the importmap maps the literal string 'three' to the exact module URL; if you ever rename that import key you break every addon silently.",
+   "The sandbox's CSP blocks ALL non-script fetches to any host outside the fonts.googleapis.com/gstatic.com pair \u2014 this means GLTFLoader.load(url) to any external .glb, any external texture image, and any external font JSON (for THREE.TextGeometry, which needs a FontLoader-fetched JSON) are all blocked outright. Any 3D text must be HTML/CSS overlay labels (plain absolutely-positioned divs synced to projected 3D coordinates, or three/addons/renderers/CSS2DRenderer.js) rather than TextGeometry \u2014 this is not optional, it's a hard CSP wall.",
+   "If a real GLB asset is ever added later (contra the recommendation below), it can only be used by base64-embedding its bytes directly in the HTML at authoring time and loading it via GLTFLoader.parse(arrayBuffer, ...) \u2014 never loader.load(url), since that would be a blocked external fetch even if pointed at an allowed CDN host (the allowlist permits script tags from those hosts, not arbitrary resource fetches).",
+   "Avoid Draco or KTX2 compressed glTF entirely if any real asset is ever embedded \u2014 their decoders are typically hosted on www.gstatic.com/draco/... or similar, which is not on the allowlist; there is no way to fetch the decoder wasm/js live, and inlining a whole Draco decoder's source into the page is a large, painful workaround for marginal size savings.",
+   "Base64 encoding inflates binary size by roughly 33% \u2014 factor this into the 16MB TOTAL page-size budget (HTML + all inline JS/CSS/data) if any binary asset is ever embedded; a nominally '4MB' GLB becomes ~5.3MB of base64 text, and also makes the file harder to read/edit.",
+   "cdn.tailwindcss.com's Play CDN script is a classic (non-module) script that scans the DOM's class attributes at runtime and injects a stylesheet \u2014 load it as a plain <script src=...> tag, separate from and independent of the importmap/module-script setup; it logs a 'not for production' console warning, which is expected and harmless for a prototype.",
+   "Opening the file directly via file:// works fine for the CDN-based ES module imports specifically BECAUSE they resolve to full https:// URLs through the importmap \u2014 this is a genuine cross-origin network fetch, which file:// pages are allowed to make (given proper CORS headers, which both cdnjs and jsdelivr send). What does NOT work under file:// is importing a SECOND local .js file via a relative path (e.g. import './app.js') \u2014 Chromium blocks that as a local-file CORS violation. This is a concrete, functional reason the whole app must live in one <script type=\"module\"> block in one HTML file, not a preference.",
+   "file:// + CDN means the page is not truly 'fully offline' \u2014 it still needs live internet access to fetch three.js and its addons from jsdelivr on first load (and every reload, unless the browser's HTTP cache retains them). If a genuinely offline/air-gapped requirement ever surfaces, that is incompatible with the CDN-loading approach entirely and would require vendoring three.js source into the HTML file as inline text, which is a different (and much larger) design.",
+   "Disable shadow maps entirely (no castShadow/receiveShadow) \u2014 not just a performance nicety but avoids a class of subtle WebGL context/driver quirks on hybrid-GPU laptops; use emissive/rim lighting for the stylized look instead.",
+   "Add a minimal 'webglcontextlost'/'webglcontextrestored' listener pair \u2014 hybrid-GPU laptops (integrated+discrete switching) occasionally lose the WebGL context on tab visibility changes or GPU driver resets; a one-line guard that pauses the render loop and shows a 'tap to reload' message is cheap insurance for a demo the student might present live.",
+   "MeshPhysicalMaterial's transmission feature needs WebGL2 and a background render-target capture; verify renderer.capabilities.isWebGL2 and provide the plain-transparency fallback material path for older/weaker devices (notably some older Safari/iPad configurations) rather than assuming transmission always works.",
+   "The whole CDN allowlist (cdnjs, jsdelivr/npm, cdn.tailwindcss.com, code.jquery.com for SCRIPTS only, plus fonts.googleapis.com/gstatic.com for stylesheets/fonts) exactly matches the Claude Artifact sandbox's own CSP \u2014 worth confirming this project is specifically being built to run as/like a Claude Artifact, since that shapes which corners (external assets, fetch, workers) are permanently unavailable regardless of which real host eventually serves the file."
+  ],
+  "recommendation": "Build this procedurally in Three.js \u2014 do not spend any more time searching for a real segmented brain asset. Every free option that has the right subcortical segmentation (Neuro.Wiki, NIH's 3DPX-001944, Z-Anatomy/BodyParts3D, assorted Sketchfab uploads) fails at least one hard requirement: a genuinely permissive license (several are CC BY-SA or CC BY-NC-SA, which are legally awkward to bundle into a shareable single-file artifact), true pre-segmentation into separate meshes rather than one fused blob, a direct no-manual-steps download, and a base64-safe size under the 16MB page cap. The sandbox's CSP compounds this: it blocks fetching any external GLB/texture/font outright, so even a perfect asset could only be used by hand-converting it to a base64 data URI at authoring time and loading it via GLTFLoader.parse() \u2014 real production effort for uncertain payoff, and it would leave the resulting HTML file bloated and hard to iterate on for a solo student project.\n\nConcretely: pin Three.js r170 (https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js) with all addons sourced from the same jsdelivr npm path (examples/jsm/...) via the importmap pattern verified above \u2014 never touch cdnjs for addons, since it only mirrors the core build. Build two IcosahedronGeometry(radius, 5) hemispheres sculpted into ellipsoids and displaced with 3-4 octave fBm noise (via simplex-noise@4.0.3 from jsdelivr) for gyri/sulci, a separate cerebellum mesh with a directional-ripple noise variant for its distinct \"folia\" look, a LatheGeometry/tapered-cylinder brainstem, and ~10-12 subcortical structures as simple primitives (spheres, TubeGeometry curves for hippocampus/caudate/corpus callosum) each carrying its own userData for the Atlas Explore panel. Make cortical lobes clickable via a per-vertex regionId attribute on the single hemisphere mesh (one draw call, clean raycasting, GPU-shader highlight glow) rather than separate lobe meshes, which would fight seam-matching against the shared noise field. Keep the whole scene under roughly 100-150k triangles, cap devicePixelRatio at 1.5, gate UnrealBloomPass and MeshPhysicalMaterial transmission behind an auto-detected or user-toggleable \"quality\" setting, use InstancedMesh for any repeated small elements (activation-flow particles, the neuron-population mode), and run the raster/membrane-trace plots on a plain 2D canvas overlay rather than in WebGL. This path is fully verified against the CDN allowlist, works from file://, stays comfortably inside the 16MB limit with zero embedded binary assets, and \u2014 done with the shaping/lobe/highlight details above \u2014 reads as an elegant, recognizable, purpose-built brain rather than a generic lumpy sphere, which is exactly the \"simple but comprehensive\" bar this project is aiming for."
+ },
+ "neuron": {
+  "model_choice": "Recommend the Izhikevich (2003) 2-variable model over LIF, AdEx, and Hodgkin-Huxley.\n\n- Hodgkin-Huxley: ruled out. 4 state variables with multiple exp()-based gating functions per neuron, needs dt ~0.01-0.025ms for stability. For N=100-300 neurons in plain JS at 60fps this is too many transcendental-function evaluations per frame, and far more parameters than needed for the pedagogical goal.\n- Plain LIF: too simple. Cannot natively produce bursting, chattering, or spike-frequency adaptation, so it can't show the \"zoo\" of cortical firing personalities (regular-spiking, fast-spiking, bursting, low-threshold-spiking) that makes exploring single-neuron dynamics interesting. Fine only as an optional \"beginner\" toggle before Izhikevich, not required.\n- AdEx (adaptive exponential IF): reasonable middle ground with more biophysically-named parameters (adaptation time constant, threshold slope factor), but less standardized/famous for teaching, slightly more expensive (exponential term), and no real added clarity over Izhikevich at this scope.\n- Izhikevich: 2 ODEs, ~5 flops/step, numerically cheap (trivially fits N=100-300 neurons at 60fps), and a single (a,b,c,d) parameter set reproduces essentially all known cortical/thalamic firing patterns (RS, FS, IB, CH, LTS, TC) -- exactly the \"one simple recipe, many personalities\" story that makes a good teaching demo. Izhikevich himself used this model for large-scale (tens of thousands of neurons) real-time cortex simulations, so it is proven for exactly this \"efficient population of spiking neurons in software\" use case. Main honesty caveat that must be stated in the UI: it is a phenomenological/fitted model, not conductance-based -- v and u do not correspond 1:1 to real ionic currents; they are abstractions tuned to reproduce the right spike patterns, not derived from channel biophysics.",
+  "equations_plain": "Core equations (verified against Izhikevich 2003 \"Simple Model of Spiking Neurons,\" IEEE Trans. Neural Networks):\n\ndv/dt = 0.04v^2 + 5v + 140 - u + I\ndu/dt = a(bv - u)\nreset rule: if v >= 30 (mV) then v <- c and u <- u + d\n\nPlain-English meaning of every term:\n- v (membrane potential, mV): the neuron's voltage \"state.\" Rises with input, and when it crosses +30 mV that counts as a spike (all-or-none event, not a graded signal).\n- u (recovery variable): an abstract slow negative-feedback variable standing in for the combined effect of Na+ channel inactivation and slow K+ channel activation. It doesn't correspond to one real current; it's a fitted stand-in that produces the right shapes of behavior (adaptation, bursting, etc). Growing u pulls v back down and makes the neuron harder to fire again (\"neuron getting tired\").\n- I (input current): everything driving the neuron -- injected/experimental current, incoming synaptic current from other simulated neurons, plus injected background noise standing in for the thousands of real synaptic inputs not simulated individually.\n- The 0.04v^2 + 5v + 140 part: an empirically-fit quadratic (not derived from a channel model) chosen so the model's spike upstroke matches real cortical neuron behavior near threshold; it is why this model needs care in numerical integration (see pitfalls).\n- a (recovery time scale, 1/ms): how fast u chases changes in v. Small a (e.g. 0.02) = slow recovery = can produce bursting or after-spike adaptation across a train; larger a (e.g. 0.1) = fast recovery = fast-spiking, minimal adaptation.\n- b (sensitivity of u to sub-threshold v): controls how strongly small voltage wobbles below threshold recruit the recovery variable; larger b can produce low-threshold spiking / resonance-like behavior.\n- c (reset voltage after a spike, mV): how far down v snaps immediately after a spike (models the fast K+-driven afterhyperpolarization). More negative c = deeper reset.\n- d (after-spike jump added to u): the size of the \"tiredness\" bump added after each spike (models slower high-threshold Ca2+/K+ currents = spike-frequency adaptation). Larger d = each spike makes the next one harder = fewer spikes per burst, more adaptation.\n\nConfirmed standard (a,b,c,d) presets from Izhikevich (2003), useful as named \"neuron type\" presets in the UI rather than raw sliders by default:\n- Regular Spiking (RS, typical excitatory cortical pyramidal cell): a=0.02, b=0.2, c=-65, d=8\n- Intrinsically Bursting (IB): a=0.02, b=0.2, c=-55, d=4\n- Chattering (CH): a=0.02, b=0.2, c=-50, d=2\n- Fast Spiking (FS, typical inhibitory interneuron): a=0.1, b=0.2, c=-65, d=2\n- Low-Threshold Spiking (LTS): a=0.02, b=0.25, c=-65, d=2\n- Thalamo-Cortical (TC): a=0.02, b=0.25, c=-65, d=0.05",
+  "default_params": {
+   "description": "dt = 0.5 ms per integration sub-step, using Izhikevich's own recommended stabilization trick: update v twice per 1 ms with half-steps (dt=0.5) while updating u once per full 1 ms, to tame the v^2 term (see pitfalls). Default run rate: 4 sub-steps (=2 ms of neural time) per animation frame at 60fps, giving ~120 ms neural-time per real second by default (~8x slower than biological real-time) -- exposed as a 'speed' slider from 0.25x to 8x so students can slow down to see individual spikes or speed up to see slow phenomena (adaptation, bursting cadence, oscillation build-up) unfold quickly. Population: N=150 total, 80/20 Dale's-law split = 120 excitatory (RS preset by default) + 30 inhibitory (FS preset by default) neurons. Connectivity: sparse random directed graph, each neuron's outgoing connections cover ~10% of the population chosen at random (~15 targets/neuron), fixed at network-build time (no rewiring), stored as adjacency lists in typed arrays. Synapses: simple exponential post-synaptic current kernel rather than instantaneous deltas, tau_E=5 ms (AMPA-like, excitatory), tau_I=10 ms (GABA-A-like, inhibitory); every neuron also gets an independent Gaussian background-noise current each step (mean 0, tunable std, default small) standing in for unmodeled synaptic bombardment (Destexhe-style 'high-conductance state' rationale). Synaptic delay: minimum 1 simulation step (>=0.5-1 ms) between presynaptic spike and postsynaptic current onset -- required to avoid pathological single-step whole-network lockstep synchrony from zero-delay coupling. Weight scaling: excitatory and inhibitory total synaptic drive are scaled to a rough balanced-network regime (Brunel-style) so the network sits in an asynchronous-irregular default state rather than silence or runaway synchrony; global 'excitatory drive' and 'GABA tone' sliders scale w_E and w_I respectively from that balanced baseline. All slider ranges must be clamped server-side/client-side to keep the network inside a non-diverging regime (see pitfalls) regardless of what combination a student picks."
+  },
+  "neuromodulator_mappings": [
+   {
+    "modulator": "Dopamine (DA)",
+    "parameter_effect": "Adds a small tonic depolarizing offset to the input current I (or raises b slightly) for a UI-labeled 'target' subpopulation only, optionally paired with a small multiplicative boost (1.0x-1.3x) to recurrent excitatory (E->E) synaptic weights in that same subpopulation. Keep the range small so it nudges excitability/gain rather than forcing runaway firing.",
+    "plain_explanation": "In real circuits, dopamine from VTA/SNc modulates excitability and synaptic gain in target neurons -- e.g. enhancing NMDA-mediated persistent activity in prefrontal cortex network models (Durstewitz & Seamans), with an inverted-U dose-response (too much is as bad as too little). In this sim, raising the Dopamine slider simply makes a highlighted 'target' group of neurons somewhat more excitable/responsive to input. It does NOT implement reward, prediction error, or any learning rule.",
+    "confidence": "Direction of the single-cell/circuit excitability effect is well-supported in computational modeling literature (Durstewitz & Seamans PFC models). The reduction to one global slider, the omission of receptor subtype (D1 vs D2) and dose-response nonlinearity (inverted-U), and especially the lack of any reward-learning loop are simplifications -- must be labeled explicitly so a student doesn't think this sim performs reinforcement learning."
+   },
+   {
+    "modulator": "Acetylcholine (ACh)",
+    "parameter_effect": "Decrease the after-spike recovery increment d by up to ~50% from baseline (less spike-frequency adaptation), and separately scale down recurrent excitatory-to-excitatory (E->E) synaptic weights (e.g. to 50-70% of baseline) while leaving feedforward/external input drive untouched.",
+    "plain_explanation": "ACh from the basal forebrain suppresses M-current-like and other slow adaptation K+ currents, so neurons keep firing near their initial rate under sustained input instead of adapting down (documented mechanistically, e.g. attenuation of ERG-type K+ currents reducing spike-frequency adaptation and network correlation). ACh also presynaptically suppresses intracortical/recurrent excitatory synapses more than thalamic/afferent ones (Hasselmo's cholinergic modulation work), biasing a network from an 'internal replay' mode toward a 'feedforward sensory' mode. The slider lowers d and turns down recurrent E-E weights to reflect both effects.",
+    "confidence": "Well-supported mechanistically for both the adaptation-reduction effect and the recurrent-vs-afferent synapse suppression effect -- one of the more physiologically faithful sliders in this design, backed by named, citable primary literature (Hasselmo; ERG K+ current studies)."
+   },
+   {
+    "modulator": "Noradrenaline / Norepinephrine (NE)",
+    "parameter_effect": "Apply a gain multiplier to each neuron's net synaptic + external current that is nonlinear in effect (amplifies already-suprathreshold/strong drive more than it amplifies subthreshold noise), and/or reduce the standard deviation of the background noise current -- both sharpen the network's effective input-output (f-I) curve.",
+    "plain_explanation": "Locus coeruleus noradrenaline release is classically modeled as increasing neural 'gain,' i.e. steepening the slope of the input-output curve, which raises the signal-to-noise ratio of target circuits (Servan-Schreiber, Printz & Cohen, Science 1990 -- 'A Network Model of Catecholamine Effects'; supported by later neural-gain/attention modeling, e.g. Eldar et al. eLife 2013). Raising the slider makes strong inputs produce proportionally stronger firing while weak/noisy inputs are relatively suppressed.",
+    "confidence": "Well-supported for the core gain/SNR mechanism -- this is a classic, frequently-cited, purpose-built computational result, arguably the single best-grounded neuromodulator mapping available. The further popular narrative linking this to 'arousal' or 'explore vs exploit' behavioral state is a reasonable but more interpretive extension; keep the slider's own description limited to gain/SNR and mark any arousal/exploration narrative as illustrative framing, not a modeled quantity."
+   },
+   {
+    "modulator": "Serotonin (5-HT)",
+    "parameter_effect": "Shift the excitation/inhibition set point by moving inhibitory-onto-excitatory and excitatory-onto-inhibitory weights modestly in opposite directions around baseline (a small bidirectional re-balancing), rather than a single unidirectional 'more/less excitable' dial.",
+    "plain_explanation": "Serotonin has been shown to fine-tune excitation/inhibition balance in cortical networks (e.g. Cerebral Cortex 2010, 'Serotoninergic Fine-Tuning of the Excitation-Inhibition Balance in Rat Visual Cortical Networks'), acting through multiple receptor subtypes whose net effect differs by context -- 5-HT1A is generally hyperpolarizing/inhibitory, 5-HT2A is often excitatory on some interneuron classes, so the real net direction is not one-size-fits-all. This sim represents serotonin as a knob that re-balances E vs I drive rather than a simple excitability dial. It explicitly does NOT model mood, wellbeing, depression, or SSRI-like pharmacology.",
+    "confidence": "Well-supported that 5-HT tunes E/I balance in cortical circuits (citable empirical/computational literature). The specific direction chosen for the slider, and especially the popular 'serotonin = mood/calm' association, are NOT modeled and must be labeled a metaphor / explicitly out of scope to avoid overclaiming -- this is one of the two weaker mappings in the set."
+   },
+   {
+    "modulator": "GABA tone (overall inhibitory strength)",
+    "parameter_effect": "Directly multiply the inhibitory synaptic weight/conductance for all I->E and I->I connections by a single gain factor, optionally with a small added tonic hyperpolarizing/leak-like current on all neurons to represent extrasynaptic tonic GABA-A conductance.",
+    "plain_explanation": "This is the most literal slider in the set: it changes the actual strength of inhibitory synapses in the simulated network, which is mechanistically exactly what GABA-A receptor-mediated inhibition does in real cortex (about 20-30% of cortical neurons are GABAergic interneurons). Raising it shifts the network from asynchronous-irregular firing toward slower, more suppressed, or more oscillatory activity -- a direct, well-studied consequence of E/I balance shifts in spiking network models (Brunel-type balanced networks; PING/ING-style oscillations).",
+    "confidence": "Well-supported / direct mechanism, not a metaphor. This slider maps essentially 1:1 onto a real, well-characterized physiological parameter (inhibitory synaptic conductance) and its network-level consequences are standard, citable computational neuroscience (Brunel 2000 network states)."
+   },
+   {
+    "modulator": "Cortisol / acute stress",
+    "parameter_effect": "Composite, clearly-labeled illustrative slider: (a) increase background noise amplitude on all neurons, (b) modestly raise excitability (small added depolarizing current, or shift b) on a UI-labeled 'amygdala-like' subgroup, while (c) modestly suppress excitability (small hyperpolarizing offset) on a separately labeled 'hippocampus-like/regulatory' subgroup -- gesturing at documented opposite-direction, region-specific effects rather than one global excitability number.",
+    "plain_explanation": "Real cortisol/glucocorticoid effects on neurons are genuinely biphasic (fast non-genomic vs slow genomic signaling, on different timescales) and region-specific: basolateral amygdala neurons can become more excitable following corticosteroid exposure, while hippocampal circuits show more mixed, time-dependent effects (including changes via HCN1 channels and shifts in glutamatergic/GABAergic balance) rather than a simple excitability increase. This sim compresses all of that into one illustrative 'stress' slider nudging two labeled subgroups in opposite directions plus added noise, purely to convey the intuition that 'stress hormones don't just turn the brain up uniformly, they reweight different circuits differently and over different timescales.' It is not a quantitative or mechanistic stress model.",
+    "confidence": "LOW / pedagogical metaphor -- the weakest-grounded mapping in the set. Direction, magnitude, and time-course of real cortisol effects vary by brain region, receptor type, and time since stress onset in ways a single instantaneous slider cannot capture (confirmed across amygdala vs hippocampus literature, which shows opposite and time-dependent effects). Must carry the single most explicit 'illustrative only, not a real stress model' disclaimer of any slider in the UI."
+   }
+  ],
+  "population_design": "N = 150 point neurons total, split 80/20 by Dale's law: 120 excitatory (default preset: Regular Spiking) + 30 inhibitory (default preset: Fast Spiking) -- 80/20 is presented in the UI as \"a common cortex-wide approximation,\" not a universal constant (real ratios vary by region/layer/species). Each neuron's identity (excitatory vs inhibitory) is fixed at network build time and it may ONLY make synapses of that one sign to every target it connects to (Dale's law) -- call this out explicitly in the UI since students often assume synapse sign can vary per-connection.\n\nConnectivity: sparse random directed graph, not all-to-all. Each neuron connects to ~10% of the rest of the population chosen at random at build time (about 15 outgoing targets per neuron on average), stored as fixed adjacency lists in typed arrays (Int32Array indices + matching weight array) for fast iteration -- no runtime rewiring/plasticity in the base sim (keeps it explainable and avoids conflating this with a learning demo).\n\nSynaptic transmission: not instantaneous voltage deltas -- use a simple exponentially-decaying post-synaptic current per neuron (one extra state variable per neuron, incremented on a presynaptic spike arrival and decaying each step), tau_E ~ 5 ms (AMPA-like) for excitatory sources and tau_I ~ 10 ms (GABA-A-like) for inhibitory sources. A minimum synaptic delay of one simulation step (>=0.5-1 ms) between presynaptic spike and postsynaptic current onset is required (see pitfalls) to avoid pathological zero-delay lockstep synchrony.\n\nBackground drive: every neuron receives an independent Gaussian noise current each step (mean 0, small tunable std), standing in for the thousands of real synaptic inputs per cortical neuron that aren't individually simulated (Destexhe-style \"high-conductance/in-vivo-like\" state rationale) -- flagged in the UI as a necessary simplification, not a literal biological noise source.\n\nNumerical integration for 60fps in plain JS: dt = 0.5 ms; Izhikevich's own stabilization trick is used -- update v with two half-ms Euler sub-steps per full 1 ms tick while updating u once per full 1 ms tick -- to control the v^2 term's stiffness near spike threshold (see pitfalls; plain 1ms-step Euler on the raw equations is a known source of divergence). Default run rate: 4 sub-steps (2 ms neural time) per requestAnimationFrame call at 60fps (~120 ms neural-time/real-second by default), exposed via a \"speed\" slider (0.25x-8x) so a student can slow down to watch individual spikes or speed up to see slower phenomena (bursting cadence, adaptation, network oscillation build-up) within a reasonable wait. Performance: 150 neurons x ~15 synapses x a few flops/step x a handful of sub-steps/frame is trivial for JS at 60fps -- use Float32Array for all per-neuron state (v, u, synaptic current, noise seed) and pre-built Int32Array adjacency lists to avoid garbage-collection pauses from per-frame object allocation, and avoid re-allocating arrays inside the animation loop.\n\nWeight/gain balancing: total excitatory and inhibitory synaptic drive are scaled from a rough balanced-network baseline (Brunel-style asynchronous-irregular regime) so the default network sits in a sustained, non-silent, non-runaway-synchronous firing state; the \"excitatory drive\" and \"GABA tone\" sliders scale w_E and w_I respectively away from that baseline, and both must be range-clamped so no slider combination can push the network into unbounded runaway firing or complete silence without at least a graceful, explained state (see pitfalls).",
+  "visualizations": [
+   "Spike raster plot: y-axis = neuron index (excitatory neurons grouped/colored separately from inhibitory), x-axis = a scrolling time window (e.g. last 2-5 seconds of neural time); one tick/dot per spike. Must be drawn on an HTML canvas (not SVG/DOM nodes) for performance with hundreds of spikes accumulating over a scrolling window -- maintain a rolling spike buffer and redraw incrementally rather than re-rendering the whole history every frame.",
+   "Membrane potential (and recovery variable) trace: pick 1 (default) up to 3 user-selectable 'highlighted' neurons and plot v(t) over a rolling time window on a line chart, with the spike-and-reset visibly marked (sharp drop to c); optionally overlay u(t) as a second, differently-colored line so the 'recovery/tiredness' variable's role becomes visually tangible alongside voltage.",
+   "Population firing-rate plot (PSTH-style): a binned and smoothed spikes-per-second trace, plotted separately for the excitatory and inhibitory subpopulations over the same rolling time window, to make emergent phenomena (synchrony, oscillation, quiescence) visible at the population level rather than only spike-by-spike.",
+   "Phase portrait (v vs u) for the highlighted neuron, optional/advanced toggle: plot the live (v,u) trajectory in the v-u plane, optionally overlaid with the two nullclines (dv/dt=0: u = 0.04v^2+5v+140+I; du/dt=0: u = b*v) so a curious student can see geometrically why/when a spike is imminent. Cheap to compute (closed-form nullclines), high pedagogical payoff, but needs its own short explanation panel since phase portraits are unfamiliar to most students -- keep behind an 'advanced' toggle rather than shown by default.",
+   "Optional/secondary: a small population 'heat' view -- neurons laid out on a compact grid or ring, node color/brightness driven by each neuron's recent (e.g. last 100ms) firing rate, updated every frame. Nice at-a-glance 'network is active here' feel; strictly secondary to the raster and rate plots, and must not be captioned in a way that implies it shows 'thoughts' or cognition (see pitfalls)."
+  ],
+  "explanations_to_include": [
+   "What a spike is: an all-or-none threshold-crossing event, not a graded/analog signal -- contrast explicitly with the continuous membrane-potential trace shown right next to the raster.",
+   "What the membrane potential v represents physically (voltage across the neuron's membrane) and what resting potential / depolarization / threshold mean in plain terms.",
+   "What the recovery variable u represents: an abstract 'tiredness'/negative-feedback stand-in for combined Na+ inactivation and slow K+ activation -- explicitly NOT a single real physical current, to prevent the misconception that u = potassium current.",
+   "Plain-English meaning of each of a, b, c, d individually (see equations_plain), presented primarily via named neuron-type presets (RS/FS/IB/CH/LTS/TC) with an 'advanced' toggle exposing the raw sliders for students who want to explore the parameter space directly.",
+   "What the input current I represents: an 'electrode/injected current' analogy for the tonic/external part, plus an explicit note that the added background noise is a simplification standing in for thousands of unmodeled real synaptic inputs, not a claim that real neurons have literal random noise generators.",
+   "Dale's law, stated explicitly as a real biological constraint (not just an implementation detail): a real neuron is either excitatory or inhibitory to ALL of its postsynaptic targets, it cannot switch sign connection-by-connection -- flagged because this is a common student misconception.",
+   "What excitatory vs inhibitory population balance (E/I ratio) means and why cortex is commonly approximated as ~80% excitatory / ~20% inhibitory, with a caveat that real ratios vary by region/layer/species.",
+   "How to read the raster plot: one dot = one spike from one neuron at one moment; rows = distinct neurons; columns = time -- explicitly avoid narrating it as 'the brain thinking.'",
+   "What population firing rate means (spikes/second averaged over a short window and over neurons) and, at a plain-language level, why recurrent excitation/inhibition timing can produce visible oscillations or synchrony in the rate trace.",
+   "Why the simulation advances in small discrete time steps (dt) rather than continuously, and briefly why too large a step causes visible instability -- kept short/intuitive, not a numerical-methods lecture.",
+   "For EVERY neuromodulator slider, a fixed two-part inline explanation pattern: 'In real neurons/circuits: <one-sentence mechanism with citation-worthy claim>' followed by 'In this simulation we simplify it as: <exact parameter(s) being changed>', plus a visible honesty badge per slider (e.g. Well-supported mechanism / Simplified but directionally supported / Illustrative metaphor only) -- this pairing should be a structural UI requirement, not just optional prose, given the project's 'every knob explained + flag metaphors' goal.",
+   "A persistent, hard-to-miss disclaimer (e.g. a small fixed banner or an always-visible 'About this model' panel) stating: this is a simplified pedagogical model of ~150 point neurons, not a real brain simulation; real human cortex has on the order of tens of billions of neurons with vastly more cell-type and connectivity diversity; real synapses have complex plasticity not modeled here; real neuromodulators act via multiple distinct receptor subtypes with region- and time-specific effects that a single global slider cannot represent.",
+   "Explicit statement that the Izhikevich model is phenomenological/fitted, not conductance-based like Hodgkin-Huxley -- v and u reproduce the right spiking behavior without corresponding 1:1 to identified ion channels.",
+   "A short note distinguishing 'simulation speed' (the UI speed multiplier / how much neural time passes per rendered frame) from 'biological realism' -- speeding up the sim to see slow phenomena faster is a UI convenience, not a claim about how fast real neurons operate."
+  ],
+  "pitfalls": [
+   "Numerical instability from the v^2 term: naive single Euler step at dt=1ms on the raw Izhikevich equations can make v diverge/blow up near and after threshold crossing. Mitigation (from Izhikevich's own recommendation): split each 1ms tick into two 0.5ms sub-steps for updating v while updating u once per full 1ms tick; additionally hard-clamp v into a safe range (e.g. no lower than about -100 to -120 mV, and check for spike/reset before v is allowed to run away past +30) on every sub-step, not just at the end of a full tick.",
+   "Extreme slider combinations (student cranks input current, or 'advanced' a/b/c/d far outside Izhikevich's tested regimes) can push the model into non-biological behavior: infinite firing, numerical overflow, or NaN state. All sliders must be range-clamped to keep the system inside a non-diverging regime, and the update loop must defensively check isFinite(v)/isFinite(u) each step and reset a neuron to a safe resting state if it goes non-finite, rather than letting NaN silently propagate through the raster/rate plots.",
+   "Spike detection at large dt can overshoot v well past +30mV before the threshold check runs, biasing spike timing/counting in the raster if only checked once per full tick -- check the threshold condition after each integration sub-step, not only once per rendered frame or once per full 1ms tick.",
+   "Zero synaptic delay in a recurrent network is a common source of a purely numerical (not physiological) artifact: with strong enough weights, fully instantaneous coupling can make many neurons fire in perfect lockstep within a single simulation step. A minimum 1-step (>=0.5-1ms) synaptic delay is required both for numerical realism and to avoid this pathological synchrony artifact.",
+   "Weight/scale mismatch as network size or E/I sliders change: total synaptic drive onto a neuron scales with in-degree x weight, so if excitatory and inhibitory total drive aren't kept roughly balanced (Brunel-style), the network can flip between total silence and runaway synchronous firing as a student adjusts N, connectivity, or the excitatory/GABA-tone sliders -- design the weight-scaling formula so it stays near a balanced regime across the intended slider ranges, and clamp the extremes.",
+   "Do not narrate simulated activity in mentalistic terms: avoid phrases like 'the network is thinking,' 'this IS the fear circuit,' or 'the neuron feels reward.' The population is a generic, unwired-to-any-real-circuit toy network with a few labeled subgroups for neuromodulator sliders -- it does not replicate actual amygdala/VTA/hippocampal connectivity, so all copy should say 'illustrates a mechanism associated with X' rather than claiming the sim IS structure X.",
+   "Do not frame the Dopamine slider as implementing reward-prediction-error, temporal-difference learning, or any form of learning/plasticity unless a real reward+learning loop is actually built -- if the base sim has no synaptic plasticity, the dopamine slider must be described purely as an excitability/gain modulator on a labeled subgroup, otherwise it overclaims a mechanism (RPE/TD learning) that is well-documented in the literature but not actually present in this simulation.",
+   "Serotonin and cortisol/stress are the two weakest-grounded mappings (confirmed via literature check: 5-HT's net E/I effect is receptor- and context-dependent rather than unidirectional; cortisol effects are genuinely biphasic, region-specific, and time-dependent, with amygdala and hippocampus documented to respond differently). These two sliders must visibly carry a stronger 'illustrative metaphor' disclaimer than GABA tone, acetylcholine, or noradrenaline, which are more directly grounded -- treating all six sliders with the same confidence badge would misrepresent how well-supported each one actually is.",
+   "The Izhikevich model itself is phenomenological (curve-fit), not conductance-based -- avoid any copy implying u 'is' a specific ionic current (e.g. 'this is the potassium current') since it is a fitted abstraction that reproduces the right dynamics rather than a biophysically derived quantity.",
+   "Do not conflate the UI's simulation-speed multiplier with a claim about biological realism or timing accuracy -- speeding up/slowing down neural-time-per-frame is purely a viewing convenience and should be labeled as such, not presented as if it reflects how fast real neurons actually operate."
+  ]
+ },
+ "draft": {
+  "architecture": "Single index.html, ~2.5-3.5k lines, zero build step, opens via file:// or any static host. One <script type=\"importmap\"> (must precede the module script) maps three, three/addons/, and simplex-noise to pinned jsdelivr npm-proxy URLs (three@0.170.0, simplex-noise@4.0.3) \u2014 cdnjs is never used for addons since it only mirrors three's core build (verified by the tech scout). Exactly one <script type=\"module\"> holds all app logic; this is not a style choice but a hard constraint \u2014 file:// blocks relative-path imports of a second local .js file (CORS), while CDN imports work because they're genuine https:// fetches. Internally the module is organized as clearly commented sections (data \u2192 math/geometry helpers \u2192 scene/renderer \u2192 interaction/raycasting \u2192 three mode controllers \u2192 shared UI chrome \u2192 render loop \u2192 boot), not as literal ES module files. Rendering is a single WebGL canvas full-bleed behind an HTML/CSS overlay UI layer (fixed/absolute-positioned glass panels); the neuron-simulation plots are plain 2D <canvas> elements composited over the WebGL canvas, not WebGL geometry. No backend, no build tooling, no external fonts required (system font stack) though Google Fonts may be added via the allowed fonts.googleapis.com/gstatic.com pair if a more distinctive typeface is wanted.\n\nDECISION \u2014 procedural brain, not an embedded asset: The tech scout checked every realistic free source (Neuro.Wiki, NIH 3DPX-001944, Z-Anatomy/BodyParts3D, Sketchfab uploads) and each one fails at least one hard requirement simultaneously \u2014 a genuinely permissive license (several are CC BY-SA / CC BY-NC-SA, legally awkward to bundle into a shareable single-file artifact), true pre-segmentation into separate per-structure meshes rather than one fused blob, a no-manual-pipeline direct download, and a base64-safe size under the 16MB artifact cap. Compounding this, the sandbox's CSP blocks any live fetch of an external .glb/.gltf/texture/font outright \u2014 even a perfect asset could only be used by hand base64-embedding it at authoring time and loading via GLTFLoader.parse(arrayBuffer), which bloats the file and kills iterability for zero net benefit over building it procedurally. Building hemispheres as noise-displaced IcosahedronGeometry ellipsoids, a rippled cerebellum, a lathe/cylinder brainstem, and ~14 simple-primitive subcortical structures (spheres, TubeGeometry curves for hippocampus/caudate/corpus callosum) stays fully inside the CDN allowlist, needs zero embedded binaries, is trivially editable, and \u2014 with the shaping/parcellation/highlight details specified below \u2014 reads as an elegant, recognizable, purpose-built brain rather than a generic lumpy sphere, which matches the \"simple but comprehensive\" bar better than any asset path that was actually available.",
+  "file_layout_inside_single_html": "\n&lt;!doctype html&gt;&lt;html&gt;&lt;head&gt;\n  &lt;meta charset, viewport&gt;\n  &lt;title&gt;, optional &lt;link&gt; to Google Fonts (Inter or Space Grotesk + a monospace like JetBrains Mono for numeric readouts)\n  &lt;script type=\"importmap\"&gt; \u2014 three@0.170.0 core + examples/jsm addons (OrbitControls, EffectComposer, RenderPass, UnrealBloomPass, CSS2DRenderer, BufferGeometryUtils) + simplex-noise@4.0.3, all pinned, all from cdn.jsdelivr.net/npm/\n  &lt;style&gt; \u2014 one block, organized as: :root design tokens (colors incl. 3 mode-accent vars, spacing, radii, shadows/glass blur), base reset, layout grid (topbar + canvas stage + side panel + bottom explain rail), glass-panel component class, buttons/sliders/toggle/select components, glossary popover component, drawer component, mode-switcher pills, neuron-mode canvas overlay grid, honesty-badge chips, responsive breakpoint (panel collapses to a bottom sheet under ~900px \u2014 nice-to-have per brief).\n&lt;/head&gt;&lt;body&gt;\n  &lt;header id=\"topbar\"&gt; app name, 3-way mode switcher, quality toggle, \"How this works\" button, keyboard-hint icon\n  &lt;canvas id=\"stage\"&gt; \u2014 three.js target\n  &lt;canvas id=\"fx-raster\"&gt;, &lt;canvas id=\"fx-trace\"&gt;, &lt;canvas id=\"fx-rate\"&gt; \u2014 2D overlay canvases, only visible/laid out in Neuron mode\n  &lt;aside id=\"side-panel\"&gt; \u2014 mode-specific content, swapped by the mode controller: Pathway list+transport, Atlas region list+search+lesion toggle, Neuron presets+sliders\n  &lt;section id=\"explain-panel\"&gt; \u2014 persistent \"Explain this\" surface, always present, its innerHTML replaced by whichever controller is active; content is produced via a shared linkTerms(html) helper so every rendered explanation gets glossary spans automatically\n  &lt;dialog id=\"glossary-popover\"&gt; (or a positioned div) \u2014 opens near a clicked .term span\n  &lt;aside id=\"how-drawer\"&gt; \u2014 slide-in panel: Rendering, Timing model, Neuron equations, Metaphor-vs-physiology / misconceptions (from accuracy_pitfalls), full A-Z glossary browser (safety net for coverage)\n  &lt;div id=\"webgl-lost-banner\" hidden&gt; \u2014 shown on 'webglcontextlost'\n  &lt;script type=\"module\"&gt;\n    // 1. DATA \u2014 const REGIONS = {...28 entries...}; const PATHWAYS = [...8...]; const GLOSSARY = [...38...]; const NEUROMOD_DEFS = [...6...]; const NEURON_PRESETS = {...6 (a,b,c,d) sets...}; const ACCURACY_PITFALLS = [...13...]\n    // 2. MATH/GEOM HELPERS \u2014 fbm(noise3D, p, octaves), buildHemisphere(side), buildCerebellum(), buildBrainstem(), buildSubcortical(id), regionIdForVertex(theta,phi,side) parcellation lookup\n    // 3. SCENE \u2014 renderer/camera/OrbitControls/lights/composer(bloom)/pixelRatio cap/resize/contextlost-restored handlers/quality auto-detect\n    // 4. BUILD \u2014 instantiate all meshes, attach userData, assemble sceneGraph, compute region centroids (for pathway curves/camera framing)\n    // 5. INTERACTION \u2014 raycaster, hover outline, click resolver (mesh userData OR regionId-attribute majority vote), camera fly-to(target)\n    // 6. GLOSSARY \u2014 linkTerms(html), popover open/close/position, drawer glossary browser render\n    // 7. MODE: ATLAS \u2014 region list render, select/focus, lesion toggle+state map, card renderer (functions/lesion_effects/location/connections/famous_case)\n    // 8. MODE: PATHWAYS \u2014 scenario list, step sequencer state machine, timeline scrubber, InstancedMesh pulse-along-curve, play/pause/step/prev, syncs Explain panel + accuracy_caveats banner\n    // 9. MODE: NEURON SIM \u2014 Float32Array state (v,u,Isyn), Int32Array adjacency, izhikevichStep(), fixed-timestep accumulator, neuromodulator slider handlers (parameter deltas per NEUROMOD_DEFS), InstancedMesh population dots, raster/trace/rate canvas renderers, phase-portrait advanced toggle, isFinite guards\n    // 10. MODE SWITCHER + KEYBOARD SHORTCUTS + \"how this works\" drawer wiring\n    // 11. RENDER LOOP \u2014 requestAnimationFrame: step active mode, render composer, draw active 2D canvases\n    // 12. BOOT\n  &lt;/script&gt;\n&lt;/body&gt;&lt;/html&gt;\n",
+  "data_model": "All content is embedded as plain JS object/array literals transcribed directly from the research JSON (no runtime fetch \u2014 everything is static data baked into the file):\n\nREGIONS: keyed by id (v1, v4, mt_v5, ffa, a1, wernicke, broca, s1, m1, ppc, dlpfc, vmpfc_ofc, acc, insula, corpus_callosum, thalamus, hypothalamus, amygdala, hippocampus, striatum, globus_pallidus, stn, nucleus_accumbens, vta, substantia_nigra, cerebellum, locus_coeruleus, raphe_nuclei \u2014 28 total). Each entry keeps the research's fields verbatim (name, group, one_liner, functions[], lesion_effects, approx_location, key_connections[], famous_case_or_evidence?) plus three build-time-only fields added during Step 6/10: `kind` ('cortical-region' | 'subcortical' | 'brainstem' | 'cerebellum' | 'commissure'), `position` (Vector3 in model space, either the centroid read off the built mesh for subcortical/discrete objects, or a representative point for cortical regionId zones), and `meshRefs` (populated at build time \u2014 one or two Object3D refs for paired structures).\n\nCORTICAL PARCELLATION MAP: a small pure function `regionIdForVertex(theta, phi, side)` returning one of the 12 cortical region ids (v1, v4, mt_v5, ffa, a1, wernicke/broca on the language-dominant side only \u2014 see note below, s1, m1, ppc, dlpfc, vmpfc_ofc, acc) from hand-tuned angular boundaries against the pre-displacement unit-sphere position. Wernicke's/Broca's are shown only on the left hemisphere (with a one-line note on the right hemisphere's homologous patch: \"usually less specialized for language\"), reflecting the ~95-99% left-lateralization the content notes as typical-not-universal. Insula and corpus_callosum are NOT part of this attribute (see below).\n\nPATHWAYS: array of 8 scenario objects (recognize_face, recall_word, fear_response, making_decision, reading_sentence, motor_skill_learning, attention_shift, sleep_consolidation), each with id, title, scenario_sentence, steps[] (region_ids[], approx_ms, what_happens, why_it_matters, evidence_or_method), and accuracy_caveats (rendered as a permanently visible \"how literally to take this\" note under the step content, not hidden in a tooltip).\n\nGLOSSARY: array of 38 {term, plain_definition} entries, used two ways: (a) linkTerms(html) auto-wraps any occurrence of a term (longest-match-first, word-boundary regex, case-insensitive) in the dynamically-rendered explain/atlas/neuron text into a clickable `<span class=\"term\" data-term=\"...\">`; (b) a full A-Z browsable list inside the \"How this works\" drawer as a coverage safety net independent of incidental text matches.\n\nNEURON_PRESETS: the 6 named (a,b,c,d) sets (RS, IB, CH, FS, LTS, TC) plus their one-line behavioral description, used as the default UI (dropdown) with an \"advanced\" toggle exposing raw a/b/c/d sliders clamped to safe ranges.\n\nNEUROMOD_DEFS: array of 6 {name, parameter_effect (exact simulation mapping), plain_explanation, confidence} entries transcribed from the research, each rendered with the fixed two-part pattern (\"In real neurons/circuits: ...\" / \"In this simulation we simplify it as: ...\") plus a visible honesty badge derived from `confidence` (Well-supported / Simplified-but-directional / Illustrative metaphor only \u2014 Serotonin and Cortisol get the weakest badge per the research's explicit confidence notes).\n\nACCURACY_PITFALLS: the 13-item list from research, rendered verbatim (lightly copy-edited) as a \"Common misconceptions\" section in the \"How this works\" drawer.\n\nRuntime-only state (not persisted, no localStorage needed since nothing here demands cross-session memory): activeMode, atlas.selectedRegionId, atlas.lesionedIds (Set), atlas.lesionModeOn, pathway.activeId/activeStepIndex/isPlaying/speedMultiplier, neuron.Float32Array state arrays (v,u,Isyn per neuron), neuron.adjacency (Int32Array), neuron.sliderValues (6 neuromodulators + speed + N/connectivity if exposed), neuron.highlightedNeuronIndices, quality.level (auto-detected + user override), glossary.openTerm.",
+  "ui_layout": "Full-viewport 3-zone layout: (1) a fixed topbar (~56px) \u2014 app name/logo mark on the left, a 3-pill mode switcher centered (Pathways / Atlas / Neurons, each pill tinted with its accent color when active), and a right cluster with a quality toggle (Auto/High/Low), a \"?\" button opening the How-this-works drawer, and a small keyboard-shortcut hint; (2) the WebGL canvas fills the remaining viewport as the base layer, with OrbitControls (rotate/pan/zoom, damped) always live except a widescreen-only micro-hint on first load (\"drag to rotate, scroll to zoom, click a region\"); (3) floating glass panels overlaid on the canvas rather than a hard sidebar split, so the brain stays large and central: a left panel (~340px, collapsible via a chevron) holds the mode-specific control list (pathway scenario picker + transport controls, or atlas region search/list + lesion toggle, or neuron presets + neuromodulator sliders), and a bottom-right \"Explain this\" card (~380px wide, max ~50vh, scrollable) is always present and re-populates live with whatever is hovered/selected/animating \u2014 this is the one panel that never disappears across modes, giving the app a consistent anchor. In Pathway mode a slim horizontal timeline scrubber docks along the bottom edge showing step markers and the current approx_ms readout. In Neuron mode the left panel's lower half is replaced by the three stacked 2D-canvas plots (raster, membrane+recovery trace, population rate), with the advanced phase-portrait plot behind a collapsed \"Advanced\" disclosure. The glossary popover is a small fixed-width card that appears anchored near the clicked term (flips side near viewport edges) with the definition and a subtle \"part of glossary\" chevron linking into the full drawer list. The How-this-works drawer slides in from the right at ~420px wide, full height, with its own internal tab/anchor nav (Rendering / Timing model / Neuron equations / Metaphor vs. physiology / Full glossary). Keyboard: number keys 1/2/3 switch modes, arrow keys step through the active pathway or move focus through the atlas region list, space toggles pathway play/pause, Escape closes any open popover/drawer.",
+  "visual_design": "Dark, glassy, minimal \u2014 one calm neutral base so switching modes doesn't jar, with exactly one accent color per mode carrying all the \"this mode is active\" signaling: Pathways = a cool cyan/teal (--accent-pathway), Atlas = a violet/orchid (--accent-atlas), Neurons = a warm amber (--accent-neuron). Base palette: near-black ink background (#0a0b0f range) for the page behind the canvas, panels as translucent dark glass (rgba background ~0.55-0.65 alpha over a subtle backdrop-filter: blur(16px), 1px hairline border at ~8-12% white, soft outer shadow) so the 3D brain reads through faintly at panel edges. Brain materials: cortex hemispheres in a cool, slightly translucent blue-gray (MeshPhysicalMaterial, opacity ~0.3, low roughness) so gyral folding is legible while subcortical structures glow through from beneath; each subcortical structure gets its own small distinct emissive-tinted color (thalamus pale gold, amygdala warm red, hippocampus amber, striatum violet, etc.) chosen for maximum distinguishability at a glance, not for anatomical realism \u2014 documented as such. Selection/hover state = a soft rim-light glow in the active mode's accent color (via emissive intensity lerp), never a hard outline, keeping the \"elegant\" register. Typography: one geometric/humanist sans for all UI chrome (system-ui stack, or Inter/Space Grotesk via Google Fonts if a more distinctive brand feel is wanted) at a restrained size scale (13-15px body, 11-12px labels/badges, larger 20-24px for pathway scenario titles and region names), plus a monospace face for every numeric readout (ms timers, mV values, slider numbers, spike counts) so \"live data\" is visually distinct from prose. Generous whitespace: panel internal padding ~20-24px, list-item spacing ~12px, never more than ~65-70 characters per line of explanatory prose. Honesty badges (Well-supported / Simplified-directional / Illustrative metaphor) get their own small muted chip style (not accent-colored) so they read as neutral metadata, not part of the color-coded mode system. No skeuomorphism, no gradients beyond very subtle panel-edge glass sheen, no more than the three defined accents plus the neutral grayscale ramp anywhere in the UI.",
+  "modes": [
+   {
+    "name": "Cognitive Pathway Journeys",
+    "behavior": "User picks one of 8 preset scenarios from the left panel (Recognizing a Face, Recalling a Word/Name, Fear Response, Making a Decision, Reading a Sentence, Learning a Motor Skill, Shifting Attention, Sleep & Memory Consolidation). Transport controls (play/pause/prev/next) and a bottom timeline scrubber step through that scenario's ordered steps; each step highlights its region(s) with an accent-colored emissive glow, camera eases toward the relevant area, and (for steps after the first) a small InstancedMesh pulse travels along a CatmullRomCurve3 between the previous and current step's region centroid to visualize 'activation flowing'. approx_ms is shown as a running readout on the scrubber.",
+    "explanation_surface": "The persistent Explain panel shows the current step's what_happens, why_it_matters, and evidence_or_method, with every technical term auto-linked to the glossary; the pathway's scenario_sentence sits at the top and its accuracy_caveats sits in a permanently visible muted note beneath the step content (not hidden), since several pathways explicitly flag their ms values as schematic order-of-engagement rather than literal timings."
+   },
+   {
+    "name": "Atlas Explore",
+    "behavior": "A searchable/filterable list of all 28 regions (grouped by the research's `group` field \u2014 occipital lobe, temporal lobe, basal ganglia, brainstem, etc.) sits in the left panel; clicking a list item or clicking the region directly in the 3D view selects it, eases the camera toward it, and applies the accent-colored highlight. A 'Lesion mode' toggle switches click behavior from 'select' to 'lesion': clicking a region instead dims it to a flat gray, drops its opacity, and marks it with a small 'LESIONED' badge, while its lesion_effects text becomes the headline of the Explain panel; multiple regions can be lesioned at once (a 'reset all' button clears them) to let a student explore combinations informally.",
+    "explanation_surface": "The Explain panel renders the selected region's full card: name, one_liner, functions (bulleted), lesion_effects, approx_location, key_connections (each connection name is itself clickable and jumps/selects that region), and famous_case_or_evidence when present \u2014 all text passed through the glossary auto-linker."
+   },
+   {
+    "name": "Parametric Neuron Simulation",
+    "behavior": "A population of 150 Izhikevich point neurons (120 excitatory/RS default + 30 inhibitory/FS default, Dale's-law-fixed at build time, ~10% random sparse connectivity, exponential synaptic kernels, 1-step minimum synaptic delay, per-neuron Gaussian background noise) runs continuously via a fixed dt=0.5ms sub-step accumulator (u updated once per full 1ms), at a default of 4 sub-steps per animation frame with a 0.25x-8x speed slider. A neuron-type preset dropdown (RS/IB/CH/FS/LTS/TC) picks the (a,b,c,d) of up to 3 user-highlighted neurons, with an 'advanced' toggle exposing raw a/b/c/d sliders (range-clamped to a non-diverging regime). Six neuromodulator sliders (Dopamine, Acetylcholine, Noradrenaline, Serotonin, GABA tone, Cortisol/stress) each apply the exact parameter mapping specified in the research to labeled subgroups or global weights.",
+    "explanation_surface": "The left panel's lower half hosts three live 2D-canvas plots (spike raster colored by E/I, membrane-potential + recovery-variable trace for the highlighted neuron(s), population firing-rate PSTH for E vs I) plus a collapsed 'advanced' v-u phase portrait with nullclines; every neuromodulator slider shows its fixed two-part explanation ('In real neurons/circuits: ...' / 'In this simulation we simplify it as: ...') plus a visible confidence badge, and a persistent disclaimer banner states this is ~150 point neurons on a fitted (non-conductance-based) model, not a real brain, with Dale's law, spikes-as-threshold-events, and the dt/speed-vs-realism distinctions called out per the research's explanations_to_include list."
+   }
+  ],
+  "build_steps": [
+   {
+    "step": "1. Skeleton + verified CDN boot",
+    "deliverable": "index.html with importmap (three@0.170.0 core+addons, simplex-noise@4.0.3, all jsdelivr), a bare module script that creates a WebGL renderer/scene/camera/OrbitControls and renders an empty dark scene with one test cube.",
+    "verify": "Open in browser (including via file://): zero console errors, zero 404s on the CDN URLs, cube visible and orbit-controllable, resize handling works."
+   },
+   {
+    "step": "2. Cerebral hemispheres: ellipsoid shaping + fBm gyri",
+    "deliverable": "buildHemisphere(side) producing two IcosahedronGeometry(radius,5) meshes non-uniformly scaled into a brain-like ellipsoid with lobe bulges, displaced along vertex normals by a 3-4 octave simplex fBm, normals recomputed, positioned either side of a visible longitudinal fissure, glassy translucent material.",
+    "verify": "Brain silhouette is recognizable (not a lumpy sphere) from multiple angles; frame time stays smooth while orbiting; triangle count logged to console stays near the ~20-25k/hemisphere budget."
+   },
+   {
+    "step": "3. Cerebellum + brainstem",
+    "deliverable": "Cerebellum mesh with the fBm+directional-ripple 'folia' variant positioned postero-inferior; brainstem as a tapered Lathe/Cylinder connecting cerebrum to a short spinal-cord stub.",
+    "verify": "Cerebellum visually reads as distinct-textured from cortex at a glance; brainstem sits anatomically plausible beneath thalamus with no gaps/z-fighting."
+   },
+   {
+    "step": "4. Subcortical primitives placed + tagged",
+    "deliverable": "All ~14 subcortical/discrete structures (thalamus, hypothalamus, amygdala, hippocampus (TubeGeometry curve), striatum, globus pallidus, STN, nucleus accumbens, VTA, substantia nigra, locus coeruleus, raphe nuclei, corpus callosum (TubeGeometry), insula-as-discrete-primitive) built as distinctly colored primitives at proportionally plausible positions, each carrying full userData from REGIONS.",
+    "verify": "Every structure is visible/selectable via a temporary debug wireframe toggle; console.table of userData confirms all 28 REGIONS ids are represented across cortical+subcortical objects (none missing, none duplicated)."
+   },
+   {
+    "step": "5. Lighting, bloom, quality auto-detect, context-loss guard",
+    "deliverable": "Key/fill/rim lighting (no shadow maps), UnrealBloomPass gated behind a quality toggle with auto-detection from first-second frame times, devicePixelRatio capped at 1.5, webglcontextlost/restored listeners pausing the loop and showing a banner.",
+    "verify": "Toggle quality High/Low and see a visible bloom/no-bloom difference with no console errors; simulate context loss (chrome devtools) and confirm the banner appears and recovery works."
+   },
+   {
+    "step": "6. Raycasting + click/hover resolution + camera fly-to",
+    "deliverable": "A unified pick(event) function that raycasts against subcortical meshes directly and, separately, against the hemisphere mesh (face \u2192 regionId attribute placeholder returning null until step 8), plus a smooth camera-ease-to-target helper.",
+    "verify": "Hovering any subcortical structure shows a name tooltip; clicking eases the camera toward it; console logs the resolved id with no ambiguity between overlapping structures."
+   },
+   {
+    "step": "7. Glossary system + linkTerms + popover",
+    "deliverable": "GLOSSARY data (38 entries), longest-match-first word-boundary auto-linker, popover component wired to any .term span in the DOM, dismiss on outside-click/Escape.",
+    "verify": "Feed a sample explanation string containing 5+ glossary terms (including a tricky overlap like 'ERP' inside 'N400' phrasing) through linkTerms and confirm exactly the intended terms are wrapped, each opens the correct definition, and popover repositions near viewport edges."
+   },
+   {
+    "step": "8. Atlas Explore mode: subcortical wired end-to-end",
+    "deliverable": "Left panel region list (grouped/searchable) + Explain panel card renderer for the 14 subcortical/discrete structures only (cortical parcellation not yet built), selection sync between list/3D-click/camera.",
+    "verify": "Every one of the 14 non-cortical REGIONS entries is reachable both by list click and by 3D click, and its full card (functions, lesion_effects, location, connections, famous case) renders with glossary links active."
+   },
+   {
+    "step": "9. Cortical parcellation-by-angle + per-vertex highlight shader",
+    "deliverable": "regionIdForVertex(theta,phi,side) hand-tuned boundary function producing a Float32BufferAttribute('regionId',...) on each hemisphere geometry for the 12 cortical zones (V1,V4,MT/V5,FFA,A1,Wernicke*,Broca*,S1,M1,PPC,dlPFC,vmPFC/OFC,ACC), a second highlightWeight attribute driven by onBeforeCompile shader injection for smooth glow-on-select.",
+    "verify": "A temporary 'debug flat-color by regionId' material shows all 12 zones as distinct, roughly anatomically-plausible-shaped patches on both hemispheres with no unassigned (black/default) vertices; clicking each patch resolves to the correct region id via face-vertex majority vote."
+   },
+   {
+    "step": "10. Atlas Explore mode: cortical regions + lesion mode",
+    "deliverable": "Cortical regions folded into the same Atlas list/search/card flow as step 8; lesion-mode toggle implemented for both cortical (dim via highlightWeight/opacity attribute) and subcortical (material swap) regions, with a lesioned-set tracker and reset-all control.",
+    "verify": "All 28 REGIONS are now selectable through one unified Atlas UI; toggling lesion mode and clicking 3-4 regions of mixed types shows all of them dimmed simultaneously with correct lesion_effects text, and reset-all restores normal appearance."
+   },
+   {
+    "step": "11. How-this-works drawer",
+    "deliverable": "Slide-in drawer with Rendering / Timing model / Neuron equations / Metaphor-vs-physiology (rendering the 13 ACCURACY_PITFALLS items) / full A-Z glossary browser tabs.",
+    "verify": "Every tab renders complete content with no lorem-ipsum placeholders; the full glossary browser lists all 38 terms; drawer opens/closes via the topbar button and Escape."
+   },
+   {
+    "step": "12. Pathway data wiring (text-only, no animation yet)",
+    "deliverable": "PATHWAYS data (8 scenarios), scenario picker in left panel, step list rendering what_happens/why_it_matters/evidence_or_method/accuracy_caveats into the Explain panel on step selection, prev/next buttons (no camera/particle animation yet).",
+    "verify": "Stepping through all 8 pathways end-to-end shows correct, glossary-linked text for every one of their ~5 steps each (40 steps total) with no missing fields."
+   },
+   {
+    "step": "13. Pathway animation: camera + activation-flow particles + timeline",
+    "deliverable": "Camera eases to each step's region(s); an InstancedMesh pulse travels along a CatmullRomCurve3 between consecutive step centroids on step transitions; bottom timeline scrubber with play/pause/scrub and approx_ms readout; auto-advance on play respecting the pathway's step timing feel (not literal wall-clock ms).",
+    "verify": "Play each of the 8 pathways start-to-finish unattended and confirm smooth camera motion, visible traveling pulses between every step pair, correct highlight-then-fade on each region, and the scrubber accurately reflects current step."
+   },
+   {
+    "step": "14. Neuron simulation core (headless, no visuals)",
+    "deliverable": "Float32Array-based Izhikevich integrator (dt=0.5ms, 2 half-step v updates + 1 u update per 1ms tick), Int32Array sparse adjacency (~10% random, fixed at build), exponential synaptic kernels (tau_E=5ms/tau_I=10ms), 1-step min delay, Gaussian background noise, isFinite guard resetting any diverging neuron to a safe resting state, all run for N=150 (120 RS excitatory + 30 FS inhibitory).",
+    "verify": "Run the integrator for a simulated 10s at default settings via a temporary console-logged spike-count summary: excitatory and inhibitory groups both produce sustained, non-zero, non-runaway firing (an asynchronous-irregular-looking regime), and forcing an extreme slider value (e.g., huge injected current) confirms no NaN/Infinity ever reaches the state arrays."
+   },
+   {
+    "step": "15. Neuron simulation visuals",
+    "deliverable": "InstancedMesh population view (color/scale pulse per spike), raster canvas (scrolling window, colored by E/I), membrane+recovery trace canvas for up to 3 highlighted neurons, population rate PSTH canvas for E vs I, advanced v-u phase-portrait with nullclines behind a disclosure toggle, speed slider (0.25x-8x).",
+    "verify": "At default settings all four plots render live and update every frame with no visible tearing/flicker over a sustained 60s run; changing the speed slider visibly speeds/slows the raster scroll rate; selecting a different neuron to highlight updates the trace immediately."
+   },
+   {
+    "step": "16. Neuromodulator sliders + honesty badges + presets + advanced a/b/c/d",
+    "deliverable": "6 neuromodulator sliders wired to their exact NEUROMOD_DEFS parameter mappings, each rendering the fixed two-part explanation text + confidence badge; neuron-type preset dropdown (RS/IB/CH/FS/LTS/TC) plus an advanced toggle exposing clamped raw a/b/c/d sliders; persistent 'not a real brain' disclaimer banner.",
+    "verify": "Move each of the 6 sliders individually from min to max and confirm both the described behavioral change (e.g. GABA tone raised \u2192 visibly sparser/more suppressed raster) and that no combination of sliders (including all at extremes simultaneously) produces NaN or a frozen UI; badges visually distinguish Serotonin/Cortisol as weaker-confidence than GABA/ACh/NE."
+   },
+   {
+    "step": "17. Mode switcher, keyboard shortcuts, responsive collapse, final content QA",
+    "deliverable": "Topbar 3-way mode switcher fully wired to show/hide the three controllers and their canvases; keyboard shortcuts (1/2/3, arrows, space, Escape); panel collapses to a bottom sheet under ~900px width; a final pass rereading every rendered string for mentalistic overclaiming (no 'the network is thinking', no reward-learning language on the Dopamine slider) and confirming glossary-term coverage.",
+    "verify": "Full manual click-through of all three modes, all 28 atlas entries, all 8 pathways, all 6 neuromodulator sliders, glossary popovers on at least 10 distinct terms, and the full how-this-works drawer, with the browser console open throughout showing zero errors/warnings; resize to a narrow width and confirm the layout collapses usably."
+   }
+  ],
+  "risks": [
+   "Cortical parcellation-by-angle for 12 zones on a noisy continuous mesh is inherently fiddly hand-tuning (unlike the tech scout's simpler 5-6 lobe example) and may need several visual-iteration passes before boundaries look anatomically plausible and don't leave unassigned or overlapping vertices \u2014 build a temporary flat-color-by-regionId debug material early (step 9) specifically to make this tunable by eye rather than guessing blind.",
+   "UnrealBloomPass plus any MeshPhysicalMaterial transmission use are the two most expensive parts of the render stack on integrated/hybrid GPUs; without the auto-detect+toggle from step 5 actually gating them by default, laptop frame rate could drop well below 60fps once ~28 tagged objects, InstancedMesh particles, and bloom are all active simultaneously.",
+   "Glossary auto-linking via regex is a classic source of subtle bugs: substring collisions (e.g. 'ERP' matching inside 'N170'/'N400' explanations, or 'memory' matching inside 'working memory') and re-wrapping text that's already inside a just-inserted span if linkTerms is ever called twice on the same node \u2014 must use longest-match-first ordering, word-boundary regex, and a single linkTerms pass per fresh string only.",
+   "The Izhikevich v\u00b2 term is numerically stiff; any deviation from the two-half-step-per-1ms discipline (e.g. a naive single 1ms Euler step, or checking the spike threshold only once per rendered frame instead of after every sub-step) can silently corrupt spike timing/counts or diverge to NaN, which would then propagate invisibly into the raster/rate canvases as blank or frozen plots rather than an obvious crash \u2014 the isFinite guard and per-substep threshold check from step 14 are not optional polish, they are load-bearing correctness requirements.",
+   "Content volume is large (28 region cards, 8 pathways \u00d7 ~5 steps \u00d7 4 text fields each, 38 glossary entries, 6 neuromodulator write-ups, 13 misconception items) \u2014 transcribing all of it correctly into JS literals without truncation or copy-paste drift is itself a meaningful source of errors; a step should diff the embedded DATA objects' counts (28/8/38/6/13) against the research JSON before considering content-entry done.",
+   "Modeling the insula as an always-visible discrete primitive is an anatomical simplification (it is folded cortex, not a subcortical nucleus) \u2014 if left unexplained this repeats exactly the 'phrenology-style, one-bump-one-fixed-location' framing the content research explicitly warns against; the insula's card and/or a brief inline note must say it is normally hidden inside the lateral sulcus and is shown exposed here for clickability.",
+   "Copy-overclaiming risk is systemic, not confined to one slider: the Dopamine slider must never read as implementing reward-prediction-error/learning, the neuron population must never be narrated as 'thinking' or as literally being any named real circuit (amygdala/VTA/hippocampal wiring), and pathway ms values for motor-skill-learning and sleep-consolidation must stay visibly labeled schematic-order-only rather than literal timings \u2014 this needs a deliberate final read-through pass (step 17), not just careful first-drafting.",
+   "CDN version pinning must be exact and identical across the core module and every addon import; mixing versions (or ever switching to three@0.180.0+, where three.module.js internally imports a sibling three.core.js) changes nothing functionally through the CDN but is a reason to avoid 'upgrading' the pin later without re-verifying every addon URL still resolves against it."
+  ],
+  "open_questions_for_user": [
+   "Should the two hemispheres of paired subcortical structures (amygdala, hippocampus, thalamus, caudate/putamen, globus pallidus, nucleus accumbens) be modeled as two independently clickable meshes sharing one info card (anatomically correct, doubles click targets to ~40) or as a single midline-representative primitive per structure (fewer targets, simpler lesion-mode UI, slightly less anatomically literal)? The plan above defaults to two meshes sharing one card \u2014 confirm this default is fine before step 4, since it affects the subcortical primitive count and the lesion-mode 'reset all' bookkeeping.",
+   "Should Atlas Explore's lesion mode have any cross-mode effect (e.g., lesioning both hippocampi shows a note or visibly disables the recall_word/sleep_consolidation pathways), or should the three modes stay fully independent for this build, with only a textual 'see also' cross-reference in the region cards? The plan defaults to fully independent modes to keep scope bounded \u2014 this only matters if he wants the app to feel more like one connected simulation rather than three separate tools.",
+   "Is a light-mode/theme toggle wanted at all, or should the app deliberately commit to the single dark glassy look described here with no light variant? Nothing in the brief requires light mode and the visual design above assumes dark-only; confirming this avoids doing (or skipping) unnecessary theming work."
+  ]
+ },
+ "critiques": [
+  {
+   "verdict": "needs_changes",
+   "problems": [
+    {
+     "severity": "high",
+     "issue": "Citation error in the fear_response pathway (step 1, thalamus): the content attributes the '~10-20ms thalamic/hypothalamic, ~20-30ms amygdala' MEG timing to 'Luo et al., 2007, PNAS'. Verified via search: this is Luo, Holroyd, Jones, Hendler & Blair (2007), 'Neural dynamics for facial threat processing as revealed by gamma band synchronization using MEG', published in NeuroImage 34(2):839-847, DOI 10.1016/j.neuroimage.2006.09.023 \u2014 NOT PNAS. The numeric latencies themselves are reported correctly by the content, only the journal is wrong.",
+     "fix": "Change the citation to 'Luo et al., 2007, NeuroImage' throughout (data model and any UI text that names the source)."
+    },
+    {
+     "severity": "high",
+     "issue": "Internal numerical inconsistency in the fear_response pathway: step 1 cites MEG source-localized amygdala activity 'by ~20-30ms' (Luo et al. 2007, NeuroImage), then step 2 cites intracranial-recorded amygdala responses beginning '~74-88ms' (M\u00e9ndez-B\u00e9rtolo et al. 2016, Nature Neuroscience, confirmed via search: iERP onset ~74ms) for the SAME structure in the SAME pathway \u2014 a ~3x discrepancy that is never reconciled. This matters because MEG beamformer source-localization of a small, deep structure like the amygdala is itself a genuinely contested method (spatial resolution/leakage concerns), while the intracranial number is far better grounded; presenting both as if they simply describe sequential stages invites a careful user to notice the numbers contradict each other and lose trust in the pathway feature's precision.",
+     "fix": "Either drop the ultra-fast MEG-based amygdala figure and keep only the intracranial ~74-88ms number (recommended, since it's the stronger evidence), or explicitly flag in the step text that these are two competing estimates from different methods with different reliability, not two sequential events."
+    },
+    {
+     "severity": "high",
+     "issue": "Missing myth-flag parallel to the amygdala one: the Broca's/Wernicke's area cards (and the recall_word / reading_sentence pathways built on them) present the classical 'Broca = production, Wernicke = comprehension, arcuate fasciculus disconnection' model as essentially settled. Verified via search: this classic model is widely considered obsolete in modern aphasiology (Tremblay & Dick, 2016, Brain and Language, titled 'Broca and Wernicke are dead'; also Dronkers et al. 2007's MRI re-analysis of Broca's actual preserved patient brain \u2014 'Tan'/Leborgne \u2014 showing the lesion extended well beyond 'Broca's area' into the insula and subcortical white matter). Language comprehension/production are now understood as distributed across a wider network (arcuate/uncinate/inferior fronto-occipital/middle longitudinal fasciculi), not two clean boxes connected by one tract. The project's own accuracy_pitfalls list explicitly warns against 'one bump = one fixed faculty' framing and calls out the amygdala for this, but the identical issue is left unflagged for language \u2014 arguably the single most iconic case of this exact myth in the field.",
+     "fix": "Add an accuracy_pitfalls entry and a caveat note on the broca/wernicke region cards and the two pathways that use them: the classic double-dissociation model is a useful teaching simplification, but modern lesion/imaging/tractography work shows language relies on a more distributed network, and Broca's own 'Tan' case had damage well beyond the area later named for him."
+    },
+    {
+     "severity": "high",
+     "issue": "Scope: three.js pathways/plan bundles three technically-independent, individually large subsystems into one 'first prototype' \u2014 a procedural 3D neuroanatomy atlas (28 regions, 12-zone hand-tuned cortical parcellation), 8 fully-narrated animated pathway scenarios (40 steps x 4 text fields each), and a numerically delicate 150-neuron Izhikevich spiking network with 6 neuromodulator mappings and 4 live plots. Each of these alone is a substantial build (the plan's own 17-step build sequence and stated risks section implicitly concede this). Combined into a single index.html with zero build step, the realistic risk is that content-entry errors (28 x 7 fields, 8 x 5 x 4 fields, 38 glossary entries, 6 neuromodulator write-ups = very large hand-transcribed literal count) and three separate sources of runtime bugs (raycasting/parcellation, animation timeline state machine, ODE integration stability) compound, making 'no console errors across all three modes' a high-effort bar to actually hit for a v1.",
+     "fix": "For a genuine first prototype, ship one mode fully polished before building all three \u2014 Atlas Explore is the lowest technical risk (no animation state machine, no ODE stability concerns) and would validate the procedural-brain rendering approach on its own. If all three must ship together, cut pathway count to 3-4 and region count to ~15-18 (one clean set covering each major system: vision, language, memory, emotion, movement) for v1, expanding afterward."
+    },
+    {
+     "severity": "medium",
+     "issue": "The hypothalamus card presents the classic ventromedial-hypothalamus-as-satiety-center / lateral-hypothalamus-as-feeding-center 'dual center' model via 'classic animal studies' without noting that this specific model is now considered outdated. Verified via search (PubMed 16412483, 'The rise, fall, and resurrection of the ventromedial hypothalamus...'): since the 1994 discovery of leptin and the arcuate nucleus's role, the field has moved from discrete 'centers' to a distributed, hormonally-integrated model (leptin/ghrelin, POMC/AgRP neurons projecting to multiple hypothalamic nuclei). This is the same category of oversimplification the project explicitly flags for the amygdala, just not applied here.",
+     "fix": "Add a one-line caveat to the hypothalamus card: the classic 'feeding center vs. satiety center' framing is a historical simplification; modern work centers on the arcuate nucleus integrating hormonal signals (leptin, ghrelin) across a distributed hypothalamic network."
+    },
+    {
+     "severity": "medium",
+     "issue": "M1's lesion_effects/functions describe it as 'major origin of the corticospinal tract' without qualification. This is defensible but can read as 'M1 = the motor output pathway,' when a substantial share of corticospinal fibers actually originate from premotor cortex, supplementary motor area, and parietal cortex (Dum & Strick's classic primate tracing work), not just M1 \u2014 another instance of the single-region-single-function framing the project otherwise tries to avoid.",
+     "fix": "Soften to 'a major source (alongside premotor and supplementary motor cortex) of the corticospinal tract' or add a one-line note."
+    },
+    {
+     "severity": "medium",
+     "issue": "Substantia nigra lesion_effects states 'symptoms typically appear only after roughly 50-80% of these neurons are already lost,' conflating two distinct, commonly-cited-but-different statistics: SNc dopaminergic cell-body loss (usually cited around 50-60% at symptom onset) versus striatal dopamine/terminal depletion (usually cited higher, ~70-80%). Presenting a single merged 50-80% range obscures that these are two different measurements with different typical values.",
+     "fix": "Either cite the cell-loss figure (~50-60%) and the terminal-depletion figure (~70-80%) separately, or soften to a vaguer 'the majority' framing rather than implying one precise range covers both metrics."
+    },
+    {
+     "severity": "medium",
+     "issue": "The vmPFC/OFC card cites Phineas Gage's personality change as established fact ('showed dramatic personality change') without any caveat. Verified via search (Macmillan's historical review, Science History Institute, Frontiers in Human Neuroscience 2022): the dramatic 'became a foul-mouthed, unreliable drifter' narrative rests on a single ~300-word secondhand account from Harlow that never quotes Gage directly, and later generations of textbooks progressively embellished the story to fit 19th-century phrenology-adjacent localization debates. Gage is arguably the single most over-mythologized case in cognitive neuroscience, and this project explicitly aims to flag exactly this kind of overclaiming elsewhere (amygdala, dopamine, Libet) but not here.",
+     "fix": "Add a one-line caveat: the popular 'dramatic personality transformation' story about Gage is now understood to be substantially embellished beyond the thin primary-source record (Macmillan, 2000); treat it as illustrative, not a rigorously documented case."
+    },
+    {
+     "severity": "low",
+     "issue": "FFA card and recognize_face/reading_sentence pathways cite Gao et al. (2019, Psychophysiology) as establishing FFA/fusiform gyrus as 'the' N170 source. Verified via search: Gao et al. 2019 does support fusiform gyrus (including FFA) as a primary contributor, but competing intracranial work (e.g., studies implicating the inferior occipital gyrus/OFA) shows the field has not fully converged on a single source for the N170 \u2014 other face-selective regions (OFA, STS) also contribute in some studies.",
+     "fix": "Soften 'source-localizes the N170 face response to the fusiform gyrus/FFA' to 'identifies the fusiform gyrus/FFA as a primary (though likely not sole) contributor to the N170'."
+    },
+    {
+     "severity": "low",
+     "issue": "The six named Izhikevich neuron-type presets (RS/IB/CH/FS/LTS/TC) are presented as if each (a,b,c,d) tuple alone deterministically produces its named firing pattern. This is true for RS/IB/CH/FS/LTS, but the TC (thalamocortical) preset's tonic-vs-rebound-burst behavior in Izhikevich's original model also depends on the neuron's baseline holding potential/current (e.g., needs a hyperpolarizing baseline to show rebound bursting), not just the four parameters.",
+     "fix": "Add a short note on the TC preset specifically: its bursting vs. tonic-firing behavior also depends on the background current/holding potential, not only (a,b,c,d)."
+    },
+    {
+     "severity": "low",
+     "issue": "The corpus_callosum card and split-brain framing omit the anterior commissure, which also carries some interhemispheric information (notably some olfactory and limbic/temporal-lobe information) and is clinically relevant to why some split-brain effects are partial rather than absolute.",
+     "fix": "Optional one-line addition noting the anterior commissure as a smaller secondary interhemispheric pathway not modeled here."
+    }
+   ],
+   "missing": [
+    "A caveat parallel to the existing amygdala-fear-center warning, applied to Broca's/Wernicke's areas: the classic language localization model is considered obsolete by modern aphasiology and should be labeled a teaching simplification, not settled fact.",
+    "A caveat on the hypothalamus card noting the classic VMH-satiety/LH-hunger 'dual center' model is now considered outdated in light of arcuate-nucleus/leptin research.",
+    "A reconciliation note (or removal of one figure) for the two conflicting amygdala-latency citations used within the same fear_response pathway (20-30ms MEG vs. 74-88ms intracranial).",
+    "A corrected journal name for the Luo et al. 2007 citation (NeuroImage, not PNAS).",
+    "An explicit go/no-go decision on trimming v1 scope (fewer pathways/regions, or shipping one mode before all three) given the combined complexity of procedural 3D anatomy + animated pathway state machine + spiking-network simulation in a single zero-build-step file.",
+    "A caveat on the Phineas Gage case noting the popular narrative is more embellished than the thin primary-source record supports.",
+    "No verification was attempted (given time/effort budget) for: Padoa-Schioppa & Assad 2006 OFC value-coding specifics, O'Connell et al. 2012 CPP latency ranges, Staresina et al. 2015 slow-oscillation/spindle/ripple coupling specifics, Doyon 2003/2018 motor-learning stage timing, and Aston-Jones & Cohen 2005 adaptive gain theory specifics \u2014 these are well-known, frequently-cited findings in the field and were judged lower-risk, but were not independently re-verified via search in this pass."
+   ]
+  }
+ ]
+}

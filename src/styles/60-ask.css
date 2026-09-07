@@ -1,0 +1,54 @@
+/* "Ask about this" panel (Worker Q). The container's position is the skeleton's (#ask-panel, bottom
+   right); everything here is inside it, plus the one rule that lifts the Explain card clear of it. */
+
+#ask-panel { display: flex; flex-direction: column; gap: 7px; }
+
+.ask-row { display: flex; align-items: center; gap: 8px; }
+.ask-input { margin-bottom: 0; flex: 1; min-width: 0; font-size: 12.5px; padding: 6px 10px; }
+#ask-go { flex: none; }
+
+.ask-target { font-size: 11.5px; color: var(--ink-2); line-height: 1.35; }
+.ask-target strong { color: var(--ink); font-weight: 600; }
+.ask-ids { color: var(--ink-3); margin-left: 4px; font-size: 10.5px; }
+
+.ask-answer { border-top: 1px solid var(--line); padding-top: 7px; max-height: 168px; overflow-y: auto; }
+.ask-answer-head { margin-bottom: 5px; }
+.ask-answer-body { font-size: 12.5px; line-height: 1.45; color: var(--ink-2); }
+.ask-answer-body.ask-fail { color: var(--danger-ink); }
+
+/* An ungrounded answer is not a softer version of a grounded one: it gets .badge.danger, filled in so
+   it reads as a warning rather than as one more grey label. */
+.badge.ask-bad { border-color: var(--danger); background: rgba(255,107,122,0.14); }
+
+/* No key stored: the input is disabled and this line says what is missing and where to fix it, so the
+   Ask button is never a dead end. */
+.ask-locked { margin: 0; font-size: 11.5px; line-height: 1.4; color: var(--ink-2); }
+.ask-locked .text-btn { margin-left: 6px; padding: 3px 10px; vertical-align: 1px; }
+
+.ask-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+.ask-chip {
+  border: 1px solid var(--line); background: rgba(255,255,255,0.05); color: var(--ink-2);
+  font: 500 11.5px var(--font); padding: 3px 9px; border-radius: 999px; cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s; max-width: 100%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ask-chip:hover { background: rgba(255,255,255,0.11); color: var(--ink); border-color: var(--accent); }
+.ask-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.ask-unknown { margin-top: 6px; font-size: 11.5px; color: var(--danger-ink); }
+
+.ask-spinner {
+  display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px;
+  border-radius: 50%; border: 2px solid rgba(255,255,255,0.18); border-top-color: var(--accent);
+  animation: ask-spin .8s linear infinite;
+}
+@keyframes ask-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .ask-spinner { animation-duration: 2.4s; } }
+
+/* The Explain card is bottom-bound too, so it has to move up by however tall this panel is. */
+#app.ask-on #explain-panel { bottom: calc(var(--ask-h, 60px) + 26px); }
+#app.ask-on[data-mode="scenario"] #explain-panel,
+#app.ask-on[data-mode="learn"] #explain-panel { max-height: calc(62vh - var(--ask-h, 60px)); }
+/* Neurons also has the plot stack above the Explain card (bottom-bound at 36vh + 76px), so the card's
+   ceiling has to come down by exactly what this panel takes, or the two meet in the middle. */
+#app.ask-on[data-mode="neurons"] #explain-panel { max-height: calc(36vh + 40px - var(--ask-h, 60px)); }
