@@ -14,6 +14,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: python3 build.py
-      - run: node --test 'tests/*.test.mjs'
-      - run: git diff --exit-code -- dist/index.html || (echo "dist/index.html is stale: run python3 build.py and commit" && exit 1)
+      - name: Build the single-file bundle
+        run: python3 build.py
+      - name: Unit tests
+        run: node --test 'tests/*.test.mjs'
+      - name: Committed dist must match the build
+        run: |
+          if ! git diff --exit-code -- dist/index.html; then
+            echo "dist/index.html is stale. Run python3 build.py and commit the result."
+            exit 1
+          fi
