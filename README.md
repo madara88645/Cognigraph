@@ -28,6 +28,8 @@ python3 build.py && node --test 'tests/*.test.mjs'
 
 `CONTRACTS.md` documents the build model, file ownership and the Scene / Mode / UI APIs. `research/` holds the content research and the plan the build followed.
 
+Browser smoke test (local only, needs a real Chrome — not part of `node --test` or CI): `node tests/smoke/smoke.mjs`.
+
 ## Credits
 
 Built with [three.js](https://threejs.org/) (r170). Brain geometry is procedural (no scanned asset); positions are proportional, not MNI coordinates. Colours are chosen for distinguishability, not realism.
