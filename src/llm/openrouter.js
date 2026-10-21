@@ -16,11 +16,31 @@ import { LLM_MODULATORS, LLM_BASELINE, llmMarkLesionedSteps, llmLesionedInSteps 
 export const LLM_ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
 export const LLM_KEY_STORAGE = 'cg.openrouter.key';
 export const LLM_MODEL_STORAGE = 'cg.openrouter.model';
-export const LLM_DEFAULT_MODEL = 'openai/gpt-4o-mini';
+export const LLM_DEFAULT_MODEL = 'openai/gpt-6-luna';
+
+// Exact ids from OpenRouter's 2026-10-19 notice (retirement: 2027-01-14).
+// Do not prefix-match: custom ids and other valid preferences must survive.
+export const LLM_RETIRING_MODELS = [
+  'openai/gpt-4o', 'openai/gpt-4o-2024-05-13', 'openai/gpt-4o-2024-08-06',
+  'openai/gpt-4o-2024-11-20', 'openai/gpt-4o-mini', 'openai/gpt-4o-mini-2024-07-18',
+  'openai/gpt-4.1', 'openai/gpt-4.1-mini',
+];
+
+export function llmResolveModel(model) {
+  const id = String(model == null ? '' : model).trim() || LLM_DEFAULT_MODEL;
+  return LLM_RETIRING_MODELS.includes(id) ? LLM_DEFAULT_MODEL : id;
+}
+
+/** Luna has no temperature control. Disable optional reasoning for our short output budgets. */
+export function llmSamplingParams(model, temperature) {
+  return model === 'openai/gpt-6-luna'
+    ? { reasoning: { effort: 'none' } }
+    : { temperature };
+}
 
 /** The four models offered in Settings. Ids are just strings — OpenRouter validates them, we don't. */
 export const LLM_MODELS = [
-  { id: 'openai/gpt-4o-mini', label: 'GPT-4o mini — cheap, fast (default)' },
+  { id: 'openai/gpt-6-luna', label: 'GPT-6 Luna — cheap, fast (default)' },
   { id: 'anthropic/claude-haiku-4.5', label: 'Claude Haiku 4.5 — careful prose' },
   { id: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash — fast, long context' },
   { id: 'meta-llama/llama-3.3-70b-instruct', label: 'Llama 3.3 70B — open weights' },
@@ -62,14 +82,22 @@ export function llmSetStoredKey(key) {
 export function llmStoredModel() {
   const s = llmStore();
   if (!s) return LLM_DEFAULT_MODEL;
-  try { return String(s.getItem(LLM_MODEL_STORAGE) || '').trim() || LLM_DEFAULT_MODEL; } catch (err) { return LLM_DEFAULT_MODEL; }
+  try {
+    const stored = String(s.getItem(LLM_MODEL_STORAGE) || '').trim();
+    const model = llmResolveModel(stored);
+    // Storage writes can be denied even when reads work. Still use the safe model for this run.
+    if (LLM_RETIRING_MODELS.includes(stored)) {
+      try { s.setItem(LLM_MODEL_STORAGE, model); } catch (err) { /* read-only storage */ }
+    }
+    return model;
+  } catch (err) { return LLM_DEFAULT_MODEL; }
 }
 
 export function llmSetStoredModel(model) {
   const s = llmStore();
   if (!s) return false;
   try {
-    const v = String(model == null ? '' : model).trim();
+    const v = llmResolveModel(model);
     if (v && v !== LLM_DEFAULT_MODEL) s.setItem(LLM_MODEL_STORAGE, v); else s.removeItem(LLM_MODEL_STORAGE);
     return true;
   } catch (err) { return false; }
@@ -309,7 +337,7 @@ function llmHttpReason(status) {
  */
 export async function classifyWithOpenRouter(text, opts = {}) {
   const key = String(opts.key == null ? '' : opts.key).trim();
-  const model = String(opts.model || LLM_DEFAULT_MODEL).trim() || LLM_DEFAULT_MODEL;
+  const model = llmResolveModel(opts.model);
   const prompt = String(text == null ? '' : text).trim().slice(0, LLM_MAX_PROMPT_CHARS);
   const doFetch = opts.fetchImpl || (typeof fetch === 'function' ? fetch : null);
   const lesions = Array.isArray(opts.lesions) ? opts.lesions.filter((id) => typeof id === 'string' && id) : [];
@@ -333,7 +361,7 @@ export async function classifyWithOpenRouter(text, opts = {}) {
       { role: 'user', content: prompt },
     ],
     response_format: { type: 'json_object' },
-    temperature: LLM_TEMPERATURE,
+    ...llmSamplingParams(model, LLM_TEMPERATURE),
     max_tokens: LLM_MAX_TOKENS,
   };
 

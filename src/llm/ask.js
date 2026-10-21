@@ -11,7 +11,7 @@
 // app's data only", never "correct".
 import { REGIONS } from '../data/regions.js';
 import { PATHWAYS } from '../data/pathways.js';
-import { LLM_ENDPOINT, LLM_DEFAULT_MODEL } from './openrouter.js';
+import { LLM_ENDPOINT, llmResolveModel, llmSamplingParams } from './openrouter.js';
 
 export const ASK_MAX_QUESTION = 400;
 export const ASK_MAX_ANSWER = 900;
@@ -199,7 +199,7 @@ function askHttpReason(status) {
  */
 export async function askGrounded(question, context, opts = {}) {
   const key = String(opts.key == null ? '' : opts.key).trim();
-  const model = String(opts.model || LLM_DEFAULT_MODEL).trim() || LLM_DEFAULT_MODEL;
+  const model = llmResolveModel(opts.model);
   const q = String(question == null ? '' : question).trim().slice(0, ASK_MAX_QUESTION);
   const ids = askContextIds(context);
   const doFetch = opts.fetchImpl || (typeof fetch === 'function' ? fetch : null);
@@ -228,7 +228,7 @@ export async function askGrounded(question, context, opts = {}) {
           { role: 'system', content: askSystemPrompt(context) },
           { role: 'user', content: q },
         ],
-        temperature: ASK_TEMPERATURE,
+        ...llmSamplingParams(model, ASK_TEMPERATURE),
         max_tokens: ASK_MAX_TOKENS,
       }),
       signal: opts.signal,

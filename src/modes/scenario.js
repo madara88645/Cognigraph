@@ -560,7 +560,7 @@ function scSettingsHtml() {
       <span>Model id</span>
       <select id="sc-model">${custom}${options}</select>
     </label>
-    <p class="muted">Ids pass through as-is; a retired id returns 404 and the heuristic takes over.</p>
+    <p class="muted">GPT-4o and GPT-4.1 selections, including the dated GPT-4o versions, are replaced with GPT-6 Luna ahead of their OpenRouter retirement on 14 January 2027. Other model choices are kept.</p>
 
     <h3>Ask about this</h3>
     <p class="muted">${key

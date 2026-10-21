@@ -130,14 +130,14 @@ test('answers are trimmed to three sentences and an empty answer is a failure', 
 
 test('posts one chat completion to OpenRouter with the key in the header and nothing else', async () => {
   const f = mockFetch(okReply('It binds an episode together [hippocampus].'));
-  const out = await askGrounded('What does it do?', CTX, { key: KEY, model: 'openai/gpt-4o-mini', fetchImpl: f });
+  const out = await askGrounded('What does it do?', CTX, { key: KEY, model: 'google/gemini-2.5-flash', fetchImpl: f });
 
   assert.equal(f.calls.length, 1);
   const { url, init, body } = f.calls[0];
   assert.equal(url, LLM_ENDPOINT);
   assert.equal(init.method, 'POST');
   assert.equal(init.headers.Authorization, 'Bearer ' + KEY);
-  assert.equal(body.model, 'openai/gpt-4o-mini');
+  assert.equal(body.model, 'google/gemini-2.5-flash');
   assert.equal(body.messages.length, 2);
   assert.equal(body.messages[0].role, 'system');
   assert.equal(body.messages[1].content, 'What does it do?');
@@ -147,7 +147,7 @@ test('posts one chat completion to OpenRouter with the key in the header and not
   assert.equal(out.ok, true);
   assert.equal(out.ungrounded, false);
   assert.deepEqual(out.citations, ['hippocampus']);
-  assert.equal(out.model, 'openai/gpt-4o-mini');
+  assert.equal(out.model, 'google/gemini-2.5-flash');
 });
 
 test('the model defaults to the app default and the question is capped', async () => {
