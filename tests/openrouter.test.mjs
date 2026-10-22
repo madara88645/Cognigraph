@@ -50,7 +50,7 @@ const GOOD = {
 
 test('posts exactly one JSON-mode request to the OpenRouter completions endpoint', async () => {
   const f = mockFetch(okReply(JSON.stringify(GOOD)));
-  await classifyWithOpenRouter('a friend in a crowd', { key: KEY, model: 'openai/gpt-4o-mini', fetchImpl: f });
+  await classifyWithOpenRouter('a friend in a crowd', { key: KEY, model: 'google/gemini-2.5-flash', fetchImpl: f });
 
   assert.equal(f.calls.length, 1, 'exactly one request per run');
   const { url, init, body } = f.calls[0];
@@ -61,7 +61,7 @@ test('posts exactly one JSON-mode request to the OpenRouter completions endpoint
   assert.equal(init.headers['X-Title'], 'CogniGraph');
   assert.equal(init.headers['Content-Type'], 'application/json');
 
-  assert.equal(body.model, 'openai/gpt-4o-mini');
+  assert.equal(body.model, 'google/gemini-2.5-flash');
   assert.deepEqual(body.response_format, { type: 'json_object' });
   assert.equal(body.temperature, 0.3);
   assert.ok(body.max_tokens >= 1200 && body.max_tokens <= 2000, `max_tokens ${body.max_tokens}`);
@@ -81,14 +81,14 @@ test('the model defaults to the cheap one and long input is truncated before sen
   const f = mockFetch(okReply(JSON.stringify(GOOD)));
   await classifyWithOpenRouter('y'.repeat(9000), { key: KEY, fetchImpl: f });
   assert.equal(f.calls[0].body.model, LLM_DEFAULT_MODEL);
-  assert.equal(LLM_DEFAULT_MODEL, 'openai/gpt-4o-mini');
+  assert.equal(LLM_DEFAULT_MODEL, 'openai/gpt-6-luna');
   assert.ok(f.calls[0].body.messages[1].content.length <= 1200);
 });
 
 test('the settings menu offers four models including Haiku 4.5 and Gemini 2.5 Flash', () => {
   assert.equal(LLM_MODELS.length, 4);
   const ids = LLM_MODELS.map((m) => m.id);
-  assert.ok(ids.includes('openai/gpt-4o-mini'));
+  assert.ok(ids.includes('openai/gpt-6-luna'));
   assert.ok(ids.includes('anthropic/claude-haiku-4.5'));
   assert.ok(ids.includes('google/gemini-2.5-flash'));
   for (const m of LLM_MODELS) assert.ok(m.label && m.label.length > 4, `${m.id} has no label`);
